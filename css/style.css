@@ -53,7 +53,7 @@ h1{font:800 17px var(--head);letter-spacing:-.02em}
 .btn:active:not(:disabled){transform:translate(3px,3px);box-shadow:0 0 0 var(--sh)}
 .btn.main{background:var(--tc);border-color:var(--tc);color:var(--dark)}
 
-.odds{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:0 0 14px}
+.odds{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:0 0 14px}
 .od{background:var(--paper);border:2px solid var(--line);border-top:6px solid var(--tc);border-radius:10px;padding:5px 2px 6px;text-align:center}
 .od b{display:block;font:800 13px var(--head)}
 .od small{display:block;font-size:9px;color:var(--mute);line-height:1.2;overflow:hidden;text-overflow:ellipsis}
@@ -85,7 +85,7 @@ h1{font:800 17px var(--head);letter-spacing:-.02em}
 .pick span{font-weight:700;font-size:13px;flex:none}
 .pick:has(input:checked){background:var(--tc);color:var(--dark);box-shadow:0 0 0 var(--sh);transform:translate(3px,3px)}
 .pick:has(input:checked) small{background:var(--dark);color:var(--tc)}
-.targets{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px}
+.targets{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:14px}
 .tg{background:var(--paper);border:var(--bw) solid var(--line);border-top:7px solid var(--tc);border-radius:12px;padding:7px 2px;text-align:center;box-shadow:3px 3px 0 var(--sh);transition:transform .08s,background .2s}
 .tg b{display:block;font:800 14px var(--head)}
 .tg small{display:block;font-size:9px;color:var(--mute)}
@@ -125,3 +125,11 @@ nav [aria-selected=true]{background:var(--fg);color:var(--dark);border-color:var
 .stage.mythic.hit{box-shadow:8px 8px 0 var(--tc),0 0 56px rgba(255,75,62,.6)}
 .stage.mythic .badge{background:linear-gradient(90deg,#FF4B3E,#FFC933,#27D9BD,#9B7BFF,#FF5FA2,#FF4B3E);background-size:300% 100%;animation:badge .55s .1s both cubic-bezier(.3,1.6,.5,1),rbow 3s linear infinite}
 @keyframes rbow{to{background-position:300% 0}}
+
+/* Секретный */
+.stage.secret.hit{border-color:#fff;box-shadow:8px 8px 0 var(--tc),0 0 56px rgba(255,255,255,.55)}
+.stage.secret.hit .cell{text-shadow:2px 0 #FF2D55,-2px 0 #00E5FF}
+.stage.secret.hit .reel{animation:glitch .8s steps(2,end) 3}
+@keyframes glitch{25%{transform:translate(-3px,1px) skewX(-4deg)}50%{transform:translate(3px,-1px)}75%{transform:translate(-2px,0) skewX(3deg)}}
+.stage.secret .badge{background:#fff;color:#000;text-shadow:1px 0 #FF2D55,-1px 0 #00E5FF}
+.od small,.tg small{font-size:8.5px}
