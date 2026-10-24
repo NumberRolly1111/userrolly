@@ -3,7 +3,7 @@ if(tg){tg.ready();tg.expand();try{tg.setHeaderColor('#0D0B1A');tg.setBackgroundC
 const hap=(k,v)=>{try{tg&&tg.HapticFeedback&&(k==='n'?tg.HapticFeedback.notificationOccurred(v):tg.HapticFeedback.impactOccurred(v))}catch(e){}};
 const T=[{n:'Обычный',c:'#9AA5DB',v:3},{n:'Необычный',c:'#27D9BD',v:12},{n:'Редкий',c:'#9B7BFF',v:45},{n:'Эпический',c:'#FF5FA2',v:160},{n:'Легендарный',c:'#FFC933',v:700},{n:'Мифический',c:'#FF4B3E',v:3000},{n:'Секретный',c:'#EAF1FF',v:10000}]
 T.forEach((t,i)=>t.s=['Обычн.','Необыч.','Редкий','Эпик','Легенд.','Миф.','Секрет'][i]);;
-const MODES=[{l:'Любой',min:0,cost:100},{l:'Редкий+',min:2,cost:250},{l:'Эпический+',min:3,cost:750}];
+const MODES=[{l:'Любой',min:0,cost:50},{l:'Редкий+',min:2,cost:150},{l:'Эпический+',min:3,cost:350}];
 const WORDS=['storm','night','wolf9','cyber','pixel','ghost','nova7','lunar','ember','frost','raven','blaze','orbit','pulse','zenith','vortex','shadow','dragon','falcon','comet','atlas','magic','royal','alpha','omega','delta','sigma','ninja','panda','tiger','cobalt','cipher','quartz','rocket','silent','golden','crystal','phoenix','nexus','vector','matrix','legend','hunter','pirate','wizard','spirit','shiver','velvet','copper','jungle'].filter(w=>/^[a-z]{5,}$/.test(w));
 const L='abcdefghijklmnopqrstuvwxyz',V='aeiouy',K='bcdfghjklmnprstvwxz',POOL=L+'0123456789_#$%@';
 const R=n=>Math.floor(Math.random()*n),P=a=>a[R(a.length)];
