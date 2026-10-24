@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s),tg=window.Telegram&&Telegram.WebApp;
 if(tg){tg.ready();tg.expand();try{tg.setHeaderColor('#0D0B1A');tg.setBackgroundColor('#0D0B1A')}catch(e){}}
 const hap=(k,v)=>{try{tg&&tg.HapticFeedback&&(k==='n'?tg.HapticFeedback.notificationOccurred(v):tg.HapticFeedback.impactOccurred(v))}catch(e){}};
-const T=[{n:'Обычный',c:'#9AA5DB',v:3},{n:'Необычный',c:'#27D9BD',v:12},{n:'Редкий',c:'#9B7BFF',v:45},{n:'Эпический',c:'#FF5FA2',v:160},{n:'Легендарный',c:'#FFC933',v:700}];
+const T=[{n:'Обычный',c:'#9AA5DB',v:3},{n:'Необычный',c:'#27D9BD',v:12},{n:'Редкий',c:'#9B7BFF',v:45},{n:'Эпический',c:'#FF5FA2',v:160},{n:'Легендарный',c:'#FFC933',v:700},{n:'Мифический',c:'#FF4B3E',v:3000}];
 const MODES=[{l:'Любой',min:0,cost:10},{l:'Редкий+',min:2,cost:40},{l:'Эпический+',min:3,cost:150}];
 const WORDS=['storm','night','wolf9','cyber','pixel','ghost','nova7','lunar','ember','frost','raven','blaze','orbit','pulse','zenith','vortex','shadow','dragon','falcon','comet','atlas','magic','royal','alpha','omega','delta','sigma','ninja','panda','tiger','cobalt','cipher','quartz','rocket','silent','golden','crystal','phoenix','nexus','vector','matrix','legend','hunter','pirate','wizard','spirit','shiver','velvet','copper','jungle'].filter(w=>/^[a-z]{5,}$/.test(w));
 const L='abcdefghijklmnopqrstuvwxyz',V='aeiouy',K='bcdfghjklmnprstvwxz',POOL=L+'0123456789_';
@@ -11,24 +11,27 @@ const rev=s=>[...s].reverse().join('');
 
 function gen(){
   const r=Math.random(),n=P([5,6,6,7,7,7,8,8,8,8]);let s;
-  if(r<.38)s=rnd(n);
+  if(r<.0005){const a=P(L),b=P(L.replace(a,''));s=R(2)?a.repeat(5):a+b+a+b+a}
+  else if(r<.38)s=rnd(n);
   else if(r<.66)s=syl(n);
   else if(r<.78)s=P(WORDS);
   else if(r<.86){const h=syl(3+R(2));s=h+(R(2)?P(L):'')+rev(h)}
-  else if(r<.92)s=rnd(2+R(2)).repeat(3).slice(0,5+R(3));
+  else if(r<.92)s=rnd(2+R(2)).repeat(4).slice(0,6+R(2));
   else if(r<.95){const a=R(17);s=L.slice(a,a+5+R(3))}
-  else if(r<.97)s=P(L).repeat(5+R(3));
+  else if(r<.97)s=P(L).repeat(6+R(2));
   else s=P(WORDS)+P(['_x','_','7','77','1337','_'+R(10)]);
-  if(r<.66&&R(5)===0){const k=1+R(3);s=s.slice(0,-k)+String(R(10**k)).padStart(k,'0')}
+  if(r>=.0005&&r<.66&&R(5)===0){const k=1+R(3);s=s.slice(0,-k)+String(R(10**k)).padStart(k,'0')}
   return s;
 }
-const tierOf=p=>p<45?0:p<65?1:p<90?2:p<115?3:4;
+const tierOf=p=>p<45?0:p<65?1:p<90?2:p<115?3:p<150?4:5;
 function score(s){
   let p=0;const t=[],len=s.length,core=s.replace(/[\d_]/g,''),d=new Set(s).size;
   p+={5:40,6:28,7:18,8:10}[len]??4;if(len<=6)t.push(len+' символов');
   if(!/\d/.test(s))p+=8;if(!s.includes('_'))p+=4;
   if(WORDS.includes(core)){p+=20;t.push('настоящее слово')}
   if(len>=5&&s===rev(s)){p+=30;t.push('палиндром')}
+  if(len===5&&d===1){p+=30;t.push('пять одинаковых')}
+  if(len===5&&d===2&&s===rev(s)){p+=25;t.push('двухбуквенный палиндром')}
   if(d<=2){p+=45;t.push('почти один символ')}else if(d===3){p+=25;t.push('всего 3 разных символа')}
   if(/^(.{1,3})\1+.?$/.test(s)&&d>2){p+=30;t.push('повтор')}
   let run=1,mx=1;for(let i=1;i<len;i++){run=s.charCodeAt(i)===s.charCodeAt(i-1)+1?run+1:1;mx=Math.max(mx,run)}
@@ -38,10 +41,11 @@ function score(s){
   return{t:tierOf(p),tags:t,p};
 }
 
-const SAMPLE=(()=>{const a=[];for(let i=0;i<30000;i++)a.push(score(gen()).p);return a.sort((x,y)=>x-y)})();
+const SAMPLE=(()=>{const a=[];for(let i=0;i<60000;i++)a.push(score(gen()).p);return a.sort((x,y)=>x-y)})();
 const above=p=>{let lo=0,hi=SAMPLE.length;while(lo<hi){const m=(lo+hi)>>1;if(SAMPLE[m]<p)lo=m+1;else hi=m}return SAMPLE.length-lo};
-const oneIn=p=>Math.max(2,Math.round(SAMPLE.length/Math.max(1,above(p))));
+const oneIn=p=>p>=150?2000:Math.max(2,Math.round(SAMPLE.length/Math.max(1,above(p))));
 const TIERP=T.map((_,t)=>SAMPLE.filter(p=>tierOf(p)===t).length/SAMPLE.length);
+TIERP[5]=Math.max(TIERP[5],.0004);
 const def={coins:100,spins:0,best:0,day:'',items:[]};
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 const save=()=>{try{localStorage.setItem('nameroulette',JSON.stringify(S))}catch(e){}};
@@ -72,7 +76,7 @@ async function spin(){
   let best=null;
   for(let i=0;i<3000;i++){const s=gen(),r=score(s);if(!best||r.t>best.t)best={name:s,...r};if(r.t>=m.min)break}
   cur={...best,kept:false};S.best=Math.max(S.best,cur.t);save();
-  $('#stage').classList.remove('hit','shake');$('#res').hidden=true;$('#idle').hidden=false;$('#idle').textContent='Крутится…';
+  $('#stage').classList.remove('hit','shake','mythic');$('#res').hidden=true;$('#idle').hidden=false;$('#idle').textContent='Крутится…';
   render();
   const wait=build(cur.name,true);
   await new Promise(r=>setTimeout(r,wait));
@@ -80,7 +84,7 @@ async function spin(){
 }
 function reveal(){
   const t=T[cur.t];document.documentElement.style.setProperty('--tc',t.c);
-  $('#stage').classList.add('hit');$('#stage').classList.toggle('shake',cur.t>=3);$('#idle').hidden=true;$('#res').hidden=false;
+  $('#stage').classList.add('hit');$('#stage').classList.toggle('shake',cur.t>=3);$('#stage').classList.toggle('mythic',cur.t===5);$('#idle').hidden=true;$('#res').hidden=false;
   $('#tier').textContent=t.n;
   $('#tags').innerHTML=`<span class="tag odd">Круче или равен: 1 из ${oneIn(cur.p)}</span>`+cur.tags.map(x=>`<span class="tag">${x}</span>`).join('');
   $('#sell').textContent=`Продать за ${t.v} 🪙`;
@@ -91,7 +95,7 @@ function reveal(){
 const fx=$('#fx'),cx=fx.getContext('2d');let ps=[],raf=0;
 function boom(col,tr=3){
   if(reduce)return;const w=fx.width=innerWidth,h=fx.height=innerHeight;
-  ps=Array.from({length:tr===4?160:100},()=>({x:w/2,y:h*.3,vx:(Math.random()-.5)*15,vy:-Math.random()*13-3,r:3+Math.random()*4,c:Math.random()<.6?col:'#fff',a:1}));
+  ps=Array.from({length:tr>=5?300:tr===4?160:100},()=>({x:w/2,y:h*.3,vx:(Math.random()-.5)*15,vy:-Math.random()*13-3,r:3+Math.random()*4,c:Math.random()<.6?col:'#fff',a:1}));
   if(!raf)tick();
 }
 function tick(){
@@ -167,8 +171,8 @@ function renderUp(){
   el.innerHTML=h;
   if(up.res){
     const fresh=up.fresh,st=$('#upstage'),r=up.res,wait=build(r.name,fresh,$('#upreel'));up.fresh=false;
-    if(fresh)setTimeout(()=>{st.classList.add('hit');st.classList.toggle('shake',r.t>=3);hap('n','success');if(r.t>=3)boom(T[r.t].c,r.t)},wait);
-    else st.classList.add('hit');
+    if(fresh)setTimeout(()=>{st.classList.add('hit');st.classList.toggle('shake',r.t>=3);st.classList.toggle('mythic',r.t===5);hap('n','success');if(r.t>=3)boom(T[r.t].c,r.t)},wait);
+    else{st.classList.add('hit');st.classList.toggle('mythic',r.t===5)}
   }
 }
 async function doUp(){
