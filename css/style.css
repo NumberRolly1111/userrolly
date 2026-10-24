@@ -53,10 +53,10 @@ h1{font:800 17px var(--head);letter-spacing:-.02em}
 .btn:active:not(:disabled){transform:translate(3px,3px);box-shadow:0 0 0 var(--sh)}
 .btn.main{background:var(--tc);border-color:var(--tc);color:var(--dark)}
 
-.odds{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:0 0 14px}
+.odds{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:0 0 14px}
 .od{background:var(--paper);border:2px solid var(--line);border-top:6px solid var(--tc);border-radius:10px;padding:5px 2px 6px;text-align:center}
 .od b{display:block;font:800 13px var(--head)}
-.od small{display:block;font-size:10px;color:var(--mute);line-height:1.2;overflow:hidden;text-overflow:ellipsis}
+.od small{display:block;font-size:9px;color:var(--mute);line-height:1.2;overflow:hidden;text-overflow:ellipsis}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--paper);border:var(--bw) solid var(--line);border-radius:18px;padding:5px;margin:20px 0 14px;box-shadow:4px 4px 0 var(--sh)}
 .seg button{padding:9px 4px;border-radius:12px;font-size:13px;font-weight:700;transition:background .2s,color .2s}
 .seg small{display:block;font-size:11px;font-weight:500;opacity:.75}
@@ -85,10 +85,10 @@ h1{font:800 17px var(--head);letter-spacing:-.02em}
 .pick span{font-weight:700;font-size:13px;flex:none}
 .pick:has(input:checked){background:var(--tc);color:var(--dark);box-shadow:0 0 0 var(--sh);transform:translate(3px,3px)}
 .pick:has(input:checked) small{background:var(--dark);color:var(--tc)}
-.targets{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px}
+.targets{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px}
 .tg{background:var(--paper);border:var(--bw) solid var(--line);border-top:7px solid var(--tc);border-radius:12px;padding:7px 2px;text-align:center;box-shadow:3px 3px 0 var(--sh);transition:transform .08s,background .2s}
 .tg b{display:block;font:800 14px var(--head)}
-.tg small{display:block;font-size:10px;color:var(--mute)}
+.tg small{display:block;font-size:9px;color:var(--mute)}
 .tg.on{background:var(--tc);color:var(--dark);box-shadow:0 0 0 var(--sh);transform:translate(3px,3px)}
 .tg.on small{color:var(--dark)}
 .meter{position:relative;height:24px;background:var(--paper);border:var(--bw) solid var(--line);border-radius:999px;overflow:hidden;margin:4px 0 10px}
@@ -120,3 +120,8 @@ nav [aria-selected=true]{background:var(--fg);color:var(--dark);border-color:var
 .rc.w{background:var(--tc);border-color:var(--tc);color:var(--dark)}
 .rc.on{outline:3px solid #fff;outline-offset:2px;animation:land .5s}
 .upres .stage{margin-top:14px}
+
+/* Мифический */
+.stage.mythic.hit{box-shadow:8px 8px 0 var(--tc),0 0 56px rgba(255,75,62,.6)}
+.stage.mythic .badge{background:linear-gradient(90deg,#FF4B3E,#FFC933,#27D9BD,#9B7BFF,#FF5FA2,#FF4B3E);background-size:300% 100%;animation:badge .55s .1s both cubic-bezier(.3,1.6,.5,1),rbow 3s linear infinite}
+@keyframes rbow{to{background-position:300% 0}}
