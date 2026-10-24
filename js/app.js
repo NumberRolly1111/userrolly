@@ -1,18 +1,45 @@
 const $=s=>document.querySelector(s),tg=window.Telegram&&Telegram.WebApp;
 if(tg){tg.ready();tg.expand();try{tg.setHeaderColor('#0D0B1A');tg.setBackgroundColor('#0D0B1A')}catch(e){}}
 const hap=(k,v)=>{try{tg&&tg.HapticFeedback&&(k==='n'?tg.HapticFeedback.notificationOccurred(v):tg.HapticFeedback.impactOccurred(v))}catch(e){}};
-const T=[{n:'Обычный',c:'#9AA5DB',v:3},{n:'Необычный',c:'#27D9BD',v:12},{n:'Редкий',c:'#9B7BFF',v:45},{n:'Эпический',c:'#FF5FA2',v:160},{n:'Легендарный',c:'#FFC933',v:700},{n:'Мифический',c:'#FF4B3E',v:3000}];
+const T=[{n:'Обычный',c:'#9AA5DB',v:3},{n:'Необычный',c:'#27D9BD',v:12},{n:'Редкий',c:'#9B7BFF',v:45},{n:'Эпический',c:'#FF5FA2',v:160},{n:'Легендарный',c:'#FFC933',v:700},{n:'Мифический',c:'#FF4B3E',v:3000},{n:'Секретный',c:'#EAF1FF',v:10000}]
+T.forEach((t,i)=>t.s=['Обычн.','Необыч.','Редкий','Эпик','Легенд.','Миф.','Секрет'][i]);;
 const MODES=[{l:'Любой',min:0,cost:10},{l:'Редкий+',min:2,cost:40},{l:'Эпический+',min:3,cost:150}];
 const WORDS=['storm','night','wolf9','cyber','pixel','ghost','nova7','lunar','ember','frost','raven','blaze','orbit','pulse','zenith','vortex','shadow','dragon','falcon','comet','atlas','magic','royal','alpha','omega','delta','sigma','ninja','panda','tiger','cobalt','cipher','quartz','rocket','silent','golden','crystal','phoenix','nexus','vector','matrix','legend','hunter','pirate','wizard','spirit','shiver','velvet','copper','jungle'].filter(w=>/^[a-z]{5,}$/.test(w));
-const L='abcdefghijklmnopqrstuvwxyz',V='aeiouy',K='bcdfghjklmnprstvwxz',POOL=L+'0123456789_';
+const L='abcdefghijklmnopqrstuvwxyz',V='aeiouy',K='bcdfghjklmnprstvwxz',POOL=L+'0123456789_#$%@';
 const R=n=>Math.floor(Math.random()*n),P=a=>a[R(a.length)];
 const rnd=n=>Array.from({length:n},()=>P(L)).join(''),syl=n=>Array.from({length:n},(_,i)=>P(i%2?V:K)).join('');
 const rev=s=>[...s].reverse().join('');
 
+const SECRETS=[...new Set(['1','0','7','13','11','00','22','69','42','111','222','333','666','777','888','999','000','420','404','007','123','1337','lol','wow','kek','zzz','www','ww','w','x','z','a','xx','xxx','aaa','abc','qwe','omg','wtf','gg','xd','ok','hi','yo','no','meh','oof','_','#','##','$','%','@','?','!','*','~'])];
+const ADJ=['dark','night','silent','red','blue','cold','wild','swift','lazy','crazy','happy','lucky','toxic','epic','mega','ultra','neo','pixel','cyber','royal'];
+const NOUN=['wolf','fox','cat','bear','tiger','panda','ghost','king','queen','ninja','pilot','mage','hero','dragon','falcon','raven','shark','cobra','rider','hunter'];
+const AFFIX=['pro','dev','real','official','the','its','mr','im'];
+const KEYS=['qwerty','asdfgh','zxcvbn','qazwsx','qweasd','asdfg','zxcvb','qwert','poiuy','wasd1'];
+const LEET={a:'4',e:'3',o:'0',i:'1',s:'5',t:'7'},UNLEET={4:'a',3:'e',0:'o',1:'i',5:'s',7:'t'};
+const leet=w=>[...w].map((c,i)=>i&&LEET[c]&&R(2)?LEET[c]:c).join('');
+function genNew(){
+  const k=R(11),w=P(WORDS),a=P(ADJ),nn=P(NOUN);
+  switch(k){
+    case 0:return a+nn;
+    case 1:return a+'_'+nn;
+    case 2:return leet(a+nn);
+    case 3:return leet(w);
+    case 4:return nn+(2000+R(26));
+    case 5:return P(AFFIX)+'_'+nn;
+    case 6:return nn+'_'+P(AFFIX);
+    case 7:return P(KEYS);
+    case 8:return syl(2).repeat(3);
+    case 9:return 'xx'+nn+'xx';
+    default:return a+nn+R(100);
+  }
+}
 function gen(){
+  const q=Math.random();
+  if(q<.00015)return P(SECRETS);
+  if(q<.00065){const a=P(L),b=P(L.replace(a,''));return R(2)?a.repeat(5):a+b+a+b+a}
+  if(q<.4)return genNew();
   const r=Math.random(),n=P([5,6,6,7,7,7,8,8,8,8]);let s;
-  if(r<.0005){const a=P(L),b=P(L.replace(a,''));s=R(2)?a.repeat(5):a+b+a+b+a}
-  else if(r<.38)s=rnd(n);
+  if(r<.38)s=rnd(n);
   else if(r<.66)s=syl(n);
   else if(r<.78)s=P(WORDS);
   else if(r<.86){const h=syl(3+R(2));s=h+(R(2)?P(L):'')+rev(h)}
@@ -20,15 +47,20 @@ function gen(){
   else if(r<.95){const a=R(17);s=L.slice(a,a+5+R(3))}
   else if(r<.97)s=P(L).repeat(6+R(2));
   else s=P(WORDS)+P(['_x','_','7','77','1337','_'+R(10)]);
-  if(r>=.0005&&r<.66&&R(5)===0){const k=1+R(3);s=s.slice(0,-k)+String(R(10**k)).padStart(k,'0')}
+  if(r<.66&&R(5)===0){const k=1+R(3);s=s.slice(0,-k)+String(R(10**k)).padStart(k,'0')}
   return s;
 }
-const tierOf=p=>p<45?0:p<65?1:p<90?2:p<115?3:p<150?4:5;
+const tierOf=p=>p<45?0:p<65?1:p<90?2:p<115?3:p<150?4:p<999?5:6;
 function score(s){
+  if(SECRETS.includes(s))return{t:6,tags:['секретный ник','короче 5 символов'],p:999};
   let p=0;const t=[],len=s.length,core=s.replace(/[\d_]/g,''),d=new Set(s).size;
   p+={5:40,6:28,7:18,8:10}[len]??4;if(len<=6)t.push(len+' символов');
   if(!/\d/.test(s))p+=8;if(!s.includes('_'))p+=4;
   if(WORDS.includes(core)){p+=20;t.push('настоящее слово')}
+  const plain=s.replace(/_/g,''),two=x=>ADJ.some(a=>x.startsWith(a)&&NOUN.includes(x.slice(a.length)));
+  if(two(plain.replace(/\d+$/,''))){p+=15;t.push('два слова')}
+  else if(/\d/.test(s)&&two([...plain].map(c=>UNLEET[c]||c).join(''))){p+=20;t.push('лит-спик')}
+  if(KEYS.includes(s)){p+=35;t.push('клавиатурный ряд')}
   if(len>=5&&s===rev(s)){p+=30;t.push('палиндром')}
   if(len===5&&d===1){p+=30;t.push('пять одинаковых')}
   if(len===5&&d===2&&s===rev(s)){p+=25;t.push('двухбуквенный палиндром')}
@@ -43,9 +75,9 @@ function score(s){
 
 const SAMPLE=(()=>{const a=[];for(let i=0;i<60000;i++)a.push(score(gen()).p);return a.sort((x,y)=>x-y)})();
 const above=p=>{let lo=0,hi=SAMPLE.length;while(lo<hi){const m=(lo+hi)>>1;if(SAMPLE[m]<p)lo=m+1;else hi=m}return SAMPLE.length-lo};
-const oneIn=p=>p>=150?2000:Math.max(2,Math.round(SAMPLE.length/Math.max(1,above(p))));
+const oneIn=p=>p>=999?6700:p>=150?2000:Math.max(2,Math.round(SAMPLE.length/Math.max(1,above(p))));
 const TIERP=T.map((_,t)=>SAMPLE.filter(p=>tierOf(p)===t).length/SAMPLE.length);
-TIERP[5]=Math.max(TIERP[5],.0004);
+TIERP[5]=Math.max(TIERP[5],.0004);TIERP[6]=.00015;
 const def={coins:100,spins:0,best:0,day:'',items:[]};
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 const save=()=>{try{localStorage.setItem('nameroulette',JSON.stringify(S))}catch(e){}};
@@ -76,7 +108,7 @@ async function spin(){
   let best=null;
   for(let i=0;i<3000;i++){const s=gen(),r=score(s);if(!best||r.t>best.t)best={name:s,...r};if(r.t>=m.min)break}
   cur={...best,kept:false};S.best=Math.max(S.best,cur.t);save();
-  $('#stage').classList.remove('hit','shake','mythic');$('#res').hidden=true;$('#idle').hidden=false;$('#idle').textContent='Крутится…';
+  $('#stage').classList.remove('hit','shake','mythic','secret');$('#res').hidden=true;$('#idle').hidden=false;$('#idle').textContent='Крутится…';
   render();
   const wait=build(cur.name,true);
   await new Promise(r=>setTimeout(r,wait));
@@ -84,7 +116,7 @@ async function spin(){
 }
 function reveal(){
   const t=T[cur.t];document.documentElement.style.setProperty('--tc',t.c);
-  $('#stage').classList.add('hit');$('#stage').classList.toggle('shake',cur.t>=3);$('#stage').classList.toggle('mythic',cur.t===5);$('#idle').hidden=true;$('#res').hidden=false;
+  $('#stage').classList.add('hit');$('#stage').classList.toggle('shake',cur.t>=3);$('#stage').classList.toggle('mythic',cur.t===5);$('#stage').classList.toggle('secret',cur.t===6);$('#idle').hidden=true;$('#res').hidden=false;
   $('#tier').textContent=t.n;
   $('#tags').innerHTML=`<span class="tag odd">Круче или равен: 1 из ${oneIn(cur.p)}</span>`+cur.tags.map(x=>`<span class="tag">${x}</span>`).join('');
   $('#sell').textContent=`Продать за ${t.v} 🪙`;
@@ -104,7 +136,7 @@ function tick(){
   ps=ps.filter(p=>p.a>0);raf=ps.length?requestAnimationFrame(tick):0;
 }
 
-const link=n=>`https://t.me/${n}`;
+const link=n=>`https://t.me/${encodeURIComponent(n)}`;
 const openTg=u=>tg&&tg.openTelegramLink?tg.openTelegramLink(u):window.open(u,'_blank');
 async function copy(n){try{await navigator.clipboard.writeText('@'+n);toast('Скопировано: @'+n)}catch(e){toast('Не удалось скопировать. Выдели ник вручную: @'+n)}}
 function share(n,t){const u=`https://t.me/share/url?url=${encodeURIComponent(link(n))}&text=${encodeURIComponent(`Мне выпал ник @${n} (${T[t].n}) в Нейм-рулетке`)}`;openTg(u)}
@@ -118,7 +150,7 @@ function render(){
   $('#seg').innerHTML=MODES.map((m,i)=>`<button aria-pressed="${i===mode}" data-m="${i}">${m.l}<small>${m.cost} 🪙</small></button>`).join('');
   const sp=$('#spin');sp.textContent=`Крутить · ${MODES[mode].cost} 🪙`;sp.disabled=busy;
   const pm=TIERP.map((p,i)=>i>=MODES[mode].min?p:0),sm=pm.reduce((a,b)=>a+b,0)||1;
-  $('#odds').innerHTML=T.map((t,i)=>{const v=pm[i]/sm*100;return `<span class="od" style="--tc:${t.c}"><b>${v?(v<1?v.toFixed(1):Math.round(v))+'%':'—'}</b><small>${t.n}</small></span>`}).join('');
+  $('#odds').innerHTML=T.map((t,i)=>{const v=pm[i]/sm*100;return `<span class="od" style="--tc:${t.c}"><b>${v?(v<1?v.toFixed(1):Math.round(v))+'%':'—'}</b><small>${t.s}</small></span>`}).join('');
   $('#keep').disabled=!cur||cur.kept;
   $('#st-spins').textContent=`Круток: ${S.spins}`;
   $('#st-best').innerHTML=`Лучший: <b class="chip" style="background:${T[S.best].c}">${S.spins?T[S.best].n:'—'}</b>`;
@@ -163,7 +195,7 @@ function renderUp(){
   if(!its.length&&!up.res&&!up.msg){el.innerHTML=h+`<div class="empty">Ставить пока нечего.<br>Забери ники в коллекцию.<br><button class="btn" data-go="game">К рулетке</button></div>`;return}
   h+=`<div class="stake">`+its.map(x=>`<label class="item pick" style="--tc:${T[x.t].c}"><input type="checkbox" data-sel="${x.id}"${up.sel.has(x.id)?' checked':''}><div><b>@${x.n}</b><small>${T[x.t].n}</small></div><span>${T[x.t].v} 🪙</span></label>`).join('')+`</div>`;
   h+=`<div class="targets">`+T.map((t,i)=>{const ok=s.its.length&&i>s.mx,c=ok?chanceFor(s.v,i):0;
-    return `<button class="tg${up.tg===i?' on':''}" style="--tc:${t.c}" data-tg="${i}"${ok&&c>=.01?'':' disabled'}><b>${ok?Math.round(c*100)+'%':'—'}</b><small>${t.n}</small></button>`}).join('')+`</div>`;
+    return `<button class="tg${up.tg===i?' on':''}" style="--tc:${t.c}" data-tg="${i}"${ok&&c>=.01?'':' disabled'}><b>${ok?Math.round(c*100)+'%':'—'}</b><small>${t.s}</small></button>`}).join('')+`</div>`;
   const ch=up.tg!==null?chanceFor(s.v,up.tg):0,col=up.tg!==null?T[up.tg].c:'#6A63B0';
   h+=`<div class="rl" id="rl" style="--tc:${col}"><i class="ptr"></i><div class="rl-track" id="rlt">${rlCells(ch)}</div></div>`;
   h+=`<p class="sum">${up.tg===null?'Выбери ставку и цель':`Ставка ${s.v} 🪙 · шанс ${Math.round(ch*100)}% · цель: ${T[up.tg].n}`}</p><button class="spin" id="do-up"${up.tg===null?' disabled':''}>Крутить апгрейд</button>`;
@@ -171,8 +203,8 @@ function renderUp(){
   el.innerHTML=h;
   if(up.res){
     const fresh=up.fresh,st=$('#upstage'),r=up.res,wait=build(r.name,fresh,$('#upreel'));up.fresh=false;
-    if(fresh)setTimeout(()=>{st.classList.add('hit');st.classList.toggle('shake',r.t>=3);st.classList.toggle('mythic',r.t===5);hap('n','success');if(r.t>=3)boom(T[r.t].c,r.t)},wait);
-    else{st.classList.add('hit');st.classList.toggle('mythic',r.t===5)}
+    if(fresh)setTimeout(()=>{st.classList.add('hit');st.classList.toggle('shake',r.t>=3);st.classList.toggle('mythic',r.t===5);st.classList.toggle('secret',r.t===6);hap('n','success');if(r.t>=3)boom(T[r.t].c,r.t)},wait);
+    else{st.classList.add('hit');st.classList.toggle('mythic',r.t===5);st.classList.toggle('secret',r.t===6)}
   }
 }
 async function doUp(){
@@ -193,7 +225,7 @@ async function doUp(){
   await new Promise(r=>setTimeout(r,reduce?0:700));
   S.items=S.items.filter(i=>!up.sel.has(i.id));
   if(won){
-    let b=null;for(let i=0;i<20000;i++){const n=gen(),r=score(n);if(!b||r.t>b.t)b={name:n,...r};if(r.t>=tgt)break}
+    let b=null;if(tgt===6){const n=P(SECRETS);b={name:n,...score(n)}}else for(let i=0;i<20000;i++){const n=gen(),r=score(n);if(!b||r.t>b.t)b={name:n,...r};if(r.t>=tgt)break}
     S.items.unshift({id:Date.now()+''+R(1000),n:b.name,t:b.t,p:b.p});
     up.res={name:b.name,t:b.t,p:b.p};up.fresh=true;
     up.msg=`<div class="win" style="--tc:${T[b.t].c}"><b>Успех!</b> Шанс был ${Math.round(ch*100)}%, ник уже в коллекции.</div>`;
