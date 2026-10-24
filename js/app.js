@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s),tg=window.Telegram&&Telegram.WebApp;
-if(tg){tg.ready();tg.expand();try{tg.setHeaderColor('#EEF1FF');tg.setBackgroundColor('#EEF1FF')}catch(e){}}
+if(tg){tg.ready();tg.expand();try{tg.setHeaderColor('#0D0B1A');tg.setBackgroundColor('#0D0B1A')}catch(e){}}
 const hap=(k,v)=>{try{tg&&tg.HapticFeedback&&(k==='n'?tg.HapticFeedback.notificationOccurred(v):tg.HapticFeedback.impactOccurred(v))}catch(e){}};
 const T=[{n:'Обычный',c:'#9AA5DB',v:3},{n:'Необычный',c:'#27D9BD',v:12},{n:'Редкий',c:'#9B7BFF',v:45},{n:'Эпический',c:'#FF5FA2',v:160},{n:'Легендарный',c:'#FFC933',v:700}];
 const MODES=[{l:'Любой',min:0,cost:10},{l:'Редкий+',min:2,cost:40},{l:'Эпический+',min:3,cost:150}];
@@ -50,16 +50,16 @@ const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
 function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),2600)}
 
 function build(name,animate){
-  const reel=$('#reel');reel.innerHTML='';
-  reel.style.fontSize=Math.min(44,Math.floor((reel.parentElement.clientWidth-40)/((name.length+.7)*.95)))+'px';
+  const reel=$('#reel');reel.innerHTML='';reel.classList.toggle('idle',!animate&&name.includes('?'));
+  reel.style.fontSize=Math.max(14,Math.min(46,Math.floor((reel.parentElement.clientWidth-24-(name.length+1)*6)/(name.length*.94+.6))))+'px';
   const at=document.createElement('div');at.className='at';at.textContent='@';reel.append(at);
   [...name].forEach((ch,i)=>{
-    const c=document.createElement('div'),st=document.createElement('div');c.className='cell';st.className='strip';
+    const c=document.createElement('div'),st=document.createElement('div');c.className='cell';st.className='strip'+(animate?' go':'');c.style.setProperty('--i',i);
     const n=animate?12+i*3:0,chars=Array.from({length:n},()=>P(POOL));chars.push(ch);
     st.innerHTML=chars.map(x=>`<span>${x}</span>`).join('');c.append(st);reel.append(c);
     if(n){const d=reduce?1:1000+i*260;st.style.transitionDuration=d+'ms';
-      requestAnimationFrame(()=>requestAnimationFrame(()=>st.style.transform=`translateY(${-n*1.3}em)`));
-      if(!reduce)setTimeout(()=>hap('i','light'),d)}
+      requestAnimationFrame(()=>requestAnimationFrame(()=>st.style.transform=`translateY(${-n*1.5}em)`));
+      setTimeout(()=>{st.classList.remove('go');c.classList.add('land');if(!reduce)hap('i','light')},d)}
   });
   return reduce?60:1000+(name.length-1)*260+150;
 }
@@ -72,7 +72,7 @@ async function spin(){
   let best=null;
   for(let i=0;i<3000;i++){const s=gen(),r=score(s);if(!best||r.t>best.t)best={name:s,...r};if(r.t>=m.min)break}
   cur={...best,kept:false};S.best=Math.max(S.best,cur.t);save();
-  $('#stage').classList.remove('hit');$('#res').hidden=true;$('#idle').hidden=false;$('#idle').textContent='Крутится…';
+  $('#stage').classList.remove('hit','shake');$('#res').hidden=true;$('#idle').hidden=false;$('#idle').textContent='Крутится…';
   render();
   const wait=build(cur.name,true);
   await new Promise(r=>setTimeout(r,wait));
@@ -80,7 +80,7 @@ async function spin(){
 }
 function reveal(){
   const t=T[cur.t];document.documentElement.style.setProperty('--tc',t.c);
-  $('#stage').classList.add('hit');$('#idle').hidden=true;$('#res').hidden=false;
+  $('#stage').classList.add('hit');$('#stage').classList.toggle('shake',cur.t>=3);$('#idle').hidden=true;$('#res').hidden=false;
   $('#tier').textContent=t.n;
   $('#tags').innerHTML=`<span class="tag odd">Круче или равен: 1 из ${oneIn(cur.p)}</span>`+cur.tags.map(x=>`<span class="tag">${x}</span>`).join('');
   $('#sell').textContent=`Продать за ${t.v} 🪙`;
@@ -91,7 +91,7 @@ function reveal(){
 const fx=$('#fx'),cx=fx.getContext('2d');let ps=[],raf=0;
 function boom(col,tr=3){
   if(reduce)return;const w=fx.width=innerWidth,h=fx.height=innerHeight;
-  ps=Array.from({length:tr===4?160:100},()=>({x:w/2,y:h*.3,vx:(Math.random()-.5)*15,vy:-Math.random()*13-3,r:3+Math.random()*4,c:Math.random()<.6?col:'#12101F',a:1}));
+  ps=Array.from({length:tr===4?160:100},()=>({x:w/2,y:h*.3,vx:(Math.random()-.5)*15,vy:-Math.random()*13-3,r:3+Math.random()*4,c:Math.random()<.6?col:'#fff',a:1}));
   if(!raf)tick();
 }
 function tick(){
@@ -109,7 +109,7 @@ function sellCur(){if(!cur||cur.kept)return;S.coins+=T[cur.t].v;toast(`Прод�
 
 function render(){
   setTimeout(()=>{if(typeof renderUp==='function')renderUp()},0);
-  $('#coins').textContent=S.coins+' 🪙';
+  {const cc=$('#coins'),v=S.coins+' 🪙';if(cc.textContent!==v){cc.textContent=v;cc.classList.remove('pop');void cc.offsetWidth;cc.classList.add('pop')}}
   const today=new Date().toDateString();$('#bonus').hidden=S.day===today;
   $('#seg').innerHTML=MODES.map((m,i)=>`<button aria-pressed="${i===mode}" data-m="${i}">${m.l}<small>${m.cost} 🪙</small></button>`).join('');
   const sp=$('#spin');sp.textContent=`Крутить · ${MODES[mode].cost} 🪙`;sp.disabled=busy;
