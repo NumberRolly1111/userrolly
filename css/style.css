@@ -106,3 +106,17 @@ nav [aria-selected=true]{background:var(--fg);color:var(--dark);border-color:var
 #fx{position:fixed;inset:0;pointer-events:none;z-index:9}
 [hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){*,*::before{animation:none!important;transition-duration:.01ms!important}}
+
+/* Рулетка апгрейда */
+.rl{position:relative;height:88px;margin:6px 0 12px;background:var(--paper);border:var(--bw) solid var(--line);border-radius:18px;overflow:hidden;box-shadow:4px 4px 0 var(--sh)}
+.rl::before,.rl::after{content:"";position:absolute;top:0;bottom:0;width:56px;z-index:2;pointer-events:none}
+.rl::before{left:0;background:linear-gradient(90deg,var(--paper),transparent)}
+.rl::after{right:0;background:linear-gradient(270deg,var(--paper),transparent)}
+.ptr{position:absolute;left:50%;top:0;bottom:0;width:4px;margin-left:-2px;background:#fff;z-index:3;box-shadow:0 0 14px #fff}
+.ptr::before{content:"";position:absolute;top:0;left:-8px;border:10px solid transparent;border-top-color:#fff;border-bottom:0}
+.rl-track{display:flex;gap:6px;height:100%;padding:10px 0;will-change:transform}
+.rc{flex:none;width:64px;display:grid;place-items:center;border-radius:12px;font:800 22px var(--head);border:2px solid var(--line)}
+.rc.l{background:var(--tile);color:#6A63B0}
+.rc.w{background:var(--tc);border-color:var(--tc);color:var(--dark)}
+.rc.on{outline:3px solid #fff;outline-offset:2px;animation:land .5s}
+.upres .stage{margin-top:14px}
