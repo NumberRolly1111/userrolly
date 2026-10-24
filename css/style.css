@@ -64,3 +64,31 @@ nav [aria-selected=true]{background:var(--ink);color:#fff}
 #fx{position:fixed;inset:0;pointer-events:none;z-index:9}
 [hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
+
+/* Шансы выпадения */
+.odds{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:0 0 14px}
+.od{background:var(--paper);border:2px solid var(--ink);border-top:6px solid var(--tc);border-radius:10px;padding:5px 2px 6px;text-align:center}
+.od b{display:block;font:800 13px var(--head)}
+.od small{display:block;font-size:10px;color:var(--mute);line-height:1.2;overflow:hidden;text-overflow:ellipsis}
+.tag.odd{background:var(--tc);font-weight:700}
+
+/* Апгрейд */
+.stake{max-height:34vh;overflow:auto;padding:2px 4px 6px 0;margin-bottom:12px}
+.pick{cursor:pointer}
+.pick input{width:20px;height:20px;accent-color:var(--ink);flex:none}
+.pick span{font-weight:700;font-size:13px;flex:none}
+.pick:has(input:checked){background:var(--tc);box-shadow:0 0 0 var(--ink);transform:translate(3px,3px)}
+.targets{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px}
+.tg{background:var(--paper);border:var(--bw) solid var(--ink);border-top:7px solid var(--tc);border-radius:12px;padding:7px 2px;text-align:center;box-shadow:3px 3px 0 var(--ink)}
+.tg b{display:block;font:800 14px var(--head)}
+.tg small{display:block;font-size:10px;color:var(--mute)}
+.tg.on{background:var(--tc);box-shadow:0 0 0 var(--ink);transform:translate(3px,3px)}
+.tg.on small{color:var(--ink)}
+.meter{position:relative;height:24px;background:var(--paper);border:var(--bw) solid var(--ink);border-radius:999px;overflow:hidden;margin:4px 0 10px}
+.zone{position:absolute;left:0;top:0;bottom:0;transition:width .3s}
+.mark{position:absolute;left:0;top:-2px;bottom:-2px;width:6px;margin-left:-3px;background:var(--ink);border-radius:3px}
+.upres{margin-top:16px}
+.win,.lose{border:var(--bw) solid var(--ink);border-radius:14px;padding:12px 14px;box-shadow:4px 4px 0 var(--ink);background:var(--paper)}
+.win{background:var(--tc)}
+nav{gap:8px}
+nav button{font-size:13px;padding:12px 4px}
