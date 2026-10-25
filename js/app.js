@@ -738,9 +738,9 @@ function pickPrize(s){
 const DR=82,DC=2*Math.PI*DR;
 function dialSvg(){
   let tk='';for(let i=0;i<60;i++)tk+=`<line x1="100" y1="36" x2="100" y2="${i%5?39:43}" transform="rotate(${i*6} 100 100)"/>`;
-  return `<svg viewBox="0 0 200 200" aria-hidden="true"><g id="dring" style="transform-origin:50% 50%;transform:rotate(${up.rot}deg)">
-    <circle class="dtr" cx="100" cy="100" r="${DR}"/><circle class="dwin" id="dwin" cx="100" cy="100" r="${DR}" transform="rotate(-90 100 100)" stroke-dasharray="0 ${DC}"/>
-    <g class="dtk">${tk}</g></g><path class="dptr" d="M91 0H109L100 17Z"/></svg>`;
+  // круг неподвижен: дуга успеха идёт от верха (0°) по часовой стрелке; вокруг него вращается стрелка
+  return `<svg viewBox="0 0 200 200" aria-hidden="true"><circle class="dtr" cx="100" cy="100" r="${DR}"/><circle class="dwin" id="dwin" cx="100" cy="100" r="${DR}" transform="rotate(-90 100 100)" stroke-dasharray="0 ${DC}"/>
+    <g class="dtk">${tk}</g><g id="dneedle" style="transform-origin:50% 50%;transform:rotate(${up.rot}deg)"><path class="dptr" d="M91 0H109L100 17Z"/><line class="dnl" x1="100" y1="17" x2="100" y2="26"/></g></svg>`;
 }
 let pctRaf=0;
 function tweenPct(to){
@@ -827,7 +827,7 @@ function renderSheet(){
 function renderUp(){
   if(up.busy)return;
   up.sel=new Set([...up.sel].filter(id=>S.items.some(i=>i.id===id)).slice(0,UPMAX));
-  const el=$('#tab-up');if(!el.querySelector('#dring'))el.innerHTML=upSkeleton();
+  const el=$('#tab-up');if(!el.querySelector('#dneedle'))el.innerHTML=upSkeleton();
   const s=stake();if(!s.its.length)up.prize=null;else if(!up.prize)pickPrize(s);
   fillUp();renderRes();renderSheet();
 }
@@ -839,9 +839,9 @@ async function doUp(){
   if(s.its.length>=UPMAX)S.five=1;
   S.coins-=fee;up.busy=true;xbusy=1;up.res=null;up.msg='';renderRes();
   document.querySelectorAll('#tab-up button,#tab-up input').forEach(e=>e.disabled=true);
-  const ring=$('#dring'),a360=ch*360,pad=Math.min(3,a360*.15,(360-a360)*.15),dur=reduce?60:5200;
+  const ring=$('#dneedle'),a360=ch*360,pad=Math.min(3,a360*.15,(360-a360)*.15),dur=reduce?60:5200;
   const a=won?pad+Math.random()*(a360-2*pad):a360+pad+Math.random()*(360-a360-2*pad);
-  const base=up.rot,tot=base+360*(reduce?1:6)+(((-a-base)%360)+360)%360;
+  const base=up.rot,tot=base+360*(reduce?1:6)+(((a-base)%360)+360)%360;   // стрелка по часовой доходит до угла a
   ring.style.transition=`transform ${dur}ms cubic-bezier(.1,.62,.08,1)`;void ring.getBoundingClientRect();ring.style.transform=`rotate(${tot}deg)`;
   if(!reduce){let last=-1,lt=0;const t0=performance.now();
     (function tk(){const m=new DOMMatrix(getComputedStyle(ring).transform),ang=((Math.atan2(m.b,m.a)*180/Math.PI)%360+360)%360,i=Math.floor(ang/6),now=performance.now();
