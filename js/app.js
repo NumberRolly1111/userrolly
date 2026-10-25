@@ -1122,10 +1122,11 @@ function dexSeed(){try{(S.items||[]).forEach(x=>dexAdd(x.n))}catch(e){}}
 function albumCard(){
   dexSeed();const n=dexCount(),tot=(dexMap(),DEXT),got=Array.isArray(S.dexg)?S.dexg:[];
   const nxt=DEXS.findIndex(x=>n<x[0]),ready=DEXS.map((x,i)=>n>=x[0]&&!got.includes(i)?i:-1).filter(i=>i>=0);
-  const fill=Math.min(100,DEXS.reduce((a,x,i)=>a+(n>=x[0]?1:(i===nxt?(n-(i?DEXS[i-1][0]:0))/(x[0]-(i?DEXS[i-1][0]:0)):0)),0)/DEXS.length*100);
-  return `<div class="pcard albm"><div class="alt"><span class="alic">📖</span><div><b class="alnum">${fmt(n)}<small> / ${fmt(tot)}</small></b><span class="alsub">ников каталога собрано</span></div></div>
-  <div class="altrack"><i style="width:${fill}%"></i><div class="alst">${DEXS.map((x,i)=>{const ok=n>=x[0],cl=got.includes(i);return `<div class="alm${ok?' ok':''}${cl?' cl':''}"><span class="alc">${ok?'✓':fmt(x[0])}</span><small>${short(x[1])} 🪙</small></div>`}).join('')}</div></div>
-  <div class="alft">${nxt>=0?`До ${fmt(DEXS[nxt][0])}: ещё ${fmt(DEXS[nxt][0]-n)}`:'Каталог собран полностью!'}</div>
+  const pc=n/tot*100,pt=pc>0&&pc<1?'<1':String(Math.round(pc));
+  return `<div class="pcard albm"><div class="alt"><span class="alic">📖</span><div class="alin"><b class="alnum">${fmt(n)}<small> / ${fmt(tot)}</small></b><span class="alsub">ников каталога собрано</span></div><span class="alpc">${pt}%</span></div>
+  <div class="albar"><i style="width:${Math.max(n?2:0,pc)}%"></i></div>
+  <div class="alft">${nxt>=0?`До награды ${fmt(DEXS[nxt][0])}: ещё ${fmt(DEXS[nxt][0]-n)}`:'Каталог собран полностью!'}</div>
+  <div class="algrid">${DEXS.map((x,i)=>{const ok=n>=x[0],cl=got.includes(i),w=Math.min(100,n/x[0]*100);return `<div class="alm${cl?' cl':ok?' ok':''}${i===nxt?' nx':''}"><b>${fmt(x[0])}</b><span class="alr">${short(x[1])} 🪙</span><div class="alb"><i style="width:${w}%"></i></div><em>${cl?'✓ получено':ok?'можно забрать':'ещё '+fmt(x[0]-n)}</em></div>`}).join('')}</div>
   ${ready.length?`<button class="btn main cwide" id="dex-claim">Забрать награды · +${fmt(ready.reduce((a,i)=>a+DEXS[i][1],0))} 🪙</button>`:''}</div>`}
 function dexClaim(){dexSeed();const n=dexCount();if(!Array.isArray(S.dexg))S.dexg=[];let sum=0;DEXS.forEach((x,i)=>{if(n>=x[0]&&!S.dexg.includes(i)){S.dexg.push(i);sum+=x[1]}});if(!sum)return;S.coins=Math.min(CAP,S.coins+sum);save();render();sfx('coins');toast('📖 Альбом: +'+fmt(sum)+' 🪙');renderProf()}
 function renderProf(){
