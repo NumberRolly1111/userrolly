@@ -173,3 +173,23 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .pz em{font-style:normal;font-size:12px;color:var(--tc)}
 .pp{text-align:right;flex:none}
 #prize .btn{width:100%;margin-bottom:12px}
+
+/* Плавность и новые элементы */
+#reels .stage{margin-bottom:12px}
+.rrow{animation:rise .4s both}
+.rrow .rmeta{max-height:0;opacity:0;overflow:hidden;transition:max-height .6s ease,opacity .5s}
+.rrow .rmeta.on{max-height:460px;opacity:1}
+.rrow .badge{margin-top:18px}
+.hint{text-align:center;margin:6px 0 4px}
+#seg{margin-bottom:10px}
+.seg.two{grid-template-columns:repeat(2,1fr);margin:0 0 14px}
+.tabin{animation:rise .35s both}
+.chead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:4px}
+.chead .sum{margin-bottom:12px}
+.cbtns{display:flex;gap:6px;flex:none}
+.btn.sm{padding:8px 14px;font-size:13px;flex:none}
+.item{transition:max-height .3s ease,opacity .25s,transform .3s,margin .3s,padding .3s,border-width .3s,background .2s}
+.item.out{max-height:0!important;opacity:0;transform:translateX(26px);margin-bottom:0;padding-top:0;padding-bottom:0;border-width:0}
+.selbar{position:fixed;left:0;right:0;bottom:calc(76px + env(safe-area-inset-bottom));margin:0 auto;width:min(448px,calc(100% - 32px));display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px 10px 16px;background:var(--paper);border:var(--bw) solid var(--line);border-radius:16px;box-shadow:4px 4px 0 var(--sh);font-weight:700;font-size:14px;opacity:0;transform:translateY(16px);pointer-events:none;transition:opacity .25s,transform .25s;z-index:5}
+.selbar.on{opacity:1;transform:none;pointer-events:auto}
+button,.pick,.tg{transition-property:transform,box-shadow,background,color,opacity;transition-duration:.15s}
