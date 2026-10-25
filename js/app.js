@@ -217,7 +217,7 @@ function score(s){
   return{t:tierOf(p),tags:t,p};
 }
 
-const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,upl:0,uph:[],refd:0,refc:0,casen:0,dcase:'',fast:0,theme:'',cf:'',work:[],lotp:null,lotn:0,cown:[],cn:'',ct:'',inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
+const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,upl:0,uph:[],refd:0,refc:0,casen:0,dcase:'',fast:0,theme:'',cf:'',work:[],lotp:null,lotn:0,dex:'',dexg:[],cown:[],cn:'',ct:'',inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 fixState();
 // Темы оформления: меняют цвета через переменные CSS (html[data-theme=…])
@@ -675,7 +675,7 @@ const openTg=u=>tg&&tg.openTelegramLink?tg.openTelegramLink(u):window.open(u,'_b
 async function copy(n){try{await navigator.clipboard.writeText('@'+n);toast('Скопировано: @'+n)}catch(e){toast('Не удалось скопировать. Выдели ник вручную: @'+n)}}
 const ask=(msg,ok)=>{try{if(tg&&tg.showConfirm&&tg.isVersionAtLeast&&tg.isVersionAtLeast('6.2')){tg.showConfirm(msg,y=>y&&ok());return}}catch(e){}if(confirm(msg))ok()};
 function noteBest(v,n){if(v>S.bestv){S.bestv=v;S.bestn=String(n||'')}}
-function addItem(n,t,p){S.items.unshift({id:Date.now()+''+R(1000),n,t,p});S.saved++}
+function addItem(n,t,p){S.items.unshift({id:Date.now()+''+R(1000),n,t,p});S.saved++;try{dexAdd(n)}catch(e){}}
 // забрать ники в коллекцию; если места нет, продать
 function stashAll(list){
   let k=0,s=0,au=0;list.forEach(c=>{
@@ -1110,6 +1110,24 @@ function cosSheet(){
     <h3 class="chd">Рамки аватарки</h3>${FRM.map(x=>row(x,3)).join('')}
     <h3 class="chd">Титулы</h3>${TTL.map(x=>row(x,2)).join('')}</div>`;
 }
+
+// ---------- Альбом: сколько ников каталога ты собрал ----------
+var DEXM=null,DEXT=0;
+var DEXS=[[100,150000],[500,600000],[1500,2000000],[3000,6000000],[6000,20000000],[8650,100000000]];
+function dexMap(){if(DEXM)return DEXM;DEXM={};let i=0;for(const a of CAT)for(const n of a)if(!(n in DEXM))DEXM[n]=i++;DEXT=i;return DEXM}
+function dexBits(){const m=dexMap(),L=Math.ceil(DEXT/4);let d=typeof S.dex==='string'&&/^[0-9a-f]*$/.test(S.dex)?S.dex:'';if(d.length<L)d=d+'0'.repeat(L-d.length);return d.slice(0,L)}
+function dexAdd(n){const m=dexMap(),i=m[n];if(i===undefined)return;const d=dexBits(),k=i>>2,v=parseInt(d[k],16);if(v&(1<<(i&3)))return;S.dex=d.slice(0,k)+(v|(1<<(i&3))).toString(16)+d.slice(k+1)}
+function dexCount(){const d=dexBits();let c=0;for(const ch of d){let v=parseInt(ch,16);while(v){c+=v&1;v>>=1}}return c}
+function dexSeed(){try{(S.items||[]).forEach(x=>dexAdd(x.n))}catch(e){}}
+function albumCard(){
+  dexSeed();const n=dexCount(),tot=(dexMap(),DEXT),got=Array.isArray(S.dexg)?S.dexg:[];
+  const nxt=DEXS.findIndex(x=>n<x[0]),ready=DEXS.map((x,i)=>n>=x[0]&&!got.includes(i)?i:-1).filter(i=>i>=0);
+  const fill=Math.min(100,DEXS.reduce((a,x,i)=>a+(n>=x[0]?1:(i===nxt?(n-(i?DEXS[i-1][0]:0))/(x[0]-(i?DEXS[i-1][0]:0)):0)),0)/DEXS.length*100);
+  return `<div class="pcard albm"><div class="alt"><span class="alic">📖</span><div><b class="alnum">${fmt(n)}<small> / ${fmt(tot)}</small></b><span class="alsub">ников каталога собрано</span></div></div>
+  <div class="altrack"><i style="width:${fill}%"></i><div class="alst">${DEXS.map((x,i)=>{const ok=n>=x[0],cl=got.includes(i);return `<div class="alm${ok?' ok':''}${cl?' cl':''}"><span class="alc">${ok?'✓':fmt(x[0])}</span><small>${short(x[1])} 🪙</small></div>`}).join('')}</div></div>
+  <div class="alft">${nxt>=0?`До ${fmt(DEXS[nxt][0])}: ещё ${fmt(DEXS[nxt][0]-n)}`:'Каталог собран полностью!'}</div>
+  ${ready.length?`<button class="btn main cwide" id="dex-claim">Забрать награды · +${fmt(ready.reduce((a,i)=>a+DEXS[i][1],0))} 🪙</button>`:''}</div>`}
+function dexClaim(){dexSeed();const n=dexCount();if(!Array.isArray(S.dexg))S.dexg=[];let sum=0;DEXS.forEach((x,i)=>{if(n>=x[0]&&!S.dexg.includes(i)){S.dexg.push(i);sum+=x[1]}});if(!sum)return;S.coins=Math.min(CAP,S.coins+sum);save();render();sfx('coins');toast('📖 Альбом: +'+fmt(sum)+' 🪙');renderProf()}
 function renderProf(){
   if(typeof refPoll==='function'&&!renderProf.t){renderProf.t=1;setTimeout(()=>{renderProf.t=0;refPoll()},0)}
   const u=tgUser(),name=u.first_name||'Игрок',need=xpNeed(S.lvl),pct=S.xp/need*100,rk=rankOf(S.lvl),nx=RANKS.find(x=>x[0]>S.lvl),nr=lvReward(S.lvl+1);
@@ -1124,6 +1142,7 @@ function renderProf(){
   <div class="path"><span class="pi">🧭</span><b>Путь игрока</b><small>${S.lvl+1} ур.: +${fmt(nr.c)} 🪙 и +${nr.e} ⚡</small></div>
   <div class="tri"><div><small>Капитал</small><b>${S.coins>=1e9?short(S.coins):fmtC(S.coins)} 🪙</b></div><div><small>Коллекция</small><b>${S.items.length} из ${S.slots}</b></div><div><small>Витрины</small><b>${doneV} из ${SHOW.length}</b></div></div></div>
   <div class="pcard sndrow"><div><b>Звуки</b><small>Эффекты рулетки, наград и колеса</small></div><button class="sw${S.snd?' on':''}" id="snd-tg" role="switch" aria-checked="${S.snd}" aria-label="Звуки"><i></i></button></div>
+  ${(()=>{try{return albumCard()}catch(e){return ''}})()}
   ${workPlate()}
   <div class="pcard"><h3>Тема оформления</h3><div class="themes">${THEMES.map(t=>`<button class="thm" data-theme="${t.id}" aria-pressed="${(S.theme||'')===t.id}" style="--tl:${t.a}"><i style="background:linear-gradient(135deg,${t.b} 55%,${t.a} 55%)"></i>${t.n}</button>`).join('')}</div></div>
   <div class="pcard inv invx"><div><b>Позвать друзей</b><small>За каждого друга: +${fmt(REF_C)} 🪙 и +${REF_E} ⚡ · приглашено ${S.refc} из ${REF_MAX}</small></div><div class="invb">${lb.refn>0?`<button class="btn main" id="ref-claim">Забрать +${fmt(lb.refn*REF_C)} 🪙</button>`:''}<button class="btn${lb.refn>0?'':' main'}" id="invite">Позвать</button></div></div>
@@ -1152,6 +1171,7 @@ $('#tab-prof').onclick=e=>{
   if(e.target.closest('#ach-open'))return tab('ach');
   if(e.target.closest('#top-open'))return tab('top');
   if(e.target.closest('#clan-open'))return tab('clan');
+  if(e.target.closest('#dex-claim'))return dexClaim();
   if(e.target.closest('#cos-open'))return cosSheet();
   {const th=e.target.closest('[data-theme]');if(th){S.theme=th.dataset.theme;applyTheme();save();renderProf();return}}
   if(e.target.closest('#snd-tg')){S.snd=!S.snd;save();renderProf();if(S.snd){sfx('ach')}return}
