@@ -173,7 +173,7 @@ function score(s){
   return{t:tierOf(p),tags:t,p};
 }
 
-const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
+const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 fixState();
 if(!S.uid){const id=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.id;S.uid=id?(id%999999)+1:R(999999)+1}
@@ -197,6 +197,7 @@ function fixState(){
   num('best',0);S.best=Math.min(6,Math.max(0,Math.floor(S.best)));
   if(S.econ===3){S.coins=Math.round(S.coins*30);S.bestv=Math.round((S.bestv||0)*30);S.maxCoins=Math.round((S.maxCoins||0)*30);S.econ=4}   // экономика ×30: переносим баланс игрока
   else if(S.econ!==4){S.coins=START;S.econ=4}
+  if(typeof S.bestn!=='string')S.bestn='';S.hide=S.hide?1:0;
   num('uid',0);num('en',EN_CAP);S.en=Math.max(0,Math.min(999,Math.floor(S.en)));num('enT',0);if(S.src!=='free'&&S.src!=='coin')S.src='free';S.snd=S.snd!==false;num('lvl',1);S.lvl=Math.max(1,Math.floor(S.lvl));num('xp',0);S.xp=Math.max(0,Math.floor(S.xp));
   S.show=Array.isArray(S.show)?[...new Set(S.show.filter(n=>n===0||n===1||n===2))]:[];
   S.cnt=Array.isArray(S.cnt)?Array.from({length:7},(_,i)=>Math.max(0,+S.cnt[i]||0)):[0,0,0,0,0,0,0];
@@ -234,8 +235,8 @@ function cloudLoad(){
 S.maxStreak=Math.max(S.maxStreak||0,S.login.n||0);
 
 // ---------- Бонусы: ядро (ежедневный вход, ежедневная рулетка, недельные задания) ----------
-// Награды за 14 дней входа подряд (после 14-го дня круг начинается заново)
-const LOGIN=[30000,45000,60000,90000,120000,150000,225000,300000,375000,450000,600000,750000,1050000,1500000];
+// Награды за 7 дней входа подряд (после 7-го дня круг начинается заново)
+const LOGIN=[30000,45000,60000,90000,120000,150000,225000];
 // Призы ежедневной рулетки; w = шанс в процентах (сумма 100). k:'c' монеты, k:'n' ник редкости t
 const WHEEL0=[{k:'c',v:150000,w:32},{k:'c',v:300000,w:22},{k:'c',v:600000,w:13},{k:'c',v:1000000,w:7},{k:'c',v:1500000,w:3.5},{k:'c',v:3000000,w:1},
   {k:'n',t:3,w:11},{k:'n',t:4,w:6},{k:'n',t:5,w:3.5},{k:'n',t:6,w:1}];
@@ -261,7 +262,7 @@ const dw=n=>n%10===1&&n%100!==11?'день':[2,3,4].includes(n%10)&&![12,13,14].
 let lastK=todayK()+weekK();
 function loginInfo(){
   const L=S.login,done=L.last===todayK(),alive=done||L.last===yestK(),n=alive?L.n:0;
-  return{done,alive,n,idx:done?(L.n-1)%14:n%14};   // idx: какую награду выдали сегодня / какая доступна
+  return{done,alive,n,idx:done?(L.n-1)%7:n%7};   // idx: какую награду выдали сегодня / какая доступна
 }
 function tickEn(){   // накопление энергии: +1 каждые 15 минут, пока меньше запаса
   const now=Date.now();
@@ -493,7 +494,7 @@ async function spin(){
   else if(S.coins<cost){toast('Не хватает монет. Продай ники в коллекции или загляни в бонусы.');return}
   flushPrev();sfx('whoosh');addXp(10*count);busy=true;if(free){if(S.en>=EN_CAP)S.enT=Date.now();S.en-=cost}else S.coins-=cost;S.spins+=count;if(count>1)S.tri++;addQuest('spins',count);
   cur=Array.from({length:count},()=>roll(m));
-  cur.forEach(c=>{S.cnt[c.t]++;S.best=Math.max(S.best,c.t);S.bestv=Math.max(S.bestv,val(c.t,c.p,c.name))});
+  cur.forEach(c=>{S.cnt[c.t]++;S.best=Math.max(S.best,c.t);noteBest(val(c.t,c.p,c.name),c.name)});
   S.pend=cur.map(({name,t,p})=>({name,t,p}));save();
   // одна общая анимация: крутится лучший ник из выпавших, остальные видны в переключателе после неё
   sel=cur.reduce((b,c,i)=>c.t>cur[b].t||(c.t===cur[b].t&&c.p>cur[b].p)?i:b,0);
@@ -545,6 +546,7 @@ function tick(){
 const openTg=u=>tg&&tg.openTelegramLink?tg.openTelegramLink(u):window.open(u,'_blank');
 async function copy(n){try{await navigator.clipboard.writeText('@'+n);toast('Скопировано: @'+n)}catch(e){toast('Не удалось скопировать. Выдели ник вручную: @'+n)}}
 const ask=(msg,ok)=>{try{if(tg&&tg.showConfirm&&tg.isVersionAtLeast&&tg.isVersionAtLeast('6.2')){tg.showConfirm(msg,y=>y&&ok());return}}catch(e){}if(confirm(msg))ok()};
+function noteBest(v,n){if(v>S.bestv){S.bestv=v;S.bestn=String(n||'')}}
 function addItem(n,t,p){S.items.unshift({id:Date.now()+''+R(1000),n,t,p});S.saved++}
 // забрать ники в коллекцию; если места нет, продать
 function stashAll(list){
@@ -785,7 +787,7 @@ async function doUp(){
   await new Promise(r=>setTimeout(r,reduce?0:700));
   S.items=S.items.filter(i=>!up.sel.has(i.id));S.ups++;addQuest('ups',1);addXp(won?85:25);
   if(won){
-    S.upw++;if(ch<=.1)S.luck=1;S.cnt[pr.t]++;S.bestv=Math.max(S.bestv,pr.price);addItem(pr.name,pr.t,pr.p);
+    S.upw++;if(ch<=.1)S.luck=1;S.cnt[pr.t]++;noteBest(pr.price,pr.name);addItem(pr.name,pr.t,pr.p);
     up.res={name:pr.name,t:pr.t,p:pr.p};up.fresh=true;
     up.msg=`<div class="win" style="--tc:${T[pr.t].c}"><b>Успех!</b> Шанс был ${Math.round(ch*100)}%, ник уже в коллекции.</div>`;
   }else{up.msg=`<div class="lose"><b>Не вышло.</b> Ставка сгорела, шанс был ${Math.round(ch*100)}%.</div>`;hap('n','error');sfx('lose')}
@@ -828,6 +830,7 @@ function renderProf(){
     <div class="pgrid"><div class="pt"><small>Круток</small><b>${fmt(S.spins)}</b></div><div class="pt"><small>Удачных апгрейдов</small><b>${fmt(S.upw)}</b></div>
     <div class="pt"><small>В игре за всё время</small><b id="tm-all">${fmtT(S.time)}</b></div><div class="pt"><small>В игре сегодня</small><b id="tm-day">${fmtT(todaySec())}</b></div></div>
     <div class="pgrid tiers">${T.map((t,i)=>`<div class="pt${i===6?' last':''}" style="--tc:${t.c}"><small>${TN[i]}</small><b>${fmt(S.cnt[i])}</b></div>`).join('')}</div></div>
+  <button class="pcard achbtn" id="top-open"><div><b>Рейтинг игроков</b><small>Топ по капиталу и самому дорогому нику</small></div><span class="trophy">🏆</span></button>
   <button class="pcard achbtn" id="ach-open"><div><b>Достижения</b><small>Открыто ${ACH.filter(achOk).length} из ${ACH.length}${achReady().length?` · наград к получению: ${achReady().length}`:''}</small></div><span class="mini" style="--p:${ACH.filter(achOk).length/ACH.length*100}"><i>${ACH.filter(achOk).length}</i></span></button>`;
 }
 setInterval(()=>{
@@ -839,10 +842,11 @@ setInterval(()=>{
   if(!$('#tab-bon').hidden)updTimers();
   const kk=todayK()+weekK();if(kk!==lastK){lastK=kk;ensureQuests();render()}
 },1000);
-document.addEventListener('visibilitychange',()=>{if(document.hidden){save();if(cloudDone)cloudPush()}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){save();lbPush();if(cloudDone)cloudPush()}});
 addEventListener('pagehide',()=>{save();if(cloudDone)cloudPush()});
 $('#tab-prof').onclick=e=>{
   if(e.target.closest('#ach-open'))return tab('ach');
+  if(e.target.closest('#top-open'))return tab('top');
   if(e.target.closest('#snd-tg')){S.snd=!S.snd;save();renderProf();if(S.snd){sfx('ach')}return}
   if(e.target.closest('#idcopy')){(async()=>{try{await navigator.clipboard.writeText(String(S.uid).padStart(6,'0'));toast('ID скопирован')}catch(x){toast('Не удалось скопировать ID')}})();return}
   if(e.target.id!=='invite')return;
@@ -870,7 +874,7 @@ $('#prof-btn').onclick=()=>tab($('#tab-prof').hidden?'prof':'game');
 
 function tab(n){
   document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===(n==='show'?'col':n)));
-  ['game','col','up','prof','bon','ach','show'].forEach(k=>{const e=$('#tab-'+k);
+  ['game','col','up','prof','bon','ach','show','top'].forEach(k=>{const e=$('#tab-'+k);
     if(k===n){if(e.hidden){e.hidden=false;e.classList.remove('tabin');void e.offsetWidth;e.classList.add('tabin');clearTimeout(e._ti);e._ti=setTimeout(()=>e.classList.remove('tabin'),900)}}else e.hidden=true});
   $('#prof-btn').setAttribute('aria-pressed',n==='prof');
   $('#bon-btn').setAttribute('aria-pressed',n==='bon');
@@ -881,9 +885,62 @@ function tab(n){
   if(n==='bon')renderBon();
   if(n==='ach')renderAch();
   if(n==='show')renderShow();
+  if(n==='top')openTop();
   scrollTo(0,0);
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+// ---------- Рейтинг игроков ----------
+// Рейтинг работает через маленький сервер (папка rating-worker). Пока адрес не указан, страница показывает подсказку.
+const API='';   // например: https://nr-rating.твой-аккаунт.workers.dev
+const escH=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const netWorth=()=>S.coins+S.items.reduce((s,x)=>s+val(x.t,x.p,x.n),0);   // капитал = монеты + стоимость коллекции
+const lb={by:'net',data:{},load:false,err:'',sent:'',last:0};
+function bestOwn(){   // лучший ник из коллекции, если имя ещё не записано
+  if(S.bestn||!S.items.length)return;
+  let b=null,bv=0;S.items.forEach(x=>{const v=val(x.t,x.p,x.n);if(v>bv){bv=v;b=x.n}});if(b&&bv>=S.bestv*.999){S.bestn=b}
+}
+async function lbReq(path,body){
+  const r=await fetch(API.replace(/\/$/,'')+path,{method:body?'POST':'GET',headers:{'X-Init-Data':tg&&tg.initData||'','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  if(!r.ok)throw new Error(r.status===429?'wait':'http '+r.status);return r.json();
+}
+async function lbPush(force){
+  if(!API||!tg||!tg.initData)return;bestOwn();
+  const u=tgUser(),b={name:(u.first_name||'Игрок').slice(0,24),net:Math.round(netWorth()),best:S.bestv,bestn:S.bestn||'',lvl:S.lvl,hide:S.hide},sig=JSON.stringify(b);
+  if(!force&&sig===lb.sent)return;if(Date.now()-lb.last<12000)return;
+  lb.last=Date.now();try{await lbReq('/sync',b);lb.sent=sig}catch(e){}
+}
+async function openTop(){
+  renderTop();if(!API||!tg||!tg.initData)return;
+  lb.load=true;lb.err='';renderTop();
+  try{await lbPush(true);lb.data[lb.by]=await lbReq('/top?by='+lb.by)}catch(e){lb.err=e.message==='wait'?'Подожди несколько секунд и попробуй снова':'Не удалось загрузить рейтинг'}
+  lb.load=false;if(!$('#tab-top').hidden)renderTop();
+}
+function renderTop(){
+  const d=lb.data[lb.by],net=lb.by==='net',medal=['🥇','🥈','🥉'];
+  const val2=x=>net?fmtC(x)+' 🪙':fmtC(x)+' 🪙';
+  let body;
+  if(!API)body='<div class="pcard lbmsg"><b>Рейтинг пока не подключён</b><small>Нужно развернуть сервер из папки rating-worker и вписать его адрес в app.js (константа API). Подробности в README.</small></div>';
+  else if(!tg||!tg.initData)body='<div class="pcard lbmsg"><b>Рейтинг доступен в Telegram</b><small>Открой игру через бота, чтобы видеть таблицу и попасть в неё.</small></div>';
+  else if(lb.load&&!d)body='<div class="pcard lbmsg"><small>Загружаю…</small></div>';
+  else if(lb.err&&!d)body=`<div class="pcard lbmsg"><b>${lb.err}</b><button class="btn main" id="top-retry">Повторить</button></div>`;
+  else if(d){
+    const me=d.me;
+    body=`<div class="pcard lbme"><small>Твоё место</small><b>${me&&me.rank?'#'+fmt(me.rank):'—'}</b><span>${val2(net?Math.round(netWorth()):S.bestv)}${!net&&S.bestn?` · ${escH(S.bestn)}`:''}</span></div>
+    <div class="lbl">`+(d.top.length?d.top.map((r,i)=>`<div class="lbr${r.me?' me':''}"><em>${medal[i]||i+1}</em><div class="lbn"><b>${escH(r.name)}</b><small>${net?`${r.lvl} ур.`:escH(r.bestn||'—')}</small></div><span>${val2(r.v)}</span></div>`).join(''):'<div class="pcard lbmsg"><small>Пока никого нет — стань первым!</small></div>')+'</div>';
+  }else body='';
+  setHtml($('#tab-top'),`<div class="ahead"><button class="btn sm" id="top-back">‹ Профиль</button><h2>Рейтинг</h2></div>
+  <div class="seg two"><button data-by="net" aria-pressed="${net}">Капитал</button><button data-by="best" aria-pressed="${!net}">Лучший ник</button></div>
+  ${body}
+  <div class="pcard sndrow"><div><b>Показывать меня</b><small>Если выключить, тебя не будет в таблице</small></div><button class="sw${S.hide?'':' on'}" id="top-hide" role="switch" aria-checked="${!S.hide}"></button></div>`);
+}
+$('#tab-top').onclick=e=>{
+  if(e.target.closest('#top-back'))return tab('prof');
+  if(e.target.closest('#top-retry'))return openTop();
+  const b=e.target.closest('[data-by]');if(b&&b.dataset.by!==lb.by){lb.by=b.dataset.by;return openTop()}
+  if(e.target.closest('#top-hide')){S.hide=S.hide?0:1;save();lb.sent='';lbPush(true).then(()=>{if(!$('#tab-top').hidden)openTop()});renderTop()}
+};
+setInterval(()=>{if(!document.hidden)lbPush()},60000);
+
 // ---------- Бонусы: вкладка ----------
 const bon={busy:false,res:null,ang:0,win:-1,fresh:false};
 // ---------- Колесо ежедневной рулетки ----------
@@ -919,7 +976,7 @@ function renderBon(){
   let h=`<h2>Бонусы</h2>`;
   h+=`<div class="pcard"><div class="bhead"><h3>Ежедневный вход</h3><span class="bsub">Серия: ${li.n} ${dw(li.n)}</span></div><div class="lgrid">`+
     LOGIN.map((r,i)=>{const st=(li.done?i<=li.idx:i<li.idx)?'done':(!li.done&&i===li.idx)?'now':'';
-      return `<div class="lcell ${st}${i===13?' big':''}"><small>День ${i+1}</small><b>${kfmt(r)}</b>${st==='done'?'<i>✓</i>':''}</div>`}).join('')+`</div>`+
+      return `<div class="lcell ${st}${i===6?' big':''}"><small>День ${i+1}</small><b>${kfmt(r)}</b>${st==='done'?'<i>✓</i>':''}</div>`}).join('')+`</div>`+
     (li.done?`<button class="btn" disabled>Получено · следующая через <span data-t="day"></span></button>`
       :`<button class="btn main" data-b="login">Забрать день ${li.idx+1}: ${fmt(LOGIN[li.idx])} 🪙</button>`)+
     (!li.done&&!li.alive&&S.login.n>0?`<p class="sum">Серия прервалась, награды идут с первого дня.</p>`:'')+`</div>`;
@@ -956,7 +1013,7 @@ async function doWheel(){
   let res;
   if(win.k==='c'){S.coins+=win.v;res={k:'c',v:win.v}}
   else{
-    S.cnt[pick.t]++;S.bestv=Math.max(S.bestv,pick.price);
+    S.cnt[pick.t]++;noteBest(pick.price,pick.name);
     if(S.items.length<MAX){addItem(pick.name,pick.t,pick.p);res={k:'n',name:pick.name,t:pick.t,p:pick.p,saved:true}}
     else{const v=val(pick.t,pick.p,pick.name);S.coins+=v;S.sold++;res={k:'n',name:pick.name,t:pick.t,p:pick.p,saved:false,v}}
   }
