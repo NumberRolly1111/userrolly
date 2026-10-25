@@ -14,7 +14,13 @@
 <body>
 <canvas id="fx"></canvas>
 <div class="app">
-  <header><h1>Нейм-рулетка</h1><div class="top"><button class="bonus" id="bonus" hidden>+50 🪙 бонус дня</button><div class="pill" id="coins"></div></div></header>
+  <header>
+    <div class="brand">
+      <button class="prof-btn" id="prof-btn" aria-label="Профиль" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></button>
+      <h1>Нейм-рулетка</h1>
+    </div>
+    <div class="top"><button class="bonus" id="bonus" hidden aria-label="Бонус дня">🎁 +1 000</button><div class="pill" id="coins"></div></div>
+  </header>
 
   <section id="tab-game">
     <div class="stage" id="stage">
@@ -24,7 +30,7 @@
         <div class="badge"><i></i><span id="tier"></span></div>
         <div class="tags" id="tags"></div>
         <div class="acts">
-          <button class="btn main" id="keep">Забрать в коллекцию</button>
+          <button class="btn main" id="keep">Сохранить</button>
           <button class="btn" id="sell"></button>
           <button class="btn" id="check">Проверить в Telegram</button>
           <button class="btn" id="copy">Копировать</button>
@@ -40,6 +46,7 @@
 
   <section id="tab-col" class="list" hidden></section>
   <section id="tab-up" class="list" hidden></section>
+  <section id="tab-prof" class="prof" hidden></section>
 </div>
 <nav role="tablist">
   <button role="tab" aria-selected="true" data-tab="game">Рулетка</button>
