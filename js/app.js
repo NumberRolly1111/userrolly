@@ -1015,7 +1015,7 @@ $('#tab-ach').onclick=e=>{if(e.target.closest('#ach-back'))return tab('prof');co
 $('#prof-btn').onclick=()=>tab($('#tab-prof').hidden?'prof':'game');
 
 // Страницы: index.html (игра), rating.html (рейтинг), achievements.html (достижения). Состояние общее — в localStorage и облаке Telegram.
-const PAGE=document.body.dataset.page||'main',PAGES={top:'rating.html',ach:'achievements.html'};
+const PAGE=document.body.dataset.page||'main',PAGES={top:'rating.html',ach:'achievements.html',clan:'clans.html'};
 function tab(n){
   const here=PAGE==='main'?['game','col','up','prof','bon','show']:[PAGE];
   if(here.includes(n))return tabIn(n);
@@ -1024,7 +1024,7 @@ function tab(n){
 }
 function tabIn(n){
   document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===(n==='show'?'col':n)));
-  ['game','col','up','prof','bon','ach','show','top'].forEach(k=>{const e=$('#tab-'+k);
+  ['game','col','up','prof','bon','ach','show','top','clan'].forEach(k=>{const e=$('#tab-'+k);
     if(k===n){if(e.hidden){e.hidden=false;e.classList.remove('tabin');void e.offsetWidth;e.classList.add('tabin');clearTimeout(e._ti);e._ti=setTimeout(()=>e.classList.remove('tabin'),900)}}else e.hidden=true});
   $('#prof-btn').setAttribute('aria-pressed',n==='prof');
   $('#bon-btn').setAttribute('aria-pressed',n==='bon');
@@ -1036,6 +1036,7 @@ function tabIn(n){
   if(n==='ach')renderAch();
   if(n==='show')renderShow();
   if(n==='top')openTop();
+  if(n==='clan')openClan();
   scrollTo(0,0);
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
@@ -1051,7 +1052,7 @@ function bestOwn(){   // лучший ник из коллекции, если �
 }
 async function lbReq(path,body){
   const r=await fetch(API.replace(/\/$/,'')+path,{method:body?'POST':'GET',headers:{'X-Init-Data':tg&&tg.initData||'','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
-  if(!r.ok)throw new Error(r.status===429?'wait':'http '+r.status);return r.json();
+  if(!r.ok){let code='';try{code=(await r.json()).error}catch(e){}throw new Error(r.status===429?'wait':(r.status===401||r.status>=500)?'http '+r.status:'e:'+code)}return r.json();
 }
 async function lbPush(force){
   if(!API||!tg||!tg.initData)return;bestOwn();
@@ -1079,17 +1080,133 @@ function renderTop(){
     <div class="lbl">`+(d.top.length?d.top.map((r,i)=>`<div class="lbr${r.me?' me':''}"><em>${medal[i]||i+1}</em><div class="lbn"><b>${escH(r.name)}</b><small>${net?`${r.lvl} ур.`:escH(r.bestn||'—')}</small></div><span>${val2(r.v)}</span></div>`).join(''):'<div class="pcard lbmsg"><small>Пока никого нет — стань первым!</small></div>')+'</div>';
   }else body='';
   setHtml($('#tab-top'),`<div class="ahead"><h2>Рейтинг</h2></div>
+  <button class="pcard achbtn" id="clan-open"><div><b>Кланы</b><small>Вступи в клан или создай свой</small></div><span class="trophy">🛡️</span></button>
   <div class="seg two"><button data-by="net" aria-pressed="${net}">Капитал</button><button data-by="best" aria-pressed="${!net}">Лучший ник</button></div>
   ${body}
   <div class="pcard sndrow"><div><b>Показывать меня</b><small>Если выключить, тебя не будет в таблице</small></div><button class="sw${S.hide?'':' on'}" id="top-hide" role="switch" aria-checked="${!S.hide}"></button></div>`);
 }
 $('#tab-top').onclick=e=>{
   if(e.target.closest('#top-back'))return tab('prof');
+  if(e.target.closest('#clan-open'))return tab('clan');
   if(e.target.closest('#top-retry'))return openTop();
   const b=e.target.closest('[data-by]');if(b&&b.dataset.by!==lb.by){lb.by=b.dataset.by;return openTop()}
   if(e.target.closest('#top-hide')){S.hide=S.hide?0:1;save();lb.sent='';lbPush(true).then(()=>{if(!$('#tab-top').hidden)openTop()});renderTop()}
 };
 setInterval(()=>{if(!document.hidden)lbPush()},60000);
+
+// ---------- Кланы ----------
+// Кланы живут на сервере рейтинга (rating-worker). Очки клана = сумма капиталов его игроков; уровень клана растёт с очками, а с ним и число мест.
+const CLAN_COST=3000000;   // цена создания клана (монет); сервер дополнительно проверяет, что капитал игрока не меньше
+const CE={sync:'Подожди пару секунд: профиль ещё не отправлен на сервер',inclan:'Ты уже в клане',nofunds:'Для создания клана не хватает капитала',exists:'Такой тег или название уже занято',full:'В клане нет мест',lvl:'Не хватает уровня',tag:'Тег: от 2 до 5 латинских букв или цифр',name:'Название: от 3 до 20 символов',notfound:'Клан или заявка не найдены',leader:'Это может только лидер',manyreq:'Не больше 5 заявок одновременно',self:'Себя выгнать нельзя',wait:'Подожди несколько секунд'};
+const cl={tab:'',q:'',list:null,my:0,me:null,load:false,err:'',sheet:'',form:null,armed:'',busy:false};
+const CICON=['🛡️','⭐','💎','🔥','👑','⚔️','🐉','🦅','🌙','⚡'];
+const chash=s=>[...s].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7);
+const cerr=e=>{const m=String(e&&e.message||e).replace(/^e:/,'');return CE[m]||(m==='http 401'?'Ошибка проверки Telegram':m==='http 500'?'Ошибка сервера':'Нет связи с сервером')};
+const joinWord=j=>j?'По заявке':'Открытый';
+async function openClan(){
+  renderClan();if(!API||!tg||!tg.initData)return;
+  cl.load=true;cl.err='';renderClan();
+  try{await lbPush(true);cl.me=await lbReq('/clan/me');if(!cl.tab)cl.tab=cl.me.clan?'my':'list';await loadClans(true)}catch(e){cl.err=cerr(e);if(!cl.tab)cl.tab='list'}
+  cl.load=false;if(!$('#tab-clan').hidden)renderClan();
+}
+async function loadClans(quiet){
+  try{const r=await lbReq('/clans?q='+encodeURIComponent(cl.q));cl.list=r.clans;cl.my=r.my}catch(e){if(!quiet)toast(cerr(e))}
+}
+async function clanAct(path,body,ok){   // общий вызов действия: блокирует повторные нажатия, обновляет данные
+  if(cl.busy)return false;cl.busy=true;cl.armed='';
+  try{const r=await lbReq(path,body||{});if(ok)toast(typeof ok==='function'?ok(r):ok);
+    cl.me=await lbReq('/clan/me');await loadClans(true);cl.busy=false;return r}
+  catch(e){cl.busy=false;toast(cerr(e));renderClan();return false}
+}
+function clanCard(c){
+  const ic=CICON[chash(c.tag)%CICON.length],hue=chash(c.tag)%360,mine=c.id===cl.my;
+  let act;
+  if(mine)act='<span class="cchip ok">Твой клан</span>';
+  else if(cl.my)act='';
+  else if(c.req)act=`<button class="cchip warn" data-cancel="${c.id}">Заявка отправлена · отменить</button>`;
+  else if(c.n>=c.cap)act='<span class="cchip">Мест нет</span>';
+  else if(S.lvl<c.minlvl)act=`<span class="cchip">С ${c.minlvl} уровня</span>`;
+  else act=`<button class="btn main sm" data-join="${c.id}">${c.join?'Подать заявку':'Вступить'}</button>`;
+  return `<div class="ccard${mine?' mine':''}" style="--ch:${hue}"><div class="cic">${ic}</div><div class="cbody"><b><em class="ctag">[${escH(c.tag)}]</em> ${escH(c.name)}</b>
+    <small>${c.lvl} ур. · ${c.n}/${c.cap} · ${joinWord(c.join)}${c.minlvl>1?` · с ${c.minlvl} ур.`:''}</small><small class="cpts">${fmt(c.pts)} очков</small>${c.descr?`<small class="cdesc">${escH(c.descr)}</small>`:''}</div><div class="cact">${act}</div></div>`;
+}
+function clanMy(){
+  const m=cl.me;if(!m||!m.clan)return `<div class="pcard lbmsg"><b>Ты пока не в клане</b><small>Вступи в клан во вкладке «Кланы» или создай свой.</small><button class="btn main" data-ct="list">К списку кланов</button></div>`;
+  const c=m.clan,ic=CICON[chash(c.tag)%CICON.length];
+  const need=(c.lvl)*3000000,pr=Math.min(100,(c.pts%3000000)/3000000*100);
+  let h=`<div class="pcard cmain" style="--ch:${chash(c.tag)%360}"><div class="chead"><div class="cic big">${ic}</div><div><b class="cn"><em class="ctag">[${escH(c.tag)}]</em> ${escH(c.name)}</b><small>${c.lvl} уровень · ${c.n}/${c.cap} · ${joinWord(c.join)}${c.minlvl>1?` · с ${c.minlvl} ур.`:''}</small></div></div>
+    ${c.descr?`<p class="cdesc2">${escH(c.descr)}</p>`:''}
+    <div class="cpts2"><span>Очки клана</span><b>${fmt(c.pts)}</b></div>
+    <div class="qbar"><i style="width:${c.lvl>=20?100:pr}%"></i></div><small class="cnext">${c.lvl>=20?'Максимальный уровень':`До ${c.lvl+1} уровня: ${fmt(c.lvl*3000000-c.pts)} очков (+2 места)`}</small>
+    <div class="crow2">${c.link?`<button class="btn" data-link="${escH(c.link)}">💬 Чат клана</button>`:''}${m.leader?'<button class="btn" id="cl-edit">⚙ Настройки</button>':''}<button class="btn${cl.armed==='leave'?' danger':''}" data-arm="leave">${cl.armed==='leave'?'Точно выйти?':'Выйти'}</button></div></div>`;
+  if(m.leader&&m.requests.length)h+=`<h3 class="ch3">Заявки · ${m.requests.length}</h3>`+m.requests.map(r=>`<div class="mrow"><div class="mn"><b>${escH(r.name)}</b><small>${r.lvl} ур. · ${fmtC(r.pts)} 🪙</small></div><div class="mbt"><button class="btn main sm" data-acc="${r.uid}">✓</button><button class="btn sm" data-rej="${r.uid}">✕</button></div></div>`).join('');
+  h+=`<h3 class="ch3">Участники · ${m.members.length}</h3>`+m.members.map((x,i)=>`<div class="mrow${x.me?' me':''}"><em>${i+1}</em><div class="mn"><b>${escH(x.name)}${x.owner?' 👑':''}</b><small>${x.lvl} ур.</small></div><span class="mpt">${fmtC(x.pts)} 🪙</span>${m.leader&&!x.me?`<button class="btn sm${cl.armed==='k'+x.uid?' danger':''}" data-arm="k${x.uid}" aria-label="Выгнать">${cl.armed==='k'+x.uid?'Выгнать?':'✕'}</button>`:''}</div>`).join('');
+  return h;
+}
+function clanSheet(){
+  const f=cl.form;if(!cl.sheet||!f)return '';
+  const edit=cl.sheet==='edit';
+  return `<div class="usheet" id="csheet"><div class="sbg" data-cclose="1"></div><div class="sbox"><div class="shead"><b>${edit?'Настройки клана':'Новый клан'}</b></div>
+  <div class="cform">${edit?'':`<label>Тег<input id="f-tag" maxlength="5" autocapitalize="characters" placeholder="ABC" value="${escH(f.tag)}"></label><label>Название<input id="f-name" maxlength="20" placeholder="Название клана" value="${escH(f.name)}"></label>`}
+  <label>Описание<textarea id="f-descr" maxlength="90" rows="2" placeholder="Коротко о клане">${escH(f.descr)}</textarea></label>
+  <label>Ссылка на чат (t.me)<input id="f-link" maxlength="64" placeholder="https://t.me/…" value="${escH(f.link)}"></label>
+  <div class="seg two"><button data-fj="0" aria-pressed="${!f.join}">Открытый</button><button data-fj="1" aria-pressed="${!!f.join}">По заявке</button></div>
+  <label>Минимальный уровень<select id="f-lvl">${[1,2,3,5,8,10,15,20,30,40,50].map(v=>`<option value="${v}"${v===f.minlvl?' selected':''}>${v}</option>`).join('')}</select></label></div>
+  ${edit?'':`<small class="sum">Создание стоит ${fmt(CLAN_COST)} 🪙${S.coins<CLAN_COST?` · не хватает ${fmt(CLAN_COST-S.coins)}`:''}</small>`}
+  <button class="btn main" id="f-ok"${!edit&&S.coins<CLAN_COST?' disabled':''}>${edit?'Сохранить':`Создать за ${fmtC(CLAN_COST)} 🪙`}</button><button class="btn" data-cclose="1">Отмена</button></div></div>`;
+}
+function renderClan(){
+  const el=$('#tab-clan');if(!el)return;
+  const tabs=[['my','Мой клан'],['list','Кланы'],['war','Война'],['raid','Рейд']];
+  let body;
+  if(!API)body='<div class="pcard lbmsg"><b>Кланы пока не подключены</b><small>Нужен сервер из папки rating-worker (см. README). Впиши его адрес в константу API.</small></div>';
+  else if(!tg||!tg.initData)body='<div class="pcard lbmsg"><b>Кланы доступны в Telegram</b><small>Открой игру через бота.</small></div>';
+  else if(cl.load&&!cl.me&&!cl.list)body='<div class="pcard lbmsg"><small>Загружаю…</small></div>';
+  else if(cl.err&&!cl.me)body=`<div class="pcard lbmsg"><b>${escH(cl.err)}</b><button class="btn main" id="cl-retry">Повторить</button></div>`;
+  else if(cl.tab==='my')body=clanMy();
+  else if(cl.tab==='war'||cl.tab==='raid')body=`<div class="pcard lbmsg"><b>${cl.tab==='war'?'Клановая война':'Клановый рейд'}</b><small>Скоро: этот режим ещё в разработке.</small></div>`;
+  else body=(cl.my?'':`<button class="btn main cwide" id="cl-new">＋ Создать клан за ${fmtC(CLAN_COST)} 🪙</button>`)+`<input class="csearch" id="cl-q" type="search" placeholder="Название или тег" value="${escH(cl.q)}" autocomplete="off"><div class="chd"><b>Кланы сервера</b><small>по очкам</small></div>`+
+    ((cl.list||[]).length?cl.list.map(clanCard).join(''):'<div class="pcard lbmsg"><small>Кланов не найдено.</small></div>');
+  const keep=document.activeElement&&document.activeElement.id==='cl-q';
+  setHtml(el,`<div class="ahead"><button class="btn sm" id="cl-back">‹ Рейтинг</button><h2>Кланы</h2></div>
+  <div class="seg four">${tabs.map(([k,l])=>`<button data-ct="${k}" aria-pressed="${cl.tab===k}">${l}</button>`).join('')}</div>${body}${clanSheet()}`);
+  if(keep){const i=$('#cl-q');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}}
+}
+function readForm(){
+  const g=id=>{const e=$('#'+id);return e?e.value:''};const f=cl.form;
+  if($('#f-tag'))f.tag=g('f-tag').toUpperCase();if($('#f-name'))f.name=g('f-name');f.descr=g('f-descr');f.link=g('f-link');f.minlvl=+g('f-lvl')||1;
+}
+let clanQ=0;
+$('#tab-clan').oninput=e=>{if(e.target.id!=='cl-q')return;cl.q=e.target.value;clearTimeout(clanQ);clanQ=setTimeout(async()=>{await loadClans(true);renderClan()},350)};
+$('#tab-clan').onclick=async e=>{
+  const t=e.target;
+  if(t.closest('#cl-back'))return tab('top');
+  if(t.closest('#cl-retry'))return openClan();
+  const ct=t.closest('[data-ct]');if(ct){cl.tab=ct.dataset.ct;cl.armed='';return renderClan()}
+  if(t.closest('[data-cclose]')){cl.sheet='';return renderClan()}
+  const fj=t.closest('[data-fj]');if(fj){readForm();cl.form.join=+fj.dataset.fj;return renderClan()}
+  if(t.closest('#cl-new')){cl.form={tag:'',name:'',descr:'',link:'',join:0,minlvl:1};cl.sheet='new';return renderClan()}
+  if(t.closest('#cl-edit')&&cl.me&&cl.me.clan){const c=cl.me.clan;cl.form={tag:c.tag,name:c.name,descr:c.descr,link:c.link,join:c.join,minlvl:c.minlvl};cl.sheet='edit';return renderClan()}
+  if(t.closest('#f-ok')){
+    readForm();const f=cl.form,edit=cl.sheet==='edit';
+    if(!edit&&S.coins<CLAN_COST)return toast('Не хватает монет');
+    const r=await clanAct(edit?'/clan/edit':'/clan/create',f,edit?'Настройки сохранены':'🛡️ Клан создан!');
+    if(r){if(!edit){S.coins-=CLAN_COST;save();render();cl.tab='my'}cl.sheet='';renderClan()}
+    return;
+  }
+  const j=t.closest('[data-join]');if(j){const r=await clanAct('/clan/join',{id:+j.dataset.join},r=>r.joined?'Ты в клане!':'Заявка отправлена');if(r&&r.joined)cl.tab='my';return renderClan()}
+  const cn=t.closest('[data-cancel]');if(cn){await clanAct('/clan/cancel',{id:+cn.dataset.cancel},'Заявка отменена');return renderClan()}
+  const ac=t.closest('[data-acc]');if(ac){await clanAct('/clan/accept',{uid:ac.dataset.acc,ok:1},'Принят в клан');return renderClan()}
+  const rj=t.closest('[data-rej]');if(rj){await clanAct('/clan/accept',{uid:rj.dataset.rej,ok:0},'Заявка отклонена');return renderClan()}
+  const lk=t.closest('[data-link]');if(lk)return openTg(lk.dataset.link);
+  const ar=t.closest('[data-arm]');
+  if(ar){const k=ar.dataset.arm;
+    if(cl.armed!==k){cl.armed=k;renderClan();setTimeout(()=>{if(cl.armed===k){cl.armed='';renderClan()}},4000);return}
+    if(k==='leave'){const r=await clanAct('/clan/leave',{},'Ты вышел из клана');if(r){cl.tab='list'}return renderClan()}
+    if(k[0]==='k'){await clanAct('/clan/kick',{uid:k.slice(1)},'Игрок исключён');return renderClan()}
+  }
+};
+
 // ---------- Друзья: награды за приглашённых ----------
 // Друг открывает игру по ссылке с ?startapp=r<id>. Сервер записывает пару «кто пригласил — кто пришёл»
 // и только для нового игрока (которого ещё не было в таблице). Пригласивший забирает награду кнопкой в профиле.
@@ -1222,7 +1339,7 @@ $('#bon-btn').onclick=()=>tab($('#tab-bon').hidden?'bon':'game');
 renderUp();
 if(PAGE!=='main')tabIn(PAGE);
 else{const h=location.hash.slice(1);if(['col','up','prof','bon','show'].includes(h))tabIn(h)}
-try{if(PAGE!=='main'&&tg&&tg.BackButton){tg.BackButton.show();tg.BackButton.onClick(()=>{location.href='index.html'})}}catch(e){}
+try{if(PAGE!=='main'&&tg&&tg.BackButton){tg.BackButton.show();tg.BackButton.onClick(()=>{location.href=PAGE==='clan'?'rating.html':'index.html'})}}catch(e){}
 refInit();
 cloudLoad();
 try{window.bootDone&&bootDone()}catch(e){}   // игра готова: убираем загрузочный экран
