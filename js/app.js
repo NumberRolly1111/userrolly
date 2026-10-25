@@ -693,7 +693,21 @@ function renderCol(){
       :`<div class="item" style="--tc:${T[x.t].c}"><div><b>@${x.n}</b>${sub}</div><button data-a="copy" data-id="${x.id}" aria-label="Копировать">⧉</button><button data-a="sell" data-id="${x.id}" aria-label="Продать">${pr} 🪙</button></div>`}).join('');
   setHtml(col,h);updSelbar();
 }
+// Аватар Telegram вместо иконки профиля: кольцо = прогресс до следующего уровня, значок = уровень
+var avaOk=true,avaKey='';
+function updAva(){
+  const eh=x=>String(x).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+  const btn=document.getElementById('prof-btn');if(!btn)return;
+  const u=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user,photo=u&&u.photo_url&&avaOk?u.photo_url:'',nm=u?(u.first_name||u.username||'?'):'?';
+  const need=xpNeed(S.lvl),pr=Math.max(0,Math.min(1,S.xp/need)),C=2*Math.PI*19;
+  const key=photo+'|'+nm+'|'+S.lvl+'|'+Math.round(pr*200);if(key===avaKey)return;avaKey=key;
+  btn.classList.add('pba');
+  btn.innerHTML=`<svg class="pbr" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="19" class="pbt"/><circle cx="22" cy="22" r="19" class="pbp" stroke-dasharray="${(C*pr).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 22 22)"/></svg>`+
+    `<span class="pbi">${photo?`<img src="${eh(photo)}" alt="" referrerpolicy="no-referrer">`:`<b>${eh([...String(nm)][0]||'?').toUpperCase()}</b>`}</span><span class="pbl">${S.lvl}</span>`;
+  const im=btn.querySelector('img');if(im)im.onerror=()=>{avaOk=false;avaKey='';updAva()};
+}
 function render(){
+  try{updAva()}catch(e){}
   setCoins();
   ensureQuests();updBonDot();checkAch();try{renderCases()}catch(e){}   // кейсы объявлены ниже: на первом проходе их ещё нет
   tickEn();const free=S.src==='free',m=free?MODES[0]:MODES[mode],seg=$('#seg'),cn=$('#cnt'),sr=$('#src');
