@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0D0B1A">
+<meta name="robots" content="noindex,nofollow">
+<title>Выдача</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Onest:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="../css/style.css?v=20261026t">
+<style>
+ .adm{max-width:520px;margin:0 auto;padding:18px 16px 40px}
+ .adm h1{font:800 20px var(--head);margin:0 0 4px}
+ .adm p{color:var(--mute);font-size:13px;margin:0 0 16px}
+ .adm label{display:block;font:700 12px var(--head);color:var(--mute);margin:14px 0 6px}
+ .adm input,.adm textarea{width:100%;box-sizing:border-box;padding:13px;border-radius:12px;border:2px solid var(--line);background:var(--tile);color:var(--fg);font:600 16px var(--body,inherit)}
+ .adm textarea{min-height:96px;resize:vertical}
+ .adm .row{display:flex;gap:8px;margin-top:10px}
+ .adm .row button{flex:1}
+ .adm .go{width:100%;margin-top:20px;padding:16px}
+ .adm .bad{color:#FF7A7A;font-weight:700;text-align:center;padding:40px 10px}
+</style>
+</head>
+<body>
+<div class="adm" id="box" hidden>
+  <h1>Выдача себе</h1>
+  <p>Монеты и любые ники попадут только в твою игру. Нажми «Выдать» — откроется игра, и всё применится.</p>
+  <label for="mv">Монеты</label>
+  <input id="mv" inputmode="numeric" placeholder="Например, 50 000 000">
+  <div class="row"><button class="btn main" id="m-set" type="button">Установить</button><button class="btn" id="m-add" type="button">Добавить</button></div>
+  <label for="nn">Ники (через пробел, запятую или с новой строки)</label>
+  <textarea id="nn" placeholder="например: nur kaz_king abc123"></textarea>
+  <button class="btn main go" id="go" type="button">Выдать</button>
+</div>
+<div class="bad" id="bad" hidden></div>
+<script>
+// Твой ID: подходит и настоящий Telegram ID, и ID из профиля игры (6 цифр)
+const ADMIN_ID=587503;
+
+const tg=window.Telegram&&Telegram.WebApp;try{tg&&tg.ready()&&0}catch(e){}
+const $=s=>document.querySelector(s);
+const uid=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.id;
+let mode='set';
+if(!ADMIN_ID||!uid||(uid!==ADMIN_ID&&(uid%999999)+1!==ADMIN_ID)){const b=$('#bad');b.hidden=false;b.textContent=!ADMIN_ID?'Сначала впиши свой Telegram ID в этот файл (ADMIN_ID).':'Нет доступа.'}
+else{
+  $('#box').hidden=false;
+  const pick=m=>{mode=m;$('#m-set').classList.toggle('main',m==='set');$('#m-add').classList.toggle('main',m==='add')};
+  $('#m-set').onclick=()=>pick('set');$('#m-add').onclick=()=>pick('add');
+  $('#go').onclick=()=>{
+    const raw=$('#mv').value.replace(/[\s_,]/g,''),v=raw===''?null:Math.floor(+raw);
+    if(v!==null&&(!isFinite(v)||v<0))return alert('Монеты: введи число');
+    const n=[...new Set($('#nn').value.split(/[\s,;]+/).map(x=>x.replace(/^@/,'')).filter(Boolean))];
+    if(n.some(x=>x.length>32))return alert('Ник длиннее 32 символов');
+    if(v===null&&!n.length)return alert('Нечего выдавать');
+    try{localStorage.setItem('nr_admin',JSON.stringify({ts:Date.now(),c:v===null?null:{m:mode,v},n}))}catch(e){return alert('Не удалось сохранить команду')}
+    location.href='../index.html';
+  };
+}
+</script>
+</body>
+</html>
