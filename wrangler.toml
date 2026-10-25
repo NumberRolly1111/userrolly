@@ -5,10 +5,10 @@ compatibility_date = "2024-11-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "roulette-db"
-database_id = "ВСТАВЬ_ID_БАЗЫ"
+database_id = "99516bdc-bee0-4070-a92c-d03a9287f225"
 
 [vars]
 # Через запятую адреса, с которых разрешены запросы, например https://user.github.io
-ALLOWED_ORIGINS = ""
+ALLOWED_ORIGINS = "https://numberrolly1111.github.io"
 # Пустая строка = игра работает и вне Telegram (для тестов). "1" = только из Telegram.
 REQUIRE_TELEGRAM = ""
