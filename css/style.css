@@ -670,3 +670,15 @@ button.slot:active{transform:scale(.97)}
 .fastb svg{flex:none}
 .fastb[aria-pressed=true]{background:var(--blue);border-color:#8C9BFF;color:#fff;box-shadow:0 0 14px rgba(110,130,255,.45)}
 .fastb:active{transform:scale(.94)}
+
+/* Аватар вместо иконки профиля */
+.prof-btn.pba{position:relative;width:46px;height:46px;border-radius:50%;background:none;border:0;box-shadow:none;padding:0;color:#fff;transition:transform .15s}
+.prof-btn.pba:active{transform:scale(.93);box-shadow:none}
+.prof-btn.pba[aria-pressed=true]{background:none;color:#fff;filter:drop-shadow(0 0 7px rgba(43,227,122,.6))}
+.pbr{position:absolute;inset:0;width:100%;height:100%}
+.pbt{fill:none;stroke:rgba(255,255,255,.14);stroke-width:3}
+.pbp{fill:none;stroke:#2BE37A;stroke-width:3;stroke-linecap:round;transition:stroke-dasharray .6s}
+.pbi{position:absolute;inset:5px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:linear-gradient(145deg,#E58BFF,#8A5CF6)}
+.pbi img{width:100%;height:100%;object-fit:cover;display:block}
+.pbi b{font:800 17px var(--head);color:#fff}
+.pbl{position:absolute;right:-3px;bottom:-3px;min-width:19px;height:19px;padding:0 4px;border-radius:10px;background:#fff;color:#0d0a1f;border:2px solid #0d0a1f;font:800 11px/15px var(--head);text-align:center;box-sizing:border-box}
