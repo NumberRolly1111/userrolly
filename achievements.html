@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Onest:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="css/style.css?v=20261026e">
+<link rel="stylesheet" href="css/style.css?v=20261026f">
 </head>
 <body data-page="ach">
 <div id="boot" aria-hidden="true"><div class="bt-glow"></div><div class="bt-logo"><span>@</span></div>
@@ -48,9 +48,11 @@
     if(t>350+i*(seen?40:110)){c.textContent=W[i];c.className='lk'}else c.textContent=pool[Math.floor(Math.random()*pool.length)]})},60);
   var pv=setInterval(function(){var p=Math.min(90,6+(Date.now()-T0)/MIN*70);bar.style.width=p+'%'},120);
   function finish(force){
-    if(done)return;done=1;clearInterval(iv);clearInterval(pv);bar.style.width='100%';
+    if(done)return;done=1;
     var wait=force?0:Math.max(0,MIN-(Date.now()-T0));
-    setTimeout(function(){cells.forEach(function(c){if(c){c.textContent=c.textContent;}});boot.className='out';try{sessionStorage.setItem('nrboot','1')}catch(e){}setTimeout(function(){boot.remove()},650)},wait+120);
+    // буквы продолжают крутиться до конца; перед закрытием все «защёлкиваются» в слово
+    setTimeout(function(){clearInterval(iv);clearInterval(pv);bar.style.width='100%';cells.forEach(function(c,i){if(c&&c.className!=='lk'){c.textContent=W[i];c.className='lk'}});
+      setTimeout(function(){boot.className='out';try{sessionStorage.setItem('nrboot','1')}catch(e){}setTimeout(function(){boot.remove()},650)},force?0:seen?120:450)},wait);
   }
   window.bootDone=function(force){
     if(force)return finish(true);
@@ -101,6 +103,6 @@
 <div class="selbar" id="selbar"><span id="selinfo"></span><button class="btn main sm" id="selsell">Продать</button></div>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="js/app.js?v=20261026e"></script>
+<script src="js/app.js?v=20261026f"></script>
 </body>
 </html>
