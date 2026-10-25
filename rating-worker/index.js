@@ -1,6 +1,25 @@
 // Сервер рейтинга «Нейм-рулетки» (Cloudflare Worker + база D1).
 // Секреты и настройки: BOT_TOKEN (секрет), ALLOWED_ORIGIN (необязательно, адрес игры).
-const MAX_NET = 5e10, MAX_BEST = 1e9, MAX_LVL = 1000, MIN_GAP_MS = 8000, MAX_AGE_S = 3 * 86400;
+const MAX_NET = 2e12, MAX_BEST = 6e6, MAX_LVL = 1000, MIN_GAP_MS = 8000, MAX_AGE_S = 3 * 86400;
+// Защита от накрутки: капитал игрока не может расти быстрее, чем это возможно в игре.
+// Разрешённый рост между двумя отправками = BURST + RATE × секунды с прошлой отправки + выручка с рынка (allow).
+// Первая отправка: до FIRST_NET. Если игрок превысил лимит, он помечается (flag=1): скрыт из рейтинга, рынок/кланы/музей для него закрыты,
+// а его прошлые данные остаются. Флаг снимается сам, когда отправленный капитал снова укладывается в лимит.
+const RATE = 5000, BURST = 40e6, FIRST_NET = 3e9, MAX_ELAPSED_S = 14 * 86400;
+const ADMIN_GAME_ID = 587503;   // владелец игры (ID из профиля): на него лимиты не действуют; можно добавить Telegram ID в переменную ADMIN_IDS через запятую
+const isAdmin = (uid, env) => {
+  const n = Number(uid);
+  return n === ADMIN_GAME_ID || (n % 999999) + 1 === ADMIN_GAME_ID || String((env && env.ADMIN_IDS) || '').split(',').map((x) => x.trim()).includes(String(uid));
+};
+let migrated = false;
+async function migrate(db) {   // добавляем новые столбцы сами, SQL вручную выполнять не нужно
+  if (migrated) return;
+  const have = (await db.prepare('PRAGMA table_info(players)').all()).results.map((r) => r.name);
+  for (const [c, d] of [['flag', 'INTEGER NOT NULL DEFAULT 0'], ['cos', "TEXT NOT NULL DEFAULT ''"], ['allow', 'INTEGER NOT NULL DEFAULT 0']]) {
+    if (!have.includes(c)) await db.prepare(`ALTER TABLE players ADD COLUMN ${c} ${d}`).run();
+  }
+  migrated = true;
+}
 const enc = new TextEncoder();
 
 async function hmac(key, data) {
@@ -50,31 +69,46 @@ async function handle(req, env) {
     const uid = await auth(req.headers.get('X-Init-Data'), env.BOT_TOKEN);
     if (!uid) return json({ error: 'auth' }, 401);
     const url = new URL(req.url);
+    await migrate(env.DB);
+    if (req.method === 'POST' && url.pathname !== '/sync' && !url.pathname.startsWith('/ref') && !isAdmin(uid, env)) {
+      const f = await env.DB.prepare('SELECT flag FROM players WHERE uid=?').bind(uid).first();
+      if (f && f.flag) return json({ error: 'flag' }, 403);
+    }
 
     if (url.pathname === '/sync' && req.method === 'POST') {
       let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
       const net = int(b.net, MAX_NET), best = int(b.best, MAX_BEST), lvl = int(b.lvl, MAX_LVL);
       if (net === null || best === null || lvl === null) return json({ error: 'bad' }, 400);
       const now = Date.now();
-      const old = await env.DB.prepare('SELECT upd FROM players WHERE uid=?').bind(uid).first();
+      const old = await env.DB.prepare('SELECT net,best,upd,flag,allow FROM players WHERE uid=?').bind(uid).first();
       if (old && now - old.upd < MIN_GAP_MS) return json({ error: 'wait' }, 429);
+      const cos = String(b.cos || '').match(/^[a-z0-9_]{0,16}\|[a-z0-9_]{0,16}$/) ? String(b.cos) : '';
+      if (!isAdmin(uid, env)) {
+        const el = old ? Math.min(MAX_ELAPSED_S, Math.max(0, (now - old.upd) / 1000)) : 0;
+        const limit = old ? old.net + BURST + RATE * el + (old.allow || 0) : FIRST_NET;
+        if (net > limit) {
+          if (old) await env.DB.prepare('UPDATE players SET flag=1, upd=? WHERE uid=?').bind(now, uid).run();
+          else await env.DB.prepare('INSERT INTO players(uid,name,net,best,bestn,lvl,hide,upd,flag,cos) VALUES(?,?,?,?,?,?,?,?,1,?)').bind(uid, clean(b.name, 24) || 'Игрок', 0, 0, '', 1, 1, now, cos).run();
+          return json({ ok: false, error: 'cheat' });
+        }
+      }
       await env.DB.prepare(
-        `INSERT INTO players(uid,name,net,best,bestn,lvl,hide,upd) VALUES(?,?,?,?,?,?,?,?)
-         ON CONFLICT(uid) DO UPDATE SET name=excluded.name,net=excluded.net,best=excluded.best,bestn=excluded.bestn,lvl=excluded.lvl,hide=excluded.hide,upd=excluded.upd`
-      ).bind(uid, clean(b.name, 24) || 'Игрок', net, best, clean(b.bestn, 32), lvl, b.hide ? 1 : 0, now).run();
+        `INSERT INTO players(uid,name,net,best,bestn,lvl,hide,upd,flag,cos,allow) VALUES(?,?,?,?,?,?,?,?,0,?,0)
+         ON CONFLICT(uid) DO UPDATE SET name=excluded.name,net=excluded.net,best=excluded.best,bestn=excluded.bestn,lvl=excluded.lvl,hide=excluded.hide,upd=excluded.upd,flag=0,cos=excluded.cos,allow=0`
+      ).bind(uid, clean(b.name, 24) || 'Игрок', net, best, clean(b.bestn, 32), lvl, b.hide ? 1 : 0, now, cos).run();
       return json({ ok: true });
     }
 
     if (url.pathname === '/top' && req.method === 'GET') {
       const col = url.searchParams.get('by') === 'best' ? 'best' : 'net';
-      const rows = (await env.DB.prepare(`SELECT uid,name,${col} AS v,bestn,lvl FROM players WHERE hide=0 AND ${col}>0 ORDER BY ${col} DESC, upd ASC LIMIT 50`).all()).results;
-      const mine = await env.DB.prepare(`SELECT ${col} AS v, hide FROM players WHERE uid=?`).bind(uid).first();
+      const rows = (await env.DB.prepare(`SELECT uid,name,${col} AS v,bestn,lvl,cos FROM players WHERE hide=0 AND flag=0 AND ${col}>0 ORDER BY ${col} DESC, upd ASC LIMIT 50`).all()).results;
+      const mine = await env.DB.prepare(`SELECT ${col} AS v, hide, flag FROM players WHERE uid=?`).bind(uid).first();
       let me = null;
-      if (mine && !mine.hide) {
-        const c = await env.DB.prepare(`SELECT COUNT(*) AS n FROM players WHERE hide=0 AND ${col}>?`).bind(mine.v).first();
+      if (mine && !mine.hide && !mine.flag) {
+        const c = await env.DB.prepare(`SELECT COUNT(*) AS n FROM players WHERE hide=0 AND flag=0 AND ${col}>?`).bind(mine.v).first();
         me = { rank: c.n + 1, v: mine.v };
       }
-      return json({ top: rows.map((r) => ({ name: r.name, v: r.v, bestn: r.bestn, lvl: r.lvl, me: r.uid === uid })), me });
+      return json({ top: rows.map((r) => ({ name: r.name, v: r.v, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', me: r.uid === uid })), me });
     }
     // ---- друзья ----
     const REF_MAX = 20;
@@ -262,7 +296,7 @@ async function clanRoutes(url, req, env, uid, json) {
 // ======================= РЫНОК МЕЖДУ ИГРОКАМИ =======================
 // Сервер хранит лоты и сделки. Ник при выставлении «замораживается» в лоте, покупатель получает его после успешной покупки,
 // продавец забирает выручку кнопкой (комиссия MARKET_FEE). Тип и цену ника клиент пересчитывает сам по названию.
-const MARKET_FEE = 0.05, MARKET_MAX_LOTS = 10, MARKET_MIN = 10, MARKET_MAX = 2_000_000_000;
+const MARKET_FEE = 0.05, MARKET_MAX_LOTS = 10, MARKET_MIN = 10, MARKET_MAX = 1_000_000_000_000;
 const NICK_RE = /^[\p{L}\p{N}_#$%@?!*~.\-]{1,24}$/u;
 
 async function marketRoutes(url, req, env, uid, json) {
@@ -278,6 +312,17 @@ async function marketRoutes(url, req, env, uid, json) {
       ? await db.prepare(base + " AND m.name LIKE ?1 ESCAPE '\\' ORDER BY " + order + ' LIMIT 60').bind(like(q)).all()
       : await db.prepare(base + ' ORDER BY ' + order + ' LIMIT 60').all()).results;
     return json({ lots: rows.map((r) => ({ id: r.id, name: r.name, price: r.price, seller: r.hide ? 'Игрок' : (r.sname || 'Игрок'), mine: r.seller === uid ? 1 : 0 })) });
+  }
+
+  if (p === '/market/history' && req.method === 'GET') {
+    const rows = (await db.prepare(`SELECT m.name,m.price,m.seller,m.buyer,m.sold_ts,ps.name AS sname,ps.hide AS shide,pb.name AS bname,pb.hide AS bhide
+      FROM market m LEFT JOIN players ps ON ps.uid=m.seller LEFT JOIN players pb ON pb.uid=m.buyer
+      WHERE m.status=1 AND (m.seller=?1 OR m.buyer=?1) ORDER BY m.sold_ts DESC LIMIT 40`).bind(uid).all()).results;
+    return json({ items: rows.map((r) => {
+      const sold = r.seller === uid;
+      const who = sold ? (r.bhide ? 'Игрок' : (r.bname || 'Игрок')) : (r.shide ? 'Игрок' : (r.sname || 'Игрок'));
+      return { name: r.name, price: r.price, kind: sold ? 'sold' : 'bought', who, ts: r.sold_ts, get: Math.floor(r.price * (1 - MARKET_FEE)) };
+    }) });
   }
 
   if (p === '/market/my' && req.method === 'GET') {
@@ -315,6 +360,9 @@ async function marketRoutes(url, req, env, uid, json) {
     if (!lot) return json({ error: 'gone' }, 404);
     if (lot.seller === uid) return json({ error: 'own' }, 400);
     if (Number(b.max) && lot.price > Number(b.max)) return json({ error: 'changed' }, 409);
+    // покупатель должен реально иметь такой капитал (по проверенным данным сервера)
+    const me = await db.prepare('SELECT net FROM players WHERE uid=?').bind(uid).first();
+    if (!me || me.net < lot.price) return json({ error: 'poor' }, 400);
     // атомарно: лот достаётся только тому, кто первым сменил статус
     const r = await db.prepare('UPDATE market SET status=1,buyer=?,sold_ts=? WHERE id=? AND status=0').bind(uid, Date.now(), id).run();
     if (!r.meta.changes) return json({ error: 'gone' }, 404);
@@ -328,6 +376,8 @@ async function marketRoutes(url, req, env, uid, json) {
       const u = await db.prepare('UPDATE market SET claimed=1 WHERE id=? AND claimed=0').bind(r.id).run();
       if (u.meta.changes) { sum += Math.floor(r.price * (1 - MARKET_FEE)); n++; }
     }
+    // выручка с рынка не считается накруткой: добавляем её к разрешённому росту капитала
+    if (sum > 0) await db.prepare('UPDATE players SET allow = allow + ? WHERE uid=?').bind(sum, uid).run();
     return json({ sum, n });
   }
   return json({ error: 'not found' }, 404);
