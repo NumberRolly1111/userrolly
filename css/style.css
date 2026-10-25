@@ -181,7 +181,8 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .hint{text-align:center;margin:6px 0 4px}
 #seg{margin-bottom:10px}
 .seg.two{grid-template-columns:repeat(2,1fr);margin:0 0 14px}
-.tabin{animation:fadein .35s both}
+.tabin{animation:rise .38s both}
+#tab-game.tabin{animation:fadein .35s both}
 @keyframes fadein{from{opacity:0}}
 .chead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:4px}
 .chead .sum{margin-bottom:12px}
@@ -463,3 +464,31 @@ button,.pick,.tg{transition-property:transform,box-shadow,background,color,opaci
 .ep.sec .ep-tier{color:#fff;text-shadow:3px 0 #FF2D55,-3px 0 #00E5FF;animation:epBox .7s .2s cubic-bezier(.2,1.4,.4,1) both,epGl .55s steps(2) 1s infinite}
 @keyframes epGl{25%{transform:translate(-4px,1px) skewX(-5deg)}50%{transform:translate(4px,-1px)}75%{transform:translate(-2px,0) skewX(4deg)}}
 .ep.sec .ep-name span{text-shadow:3px 0 #FF2D55,-3px 0 #00E5FF,0 0 34px #fff}
+
+/* ---------- общая плавность ---------- */
+html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
+button,.btn,.item,.pcard,.pk,.seg button,.src button,nav button,.sw,.sw i,.crow,.vchip,.ach,.lcell{transition:transform .18s cubic-bezier(.3,.9,.4,1),background-color .25s,color .25s,border-color .25s,box-shadow .25s,opacity .25s}
+.btn:active:not(:disabled),.seg button:active,.src button:active,nav button:active,.crow:active,.achbtn:active,.pk:active{transform:scale(.96)}
+.btn:disabled,button:disabled{transition:opacity .3s}
+/* появление блоков при открытии вкладки: каскадом, один раз */
+.tabin>*{animation:rise .45s cubic-bezier(.2,.8,.2,1) both}
+.tabin>*:nth-child(1){animation-delay:0ms}
+.tabin>*:nth-child(2){animation-delay:45ms}
+.tabin>*:nth-child(3){animation-delay:90ms}
+.tabin>*:nth-child(4){animation-delay:135ms}
+.tabin>*:nth-child(5){animation-delay:180ms}
+.tabin>*:nth-child(6){animation-delay:225ms}
+.tabin>*:nth-child(7){animation-delay:270ms}
+.tabin>*:nth-child(8){animation-delay:315ms}
+.tabin>*:nth-child(9){animation-delay:360ms}
+.tabin>*:nth-child(10){animation-delay:405ms}
+/* переключение «Бесплатно / За монеты» и режимов */
+.en:not([hidden]),.seg:not([hidden]){animation:rise .32s cubic-bezier(.2,.8,.2,1) both}
+.enbar i{transition:background .35s,transform .35s}
+.enbar i.on{transform:scaleY(1.12)}
+.enn,.lvb,.ctop b,.lvrow b{transition:color .3s}
+.rrow .acts{animation:rise .4s .1s both}
+.toast{transition:opacity .35s,transform .35s cubic-bezier(.2,.9,.3,1.2)}
+.selbar{transition:opacity .3s,transform .3s cubic-bezier(.2,.9,.3,1.2)}
+.cbar i,.vbar i,.xbar i,.qbar i{transition:width .7s cubic-bezier(.2,.8,.2,1)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
