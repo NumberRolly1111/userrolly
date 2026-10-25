@@ -1,0 +1,8 @@
+name = "nr-rating"
+main = "index.js"
+compatibility_date = "2024-11-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nr-rating"
+database_id = "ВСТАВЬ_ID_ИЗ_КОМАНДЫ_d1_create"
