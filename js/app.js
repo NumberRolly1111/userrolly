@@ -21,6 +21,7 @@ const rev=s=>[...s].reverse().join('');
 const MAX0=10,MAXSLOTS=30;   // стартовый и предельный размер коллекции
 let MAX=MAX0;                // текущий размер коллекции (растёт за монеты, хранится в S.slots)
 const slotPrice=n=>Math.round(2500*Math.pow(1.35,n-MAX0)/100)*100;   // цена следующего места при n местах
+const EN_CAP=15,EN_INT=15*60*1000;   // запас энергии и время накопления одной единицы (15 минут)
 const AUTO=['выключена','ниже необычного','ниже редкого','ниже эпического','ниже легендарного','ниже мифического'];
 const APP_LINK='';            // ссылка на Mini App для кнопки «Позвать друзей», например https://t.me/твой_бот/app
 const fmt=n=>Math.round(n).toLocaleString('ru-RU');
@@ -111,7 +112,7 @@ function score(s){
   return{t:tierOf(p),tags:t,p};
 }
 
-const def={coins:3000,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:3,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,inv:0,tri:0,luck:0,five:0,ach:null};
+const def={coins:3000,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:3,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[]};
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 fixState();
 if(S.econ!==3){S.coins=3000;S.items=S.items.slice(0,MAX);S.econ=3}
@@ -132,7 +133,7 @@ function fixState(){
   num('coins',3000);S.coins=Math.max(0,S.coins);
   ['spins','ups','upw','time','saved','sold','bestv','wheelN','maxStreak','qn','maxCoins','inv','tri','luck','five'].forEach(k=>{num(k,0);S[k]=Math.max(0,S[k])});
   num('best',0);S.best=Math.min(6,Math.max(0,Math.floor(S.best)));
-  num('uid',0);
+  num('uid',0);num('en',EN_CAP);S.en=Math.max(0,Math.min(999,Math.floor(S.en)));num('enT',0);if(S.src!=='free'&&S.src!=='coin')S.src='free';S.show=Array.isArray(S.show)?[...new Set(S.show.filter(n=>n===0||n===1||n===2))]:[];
   S.cnt=Array.isArray(S.cnt)?Array.from({length:7},(_,i)=>Math.max(0,+S.cnt[i]||0)):[0,0,0,0,0,0,0];
   if(!S.tday||typeof S.tday!=='object')S.tday={d:'',s:0};
   if(!S.login||typeof S.login!=='object')S.login={n:0,last:''};
@@ -144,7 +145,8 @@ function fixState(){
   S.slots=Math.min(MAXSLOTS,Math.max(MAX0,Math.floor(+S.slots)||MAX0));MAX=S.slots;
   S.items=S.items.slice(0,MAX);
   if(!(S.auto>=0&&S.auto<=5))S.auto=0;S.auto=Math.floor(S.auto);
-  if(S.achv!==2){S.ach=null;S.achv=2}                     // список достижений менялся: пересчитываем тихо
+  if(S.achv!==3){S.ach=null;S.achGot=[];S.achv=3}         // список достижений менялся: пересчитываем тихо
+  S.achGot=Array.isArray(S.achGot)?[...new Set(S.achGot.filter(n=>Number.isInteger(n)&&n>=0&&n<25))]:[];
   if(S.ach!==null&&!Array.isArray(S.ach))S.ach=null;
   if(S.pend!=null){const arr=Array.isArray(S.pend)?S.pend:[S.pend];S.pend=arr.filter(c=>c&&typeof c.name==='string'&&Number.isInteger(c.t)&&c.t>=0&&c.t<=6).map(c=>({name:c.name,t:c.t,p:+c.p||0}))}
 }
@@ -192,6 +194,23 @@ function loginInfo(){
   const L=S.login,done=L.last===todayK(),alive=done||L.last===yestK(),n=alive?L.n:0;
   return{done,alive,n,idx:done?(L.n-1)%14:n%14};   // idx: какую награду выдали сегодня / какая доступна
 }
+function tickEn(){   // накопление энергии: +1 каждые 15 минут, пока меньше запаса
+  const now=Date.now();
+  if(S.en>=EN_CAP){S.enT=now;return false}
+  if(!S.enT||S.enT>now)S.enT=now;
+  const k=Math.floor((now-S.enT)/EN_INT);
+  if(k>0){S.en=Math.min(EN_CAP,S.en+k);S.enT=S.en>=EN_CAP?now:S.enT+k*EN_INT;return true}
+  return false;
+}
+const enLeft=()=>S.en>=EN_CAP?0:Math.max(0,EN_INT-(Date.now()-S.enT));
+const mmss=ms=>{const s=Math.ceil(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+function updEn(){
+  const el=$('#en');if(!el||el.hidden)return;
+  const full=Math.min(S.en,EN_CAP),over=S.en>EN_CAP;
+  setHtml(el,`<div class="enrow"><span class="enic">⚡</span><b class="enl">Энергия</b><b class="enn">${S.en} ⚡</b>${over?'<em class="enx">сверх запаса</em>':''}</div>
+  <div class="enbar">${Array.from({length:EN_CAP},(_,i)=>`<i${i<full?' class="on"':''}></i>`).join('')}</div>
+  <p>${S.en<EN_CAP?`+1 энергия через ${mmss(enLeft())}. Запас: ${EN_CAP}`:`Сверх запаса ${EN_CAP} новая энергия копится, когда станет меньше ${EN_CAP}`}</p>`);
+}
 function ensureQuests(){
   const wk=weekK();if(S.q.wk===wk&&S.q.list.length===3&&S.q.list.every(q=>QDEF[q.id]))return;
   const days=7-(new Date().getDay()+6)%7;           // сколько дней недели осталось, включая сегодня
@@ -205,35 +224,43 @@ function addQuest(id,n=1){ensureQuests();const q=S.q.list.find(x=>x.id===id);if(
 ensureQuests();
 // ---------- Достижения (25) ----------
 // A(иконка, название, описание, текущее значение, цель)
-const A=(i,n,d,cur,goal=1)=>({i,n,d,cur,goal});
+const A=(i,n,d,cur,goal,r)=>({i,n,d,cur,goal,r});   // r: награда в монетах
 const ACH=[
-  A('🎰','100 круток','Сделай 100 круток',()=>S.spins,100),
-  A('🎰','1000 круток','Сделай 1000 круток',()=>S.spins,1000),
-  A('⚡','Первый успех','Выиграй первый апгрейд',()=>S.upw,1),
-  A('⚡','10 успешных апгрейдов','Выиграй 10 апгрейдов',()=>S.upw,10),
-  A('🔧','Мастер апгрейда','Сделай 100 апгрейдов',()=>S.ups,100),
-  A('📦','Первый в коллекции','Сохрани первый ник',()=>S.saved,1),
-  A('📦','Коллекция из 50 ников','Собери за всё время 50 ников в коллекцию',()=>S.saved,50),
-  A('💎','Десятитысячник','Получи ник ценой от 10 000 🪙',()=>S.bestv,10000),
-  A('💎','Самый дорогой ник','Получи ник ценой от 100 000 🪙',()=>S.bestv,100000),
-  A('✨','Первый редкий','Получи ник редкости «Редкий»',()=>S.cnt[2],1),
-  A('✨','Первый эпический','Получи ник редкости «Эпический»',()=>S.cnt[3],1),
-  A('✨','Первый легендарный','Получи ник редкости «Легендарный»',()=>S.cnt[4],1),
-  A('🔥','Первый мифический','Получи ник редкости «Мифический»',()=>S.cnt[5],1),
-  A('🕶️','Первая секретка','Получи ник редкости «Секретный»',()=>S.cnt[6],1),
-  A('🌸','10 эпических','Получи 10 эпических ников',()=>S.cnt[3],10),
-  A('💰','Первая продажа','Продай ник',()=>S.sold,1),
-  A('🏷️','Торговец','Продай 50 ников',()=>S.sold,50),
-  A('🎡','Первая рулетка','Прокрути ежедневную рулетку',()=>S.wheelN,1),
-  A('🎡','30 ежедневных рулеток','Прокрути ежедневную рулетку 30 раз',()=>S.wheelN,30),
-  A('📅','Серия 7 дней','Заходи 7 дней подряд',()=>S.maxStreak,7),
-  A('📅','Серия 14 дней','Заходи 14 дней подряд',()=>S.maxStreak,14),
-  A('✅','10 заданий','Выполни 10 заданий недели',()=>S.qn,10),
-  A('🪙','Миллионер','Накопи 1 000 000 🪙',()=>S.maxCoins,1000000),
-  A('🌙','Сутки в игре','Проведи в игре 24 часа',()=>Math.floor(S.time/3600),24),
-  A('🗄️','Полная коллекция',`Собери ${MAX0} из ${MAX0} ников`,()=>S.items.length,MAX0),
+  A('🎰','100 круток','Сделай 100 круток',()=>S.spins,100,3000),
+  A('🎰','1000 круток','Сделай 1000 круток',()=>S.spins,1000,20000),
+  A('⚡','Первый успех','Выиграй первый апгрейд',()=>S.upw,1,1500),
+  A('⚡','10 успешных апгрейдов','Выиграй 10 апгрейдов',()=>S.upw,10,8000),
+  A('🔧','Мастер апгрейда','Сделай 100 апгрейдов',()=>S.ups,100,25000),
+  A('📦','Первый в коллекции','Сохрани первый ник',()=>S.saved,1,1000),
+  A('📦','Коллекция из 50 ников','Собери за всё время 50 ников в коллекцию',()=>S.saved,50,15000),
+  A('💎','Десятитысячник','Получи ник ценой от 10 000 🪙',()=>S.bestv,10000,10000),
+  A('💎','Самый дорогой ник','Получи ник ценой от 100 000 🪙',()=>S.bestv,100000,100000),
+  A('✨','Первый редкий','Получи ник редкости «Редкий»',()=>S.cnt[2],1,2000),
+  A('✨','Первый эпический','Получи ник редкости «Эпический»',()=>S.cnt[3],1,5000),
+  A('✨','Первый легендарный','Получи ник редкости «Легендарный»',()=>S.cnt[4],1,15000),
+  A('🔥','Первый мифический','Получи ник редкости «Мифический»',()=>S.cnt[5],1,50000),
+  A('🕶️','Первая секретка','Получи ник редкости «Секретный»',()=>S.cnt[6],1,100000),
+  A('🌸','10 эпических','Получи 10 эпических ников',()=>S.cnt[3],10,20000),
+  A('💰','Первая продажа','Продай ник',()=>S.sold,1,1000),
+  A('🏷️','Торговец','Продай 50 ников',()=>S.sold,50,10000),
+  A('🎡','Первая рулетка','Прокрути ежедневную рулетку',()=>S.wheelN,1,1500),
+  A('🎡','30 ежедневных рулеток','Прокрути ежедневную рулетку 30 раз',()=>S.wheelN,30,20000),
+  A('📅','Серия 7 дней','Заходи 7 дней подряд',()=>S.maxStreak,7,8000),
+  A('📅','Серия 14 дней','Заходи 14 дней подряд',()=>S.maxStreak,14,25000),
+  A('✅','10 заданий','Выполни 10 заданий недели',()=>S.qn,10,10000),
+  A('🪙','Миллионер','Накопи 1 000 000 🪙',()=>S.maxCoins,1000000,150000),
+  A('🌙','Сутки в игре','Проведи в игре 24 часа',()=>Math.floor(S.time/3600),24,15000),
+  A('🗄️','Полная коллекция',`Собери ${MAX0} из ${MAX0} ников`,()=>S.items.length,MAX0,5000),
 ];
 const achOk=(a,i)=>S.ach.includes(i)||a.cur()>=a.goal;
+const achReady=()=>ACH.map((x,i)=>i).filter(i=>achOk(ACH[i],i)&&!S.achGot.includes(i));
+const achEarned=()=>S.achGot.reduce((s,i)=>s+(ACH[i]?ACH[i].r:0),0);
+function claimAch(i){   // i: номер или 'all'
+  const ids=i==='all'?achReady():[+i].filter(n=>ACH[n]&&achOk(ACH[n],n)&&!S.achGot.includes(n));
+  if(!ids.length)return;const sum=ids.reduce((s,n)=>s+ACH[n].r,0);
+  S.achGot.push(...ids);S.coins+=sum;save();hap('n','success');if(sum>=20000)boom('#FFC933',sum>=100000?5:4);
+  toast(`Награда: +${fmt(sum)} 🪙`);render();
+}
 let achLock=0;
 function checkAch(){
   S.maxCoins=Math.max(S.maxCoins,S.coins);
@@ -291,9 +318,10 @@ function showIdle(){const box=$('#reels');box.innerHTML='';const r=mkRow();box.a
 function roll(m){let best=null;for(let i=0;i<3000;i++){const s=gen(),r=score(s);if(!best||r.t>best.t)best={name:s,...r};if(r.t>=m.min)break}return{...best,kept:false,res:''}}
 function flushPrev(){const left=cur.filter(c=>!c.kept);cur.forEach(c=>c.kept=true);S.pend=null;if(left.length)toast('Прошлые ники: '+stashAll(left))}
 async function spin(){
-  if(busy)return;const m=MODES[mode],cost=m.cost*count;
-  if(S.coins<cost){toast('Не хватает монет. Продай ники в коллекции или загляни в бонусы.');return}
-  flushPrev();busy=true;S.coins-=cost;S.spins+=count;if(count>1)S.tri++;addQuest('spins',count);
+  if(busy)return;tickEn();const free=S.src==='free',m=free?MODES[0]:MODES[mode],cost=free?count:m.cost*count;
+  if(free){if(S.en<cost){toast(`Не хватает энергии: нужно ${cost}, есть ${S.en}. Следующая через ${mmss(enLeft())}. Можно крутить за монеты.`);return}}
+  else if(S.coins<cost){toast('Не хватает монет. Продай ники в коллекции или загляни в бонусы.');return}
+  flushPrev();busy=true;if(free){if(S.en>=EN_CAP)S.enT=Date.now();S.en-=cost}else S.coins-=cost;S.spins+=count;if(count>1)S.tri++;addQuest('spins',count);
   cur=Array.from({length:count},()=>roll(m));
   cur.forEach(c=>{S.cnt[c.t]++;S.best=Math.max(S.best,c.t);S.bestv=Math.max(S.bestv,val(c.t,c.p,c.name))});
   S.pend=cur.map(({name,t,p})=>({name,t,p}));save();
@@ -373,6 +401,39 @@ function updSelbar(){
   if(on){const its=S.items.filter(i=>colSel.has(i.id));$('#selinfo').textContent=`Выбрано: ${its.length} · ${fmt(its.reduce((a,x)=>a+val(x.t,x.p,x.n),0))} 🪙`}
   $('#selbar').classList.toggle('on',!!on);
 }
+// ---------- Витрины: наборы ников, за каждый собранный набор награда ----------
+// slots: [подпись, условие]; для сбора нужны РАЗНЫЕ ники. r: награда монетами и энергией
+const SHOW=[
+  {n:'Радуга редкостей',d:'По одному нику каждой редкости: от «Необычного» до «Легендарного»',c:'#FF5FA2',r:{c:80000,e:10},
+    slots:[['Необычный',x=>x.t===1],['Редкий',x=>x.t===2],['Эпический',x=>x.t===3],['Легендарный',x=>x.t===4]]},
+  {n:'Клуб длины',d:'Четыре ника разной длины',c:'#27D9BD',r:{c:20000,e:5},
+    slots:[['5 символов',x=>x.n.length===5],['6 символов',x=>x.n.length===6],['7 символов',x=>x.n.length===7],['8+ символов',x=>x.n.length>=8]]},
+  {n:'Зал элиты',d:'Самые редкие ники игры, вместе в одной коллекции',c:'#FFC933',r:{c:400000,e:20},
+    slots:[['Эпический+',x=>x.t>=3],['Легендарный+',x=>x.t>=4],['Мифический',x=>x.t===5],['Секретный',x=>x.t===6]]},
+];
+function vMatch(slots,items){   // подбираем разные ники под слоты так, чтобы заполнить максимум
+  let best=[],cnt=-1;const used=new Set(),cur=[];
+  const go=k=>{
+    if(k===slots.length){const c=cur.filter(Boolean).length;if(c>cnt){cnt=c;best=cur.slice()}return c===slots.length}
+    for(const it of items){if(used.has(it.id)||!slots[k][1](it))continue;used.add(it.id);cur[k]=true;const done=go(k+1);used.delete(it.id);if(done)return true}
+    cur[k]=false;return go(k+1);
+  };
+  go(0);return best.map(Boolean);
+}
+function showHtml(){
+  return `<div class="vhead"><h2>Витрины</h2><small>Собери набор из ников коллекции и забери награду</small></div>`+SHOW.map((v,i)=>{
+    const m=vMatch(v.slots,S.items),n=m.filter(Boolean).length,tot=v.slots.length,got=S.show.includes(i),ready=n===tot&&!got;
+    return `<div class="vit${got?' got':''}" style="--vc:${v.c}"><div class="vtop"><b>${v.n}</b><em>${got?'✓':n+'/'+tot}</em></div><p>${v.d}</p>
+    <div class="vbar"><i style="width:${(got?1:n/tot)*100}%"></i></div>
+    <div class="vchips">${v.slots.map((s,k)=>`<span class="vchip${got||m[k]?' ok':''}">${got||m[k]?'✓':'🔒'} ${s[0]}</span>`).join('')}</div>
+    <div class="vrw"><span><b>Награда:</b> ${fmt(v.r.c)} 🪙, +${v.r.e} ⚡</span>${got?'<em>Получено ✓</em>':ready?`<button class="btn main sm" data-a="vclaim" data-i="${i}">Забрать</button>`:''}</div></div>`}).join('');
+}
+function claimShow(i){
+  const v=SHOW[i];if(!v||S.show.includes(i))return;
+  if(vMatch(v.slots,S.items).filter(Boolean).length<v.slots.length){toast('Набор ещё не собран');return}
+  S.show.push(i);S.coins+=v.r.c;S.en+=v.r.e;save();hap('n','success');boom(v.c,5);
+  toast(`Витрина «${v.n}»: +${fmt(v.r.c)} 🪙 и +${v.r.e} ⚡`);render();
+}
 const totalV=its=>its.reduce((x,y)=>x+val(y.t,y.p,y.n),0);
 function colPanel(){
   const n=S.items.length,full=S.slots>=MAXSLOTS,pr=slotPrice(S.slots);
@@ -385,7 +446,7 @@ function colPanel(){
 function renderCol(){
   const col=$('#tab-col'),its=[...S.items].sort((a,b)=>b.t-a.t);
   if(colSel)colSel=new Set([...colSel].filter(id=>S.items.some(i=>i.id===id)));
-  let h=colPanel();
+  let h=colPanel()+showHtml();
   if(!its.length){colSel=null;h+=`<div class="empty">Коллекция пуста.<br>Крути рулетку и забирай понравившиеся ники.<br><button class="btn" data-go="game">К рулетке</button></div>`}
   else h+=`<div class="chead"><div><h2>Мои ники</h2></div>`+
     (colSel?`<div class="cbtns"><button class="btn sm" data-a="all">Все</button><button class="btn sm" data-a="cancel">Отмена</button></div>`:`<button class="btn sm" data-a="selmode">Выбрать</button>`)+`</div>`+
@@ -397,12 +458,14 @@ function renderCol(){
 function render(){
   setCoins();
   ensureQuests();updBonDot();checkAch();
-  const m=MODES[mode],seg=$('#seg'),cn=$('#cnt');
+  tickEn();const free=S.src==='free',m=free?MODES[0]:MODES[mode],seg=$('#seg'),cn=$('#cnt'),sr=$('#src');
+  if(!sr.firstChild)sr.innerHTML='<button aria-pressed="false" data-s="free">⚡ Бесплатно</button><button aria-pressed="false" data-s="coin">🪙 За монеты</button>';
+  [...sr.children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===S.src));seg.hidden=free;$('#en').hidden=!free;updEn();
   if(!seg.firstChild)seg.innerHTML=MODES.map((x,i)=>`<button aria-pressed="false" data-m="${i}">${x.l}<small>${fmt(x.cost)} 🪙</small></button>`).join('');
   if(!cn.firstChild)cn.innerHTML=[1,3].map(n=>`<button aria-pressed="false" data-n="${n}">×${n}<small>${n===1?'один ник':'три ника'}</small></button>`).join('');
   [...seg.children].forEach((b,i)=>b.setAttribute('aria-pressed',i===mode));
   [...cn.children].forEach(b=>b.setAttribute('aria-pressed',+b.dataset.n===count));
-  const sp=$('#spin');sp.textContent=`Крутить${count>1?' ×'+count:''} · ${fmt(m.cost*count)} 🪙`;sp.disabled=busy;
+  const sp=$('#spin');sp.textContent=`Крутить${count>1?' ×'+count:''} · ${free?count+' ⚡':fmt(m.cost*count)+' 🪙'}`;sp.disabled=busy;
   $('#st-spins').textContent=`Круток: ${fmt(S.spins)}`;
   $('#st-best').innerHTML=`Лучший: <b class="chip" style="background:${T[S.best].c}">${S.spins?T[S.best].n:'—'}</b>`;
   renderCol();
@@ -413,6 +476,7 @@ function render(){
 }
 
 $('#spin').onclick=spin;
+$('#src').onclick=e=>{const b=e.target.closest('[data-s]');if(b&&!busy&&S.src!==b.dataset.s){S.src=b.dataset.s;save();render()}};
 $('#seg').onclick=e=>{const b=e.target.closest('[data-m]');if(b&&!busy){mode=+b.dataset.m;render()}};
 $('#cnt').onclick=e=>{const b=e.target.closest('[data-n]');if(b&&!busy){count=+b.dataset.n;render()}};
 $('#reels').onclick=e=>{
@@ -429,6 +493,7 @@ $('#reels').onclick=e=>{
 $('#tab-col').onclick=e=>{
   const g=e.target.closest('[data-go]');if(g)return tab(g.dataset.go);
   const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
+  if(a==='vclaim'){claimShow(+b.dataset.i);return}
   if(a==='buy'){
     if(S.slots>=MAXSLOTS)return;const pr=slotPrice(S.slots);
     if(S.coins<pr){toast(`Не хватает монет: нужно ${fmt(pr)} 🪙`);return}
@@ -572,10 +637,11 @@ function renderProf(){
     <div class="pgrid"><div class="pt"><small>Круток</small><b>${fmt(S.spins)}</b></div><div class="pt"><small>Удачных апгрейдов</small><b>${fmt(S.upw)}</b></div>
     <div class="pt"><small>В игре за всё время</small><b id="tm-all">${fmtT(S.time)}</b></div><div class="pt"><small>В игре сегодня</small><b id="tm-day">${fmtT(todaySec())}</b></div></div>
     <div class="pgrid tiers">${T.map((t,i)=>`<div class="pt${i===6?' last':''}" style="--tc:${t.c}"><small>${TN[i]}</small><b>${fmt(S.cnt[i])}</b></div>`).join('')}</div></div>
-  <button class="pcard achbtn" id="ach-open"><div><b>Достижения</b><small>Открыто ${ACH.filter(achOk).length} из ${ACH.length}</small></div><span class="mini" style="--p:${ACH.filter(achOk).length/ACH.length*100}"><i>${ACH.filter(achOk).length}</i></span></button>`;
+  <button class="pcard achbtn" id="ach-open"><div><b>Достижения</b><small>Открыто ${ACH.filter(achOk).length} из ${ACH.length}${achReady().length?` · наград к получению: ${achReady().length}`:''}</small></div><span class="mini" style="--p:${ACH.filter(achOk).length/ACH.length*100}"><i>${ACH.filter(achOk).length}</i></span></button>`;
 }
 setInterval(()=>{
   if(document.hidden)return;
+  if(tickEn())save();if(!$('#tab-game').hidden)updEn();
   const d=new Date().toDateString();if(S.tday.d!==d)S.tday={d,s:0};
   S.time++;S.tday.s++;if(S.time%10===0)save();
   if(!$('#tab-prof').hidden){const a=$('#tm-all'),b=$('#tm-day');if(a){a.textContent=fmtT(S.time);b.textContent=fmtT(todaySec())}}
@@ -592,16 +658,20 @@ $('#tab-prof').onclick=e=>{
   openTg(`https://t.me/share/url?url=${encodeURIComponent(base)}&text=${encodeURIComponent('Заходи в Нейм-рулетку: выбивай редкие юзернеймы и собирай коллекцию!')}`);
 };
 function renderAch(){
-  const n=ACH.filter(achOk).length,tot=ACH.length,C=2*Math.PI*54;
+  const n=ACH.filter(achOk).length,tot=ACH.length,C=2*Math.PI*54,rd=achReady().length,got=achEarned();
   const near=ACH.map((x,i)=>({x,i,ok:achOk(x,i)})).filter(o=>!o.ok).sort((p,q)=>Math.min(q.x.cur()/q.x.goal,1)-Math.min(p.x.cur()/p.x.goal,1))[0];
-  const list=ACH.map((x,i)=>({x,i,ok:achOk(x,i)})).sort((a,b)=>b.ok-a.ok||a.i-b.i);
+  const rank=o=>o.ok&&!S.achGot.includes(o.i)?0:!o.ok?1:2;
+  const list=ACH.map((x,i)=>({x,i,ok:achOk(x,i)})).sort((a,b)=>rank(a)-rank(b)||a.i-b.i);
   const h=`<div class="ahead"><button class="btn sm" id="ach-back">‹ Профиль</button><h2>Достижения</h2></div>
   <div class="asum"><div class="ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" class="rb"/><circle cx="60" cy="60" r="54" class="rf" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-n/tot)}"/></svg><div><b>${n}</b><small>из ${tot}</small></div></div>
-    <div class="ainfo"><small class="cap2">Выполнено</small><b class="big">${Math.round(n/tot*100)}%</b><div class="chips"><span class="chip2">🏆 ${n} открыто</span><span class="chip2">🔒 ${tot-n} осталось</span></div>${near?`<p>Ближайшее: ${near.x.n}, ${fmt(Math.min(near.x.cur(),near.x.goal))} из ${fmt(near.x.goal)}</p>`:'<p>Все достижения открыты!</p>'}</div></div>
-  <div class="alist">`+list.map(({x,i,ok})=>{const c=Math.min(x.cur(),x.goal);return `<div class="ach${ok?' on':''}"><span class="ai">${x.i}</span><div class="at2"><b>${x.n}</b><small>${x.d}</small>${x.goal>1?`<div class="qbar"><i style="width:${(ok?1:c/x.goal)*100}%"></i></div><em>${ok?'Выполнено ✓':fmt(c)+' / '+fmt(x.goal)}</em>`:`<em>${ok?'Выполнено ✓':'Не выполнено'}</em>`}</div></div>`}).join('')+`</div>`;
+    <div class="ainfo"><small class="cap2">Получено наград</small><b class="big">${fmt(got)} 🪙</b><div class="chips"><span class="chip2">🏆 ${n} открыто</span><span class="chip2">🔒 ${tot-n} осталось</span></div>${near?`<p>Ближайшее: ${near.x.n}, ${fmt(Math.min(near.x.cur(),near.x.goal))} из ${fmt(near.x.goal)}</p>`:'<p>Все достижения открыты!</p>'}</div></div>
+  ${rd?`<button class="btn main cwide" data-claim="all">Забрать все награды · +${fmt(achReady().reduce((s,i)=>s+ACH[i].r,0))} 🪙</button>`:''}
+  <div class="alist">`+list.map(({x,i,ok})=>{const c=Math.min(x.cur(),x.goal),cl=S.achGot.includes(i);
+    const side=ok&&!cl?`<button class="btn main sm arw" data-claim="${i}">+${fmt(x.r)} 🪙</button>`:`<span class="arw${cl?' got':''}">${cl?'✓ ':''}+${fmt(x.r)} 🪙</span>`;
+    return `<div class="ach${ok?' on':''}"><span class="ai">${x.i}</span><div class="at2"><b>${x.n}</b><small>${x.d}</small>${x.goal>1?`<div class="qbar"><i style="width:${(ok?1:c/x.goal)*100}%"></i></div><em>${ok?'Выполнено ✓':fmt(c)+' / '+fmt(x.goal)}</em>`:`<em>${ok?'Выполнено ✓':'Не выполнено'}</em>`}</div>${side}</div>`}).join('')+`</div>`;
   setHtml($('#tab-ach'),h);
 }
-$('#tab-ach').onclick=e=>{if(e.target.closest('#ach-back'))tab('prof')};
+$('#tab-ach').onclick=e=>{if(e.target.closest('#ach-back'))return tab('prof');const b=e.target.closest('[data-claim]');if(b)claimAch(b.dataset.claim)};
 $('#prof-btn').onclick=()=>tab($('#tab-prof').hidden?'prof':'game');
 
 function tab(n){
@@ -620,12 +690,29 @@ function tab(n){
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 // ---------- Бонусы: вкладка ----------
-const bon={busy:false,res:null};
+const bon={busy:false,res:null,ang:0,win:-1,fresh:false};
+// ---------- Колесо ежедневной рулетки ----------
+const WN=WHEEL.length,WSL=360/WN;
+const wpt=(deg,r)=>{const a=deg*Math.PI/180;return [(r*Math.sin(a)).toFixed(2),(-r*Math.cos(a)).toFixed(2)]};
+const wcol=p=>p.k==='n'?T[p.t].c:['#FFD866','#FFC933','#FFB62E','#FFA526','#FF9419','#FF7F11'][Math.min(5,Math.max(0,['5000','10000','20000','35000','50000','100000'].indexOf(String(p.v))))];
+function wheelHtml(){
+  const segs=WHEEL.map((p,i)=>{
+    const a0=i*WSL,a1=a0+WSL,m=a0+WSL/2,[x0,y0]=wpt(a0,88),[x1,y1]=wpt(a1,88),col=wcol(p),isN=p.k==='n';
+    const big=isN&&p.t===6?'#fff':col;
+    return `<g class="ws${bon.win===i?' won':''}"><path d="M0,0 L${x0},${y0} A88,88 0 0 1 ${x1},${y1} Z" fill="${col}" stroke="#0D0B1A" stroke-width="1.5"/>`+
+      `<text transform="rotate(${m}) translate(0,-60)" text-anchor="middle" class="wl1${isN?' tn':''}">${isN?T[p.t].s:wlab(p)}</text>`+
+      `<text transform="rotate(${m}) translate(0,-47)" text-anchor="middle" class="wl2">${isN?'ник':'монет'}</text></g>`;
+  }).join('');
+  const lights=Array.from({length:20},(_,i)=>{const [x,y]=wpt(i*18+9,94);return `<circle class="lt" cx="${x}" cy="${y}" r="2.6"/>`}).join('');
+  return `<div class="wheel${bon.busy?' spinning':''}${bon.win>=0?' haswin':''}" id="wheel"><i class="wptr" id="wptr"></i>
+    <div class="wrot" id="wrot" style="transform:rotate(${bon.ang}deg)"><svg viewBox="-100 -100 200 200"><circle r="99" fill="#241F4A" stroke="#4B4399" stroke-width="2"/>${lights}${segs}<circle r="12" fill="#0D0B1A"/></svg></div><div class="whub">🎁</div></div>`;
+}
+const wlab=p=>p.k==='c'?(p.v>=1000?p.v/1000+'K':p.v):'';
 const wpick=()=>{let r=Math.random()*WTOT;for(const p of WHEEL){r-=p.w;if(r<0)return p}return WHEEL[0]};
 const kfmt=r=>r>=1000?r/1000+'K':String(r);
 function wresHtml(){
   const r=bon.res;if(!r)return '';
-  if(r.k==='c')return `<div class="win" style="--tc:#FFC933"><b>+${fmt(r.v)} 🪙</b> Монеты уже на балансе.</div>`;
+  if(r.k==='c')return `<div class="win" style="--tc:#FFC933"><b>+<span class="cu" data-to="${r.v}">${fmt(r.v)}</span> 🪙</b> Монеты уже на балансе.</div>`;
   return `<div class="stage" id="wstage" style="--tc:${T[r.t].c}"><div class="reel" id="wreel"></div><div class="badge"><i></i>${T[r.t].n}</div></div>`+
     `<div class="win" style="--tc:${T[r.t].c}">${r.saved?'Ник добавлен в коллекцию.':`Коллекция заполнена, ник продан за ${fmt(r.v)} 🪙.`}</div>`;
 }
@@ -642,7 +729,7 @@ function renderBon(){
       :`<button class="btn main" data-b="login">Забрать день ${li.idx+1}: ${fmt(LOGIN[li.idx])} 🪙</button>`)+
     (!li.done&&!li.alive&&S.login.n>0?`<p class="sum">Серия прервалась, награды идут с первого дня.</p>`:'')+`</div>`;
   h+=`<div class="pcard"><div class="bhead"><h3>Ежедневная рулетка</h3><span class="bsub">1 попытка в сутки</span></div>
-    <p class="sum">Призы: от ${fmt(Math.min(...WHEEL.filter(p=>p.k==='c').map(p=>p.v)))} до ${fmt(Math.max(...WHEEL.filter(p=>p.k==='c').map(p=>p.v)))} 🪙 и ники от «${T[Math.min(...WHEEL.filter(p=>p.k==='n').map(p=>p.t))].n}» до «${T[Math.max(...WHEEL.filter(p=>p.k==='n').map(p=>p.t))].n}».</p>`+
+    ${wheelHtml()}<p class="sum" hidden>${fmt(Math.min(...WHEEL.filter(p=>p.k==='c').map(p=>p.v)))} до ${fmt(Math.max(...WHEEL.filter(p=>p.k==='c').map(p=>p.v)))} 🪙 и ники от «${T[Math.min(...WHEEL.filter(p=>p.k==='n').map(p=>p.t))].n}» до «${T[Math.max(...WHEEL.filter(p=>p.k==='n').map(p=>p.t))].n}».</p>`+
     (can?`<button class="spin" data-b="wheel">Крутить рулетку</button>`:`<button class="spin" disabled>Уже крутили · ещё <span data-t="day"></span></button>`)+
     `<div class="upres">${wresHtml()}</div></div>`;
   h+=`<div class="pcard"><div class="bhead"><h3>Задания недели</h3><span class="bsub">обновятся через <span data-t="week"></span></span></div>`+
@@ -651,30 +738,55 @@ function renderBon(){
       `<div class="qbot"><small>${q.p} / ${q.n}</small>${q.got?'<em>Получено ✓</em>':ok?`<button class="btn main sm" data-b="quest" data-i="${i}">Забрать</button>`:''}</div></div>`}).join('')+`</div>`;
   if(el._h!==h){
     el.innerHTML=h;el._h=h;
-    if(bon.res&&bon.res.k==='n')playStage($('#wstage'),$('#wreel'),bon.res,false);
+    const fr=bon.fresh;bon.fresh=false;
+    if(bon.res&&bon.res.k==='n')playStage($('#wstage'),$('#wreel'),bon.res,fr);
+    else if(fr)document.querySelectorAll('#tab-bon .cu').forEach(el=>{const to=+el.dataset.to,t0=performance.now();if(reduce)return;const st=n=>{const k=Math.min(1,(n-t0)/1400);el.textContent=fmt(Math.round(to*(1-Math.pow(1-k,3))));if(k<1)requestAnimationFrame(st)};st(t0)});
   }
   updTimers();
 }
 function claimLogin(){
   const i=loginInfo();if(i.done)return;
-  const r=LOGIN[i.idx];S.login={n:i.n+1,last:todayK()};S.maxStreak=Math.max(S.maxStreak,S.login.n);S.coins+=r;save();
-  toast(`День ${i.idx+1}: +${fmt(r)} 🪙`);hap('n','success');if(r>=20000)boom('#FFC933',4);render();
+  const r=LOGIN[i.idx];S.login={n:i.n+1,last:todayK()};S.maxStreak=Math.max(S.maxStreak,S.login.n);S.coins+=r;S.en+=5;save();
+  toast(`День ${i.idx+1}: +${fmt(r)} 🪙 и +5 ⚡`);hap('n','success');if(r>=20000)boom('#FFC933',4);render();
 }
 function claimQuest(i){
   const q=S.q.list[i];if(!q||q.got||q.p<q.n)return;
-  const r=QDEF[q.id].r;q.got=true;S.qn++;S.coins+=r;save();toast(`Задание выполнено: +${fmt(r)} 🪙`);hap('n','success');render();
+  const r=QDEF[q.id].r;q.got=true;S.qn++;S.coins+=r;S.en+=3;save();toast(`Задание выполнено: +${fmt(r)} 🪙 и +3 ⚡`);hap('n','success');render();
 }
-function doWheel(){
-  if(S.wheel===todayK())return;
-  const win=wpick(),pick=win.k==='n'?P(prizePool().filter(x=>x.t===win.t)):null;
-  S.wheel=todayK();S.wheelN++;addQuest('wheel',1);hap('n','success');
-  if(win.k==='c'){S.coins+=win.v;bon.res={k:'c',v:win.v};if(win.v>=20000)boom('#FFC933',win.v>=50000?5:4)}
+async function doWheel(){
+  if(bon.busy||S.wheel===todayK())return;
+  const win=wpick(),k=WHEEL.indexOf(win),pick=win.k==='n'?P(prizePool().filter(x=>x.t===win.t)):null;
+  // приз выдаём сразу (чтобы закрытие приложения не отменило крутку), показываем после анимации
+  S.wheel=todayK();S.wheelN++;addQuest('wheel',1);
+  let res;
+  if(win.k==='c'){S.coins+=win.v;res={k:'c',v:win.v}}
   else{
     S.cnt[pick.t]++;S.bestv=Math.max(S.bestv,pick.price);
-    if(S.items.length<MAX){addItem(pick.name,pick.t,pick.p);bon.res={k:'n',name:pick.name,t:pick.t,p:pick.p,saved:true}}
-    else{const v=val(pick.t,pick.p,pick.name);S.coins+=v;S.sold++;bon.res={k:'n',name:pick.name,t:pick.t,p:pick.p,saved:false,v}}
+    if(S.items.length<MAX){addItem(pick.name,pick.t,pick.p);res={k:'n',name:pick.name,t:pick.t,p:pick.p,saved:true}}
+    else{const v=val(pick.t,pick.p,pick.name);S.coins+=v;S.sold++;res={k:'n',name:pick.name,t:pick.t,p:pick.p,saved:false,v}}
   }
-  save();render();
+  save();
+  bon.busy=true;xbusy=1;bon.res=null;bon.win=-1;
+  document.querySelectorAll('#tab-bon button').forEach(b=>b.disabled=true);
+  const wh=$('#wheel'),rot=$('#wrot'),ptr=$('#wptr');
+  const jit=(Math.random()-.5)*WSL*.7,c=k*WSL+WSL/2;
+  const fin=Math.ceil(bon.ang/360)*360+360*(5+R(2))-c+jit,dur=reduce?60:6400;
+  wh.classList.add('spinning');
+  rot.style.transition=`transform ${dur}ms cubic-bezier(.12,.72,.08,1)`;void rot.offsetWidth;
+  rot.style.transform=`rotate(${fin}deg)`;
+  if(!reduce){let last=-1;const t0=performance.now();
+    (function tk(){
+      let deg=NaN;try{const m=new DOMMatrix(getComputedStyle(rot).transform);deg=Math.atan2(m.b,m.a)*180/Math.PI}catch(e){}
+      if(isFinite(deg)){const idx=Math.floor((((-deg%360)+360)%360)/WSL);
+        if(idx!==last){if(last>=0){ptr.classList.remove('tk');void ptr.offsetWidth;ptr.classList.add('tk');hap('i','light')}last=idx}}
+      if(performance.now()-t0<dur+100)requestAnimationFrame(tk)})();
+  }
+  await sleep(dur+150);
+  bon.ang=fin;bon.win=k;wh.classList.remove('spinning');wh.classList.add('haswin');
+  const ws=wh.querySelectorAll('.ws')[k];if(ws)ws.classList.add('won');
+  hap('n','success');if(!reduce)boom(wcol(win),win.k==='n'?Math.max(3,win.t):win.v>=50000?5:win.v>=20000?4:3);
+  await sleep(reduce?0:900);
+  bon.res=res;bon.fresh=true;bon.busy=false;xbusy=0;render();
 }
 $('#tab-bon').onclick=e=>{
   const b=e.target.closest('[data-b]');if(!b||b.disabled||bon.busy)return;
