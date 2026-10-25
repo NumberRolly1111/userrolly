@@ -217,7 +217,7 @@ function score(s){
   return{t:tierOf(p),tags:t,p};
 }
 
-const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,upl:0,uph:[],refd:0,refc:0,casen:0,dcase:'',fast:0,theme:'',cf:'',cown:[],cn:'',ct:'',inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
+const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,upl:0,uph:[],refd:0,refc:0,casen:0,dcase:'',fast:0,theme:'',cf:'',work:[],lotp:null,lotn:0,cown:[],cn:'',ct:'',inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 fixState();
 // Темы оформления: меняют цвета через переменные CSS (html[data-theme=…])
@@ -260,7 +260,10 @@ function fixState(){
   else if(S.econ!==4){S.coins=START;S.econ=4}
   if(typeof S.bestn!=='string')S.bestn='';S.hide=S.hide?1:0;
   num('refc',0);S.refc=Math.max(0,Math.floor(S.refc));S.refd=S.refd?1:0;
-  if(typeof S.dcase!=='string')S.dcase='';S.fast=S.fast?1:0;if(typeof S.theme!=='string')S.theme='';if(typeof S.cf!=='string')S.cf='';S.cown=Array.isArray(S.cown)?[...new Set(S.cown.filter(x=>typeof x==='string'))]:[];if(typeof S.cn!=='string')S.cn='';if(typeof S.ct!=='string')S.ct='';
+  if(typeof S.dcase!=='string')S.dcase='';S.fast=S.fast?1:0;if(typeof S.theme!=='string')S.theme='';if(typeof S.cf!=='string')S.cf='';
+  S.work=(Array.isArray(S.work)?S.work:[]).filter(w=>w&&typeof w.id==='string'&&isFinite(+w.t)).map(w=>({id:w.id,t:Math.min(Date.now(),+w.t)})).slice(0,3);
+  if(!(S.lotp&&typeof S.lotp==='object'&&((S.lotp.k==='c'&&isFinite(+S.lotp.v)&&+S.lotp.v>0)||(S.lotp.k==='n'&&typeof S.lotp.name==='string'))))S.lotp=null;
+  num('lotn',0);S.lotn=Math.max(0,Math.floor(S.lotn));S.cown=Array.isArray(S.cown)?[...new Set(S.cown.filter(x=>typeof x==='string'))]:[];if(typeof S.cn!=='string')S.cn='';if(typeof S.ct!=='string')S.ct='';
   num('casen',0);S.casen=Math.max(0,Math.floor(S.casen));
   num('upl',0);S.upl=Math.max(0,Math.floor(S.upl));S.uph=Array.isArray(S.uph)?S.uph.filter(x=>x&&typeof x==='object'&&typeof x.s==='string').slice(0,30):[];
   num('uid',0);num('en',EN_CAP);S.en=Math.max(0,Math.min(999,Math.floor(S.en)));num('enT',0);if(S.src!=='free'&&S.src!=='coin')S.src='free';S.snd=S.snd!==false;num('lvl',1);S.lvl=Math.max(1,Math.floor(S.lvl));num('xp',0);S.xp=Math.max(0,Math.floor(S.xp));
@@ -752,7 +755,7 @@ function colPanel(){
 function renderCol(){
   const col=$('#tab-col'),its=[...S.items].sort((a,b)=>b.t-a.t);
   if(colSel)colSel=new Set([...colSel].filter(id=>S.items.some(i=>i.id===id)));
-  let h=colPanel()+showPlate();
+  let h=colPanel()+workPlate()+showPlate();
   if(!its.length){colSel=null;h+=`<div class="empty">Коллекция пуста.<br>Крути рулетку и забирай понравившиеся ники.<br><button class="btn" data-go="game">К рулетке</button></div>`}
   else h+=`<div class="chead"><div><h2>Мои ники</h2></div>`+
     (colSel?`<div class="cbtns"><button class="btn sm" data-a="all">Все</button><button class="btn sm" data-a="cancel">Отмена</button></div>`:`<button class="btn sm" data-a="selmode">Выбрать</button>`)+`</div>`+
@@ -822,6 +825,7 @@ $('#reels').onclick=e=>{
 $('#tab-col').onclick=e=>{
   const g=e.target.closest('[data-go]');if(g)return tab(g.dataset.go);
   if(e.target.closest('#show-open'))return tab('show');
+  if(e.target.closest('#work-open'))return workSheet();
   if(e.target.closest('#market-open'))return tab('market');
   if(e.target.closest('#museum-open'))return tab('museum');
   const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
@@ -1401,7 +1405,7 @@ function rollTier(c){let r=Math.random()*c.w.reduce((s,x)=>s+x[1],0);for(const [
 const dClaimed=()=>S.dcase===todayK();
 function renderCases(){
   let el=$('#cases');if(!el){const st=document.querySelector('#tab-game .stats');if(!st)return;el=document.createElement('div');el.id='cases';st.after(el)}
-  setHtml(el,`<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${S.coins<c.price?' poor':''}${c.daily&&dClaimed()?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.daily?(dClaimed()?'Через '+leftT(msToDay()):'Бесплатно · раз в сутки'):fmt(c.price)+' 🪙'}</span></button>`).join('')+'</div>');
+  setHtml(el,`<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${S.coins<c.price?' poor':''}${c.daily&&dClaimed()?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.daily?(dClaimed()?'Через '+leftT(msToDay()):'Бесплатно · раз в сутки'):fmt(c.price)+' 🪙'}</span></button>`).join('')+'</div>'+lotCard());
 }
 function caseSheet(){
   let sh=$('#casesh');if(!sh){sh=document.createElement('div');sh.id='casesh';sh.className='usheet';sh.hidden=true;document.body.appendChild(sh);
@@ -1445,6 +1449,116 @@ async function openCase(){
   const t2=$('#crt'),r2=$('#crl');if(t2&&r2){r2.classList.add('on');t2.innerHTML=tiles.join('');t2.style.transition='none';t2.style.transform=`translateX(${r2.clientWidth/2-(WIN*pitch+tw/2+off)}px)`;const ww=t2.children[WIN];if(ww)ww.classList.add('win')}
 }
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-case]');if(!b||cs.busy)return;cs.id=b.dataset.case;cs.res=null;caseSheet()});
+// ---------- Ники на работе: пассивный доход ----------
+var WORKMAX=3,WORKCAP=8*3600e3,WORKRATE=.0025,wkPick=false,wkTm=0;   // до 3 ников; 0,25% цены ника в час; копится до 8 часов
+function workList(){S.work=S.work.filter(w=>S.items.some(i=>i.id===w.id));return S.work}
+function workRate(it){return Math.max(1,Math.round(val(it.t,it.p,it.n)*WORKRATE))}
+function workAcc(w,it){return Math.floor(workRate(it)*Math.min(WORKCAP,Math.max(0,Date.now()-w.t))/3600e3)}
+function workTotal(){return workList().reduce((s,w)=>{const it=S.items.find(i=>i.id===w.id);return s+(it?workAcc(w,it):0)},0)}
+function workPlate(){const n=workList().length,t=workTotal();return `<button class="pcard achbtn" id="work-open" style="margin-bottom:16px"><div><b>Ники на работе</b><small>${n} из ${WORKMAX}${t>0?' · накоплено '+fmtC(t)+' 🪙':' · приносят монеты, пока ты не играешь'}</small></div><span class="trophy">⛏️</span></button>`}
+function workSheet(close){
+  let o=document.getElementById('worksh');
+  if(close){if(o)o.remove();clearInterval(wkTm);wkPick=false;return}
+  if(!o){o=document.createElement('div');o.id='worksh';o.className='usheet';document.body.append(o);
+    wkTm=setInterval(()=>{if(document.getElementById('worksh')&&!wkPick)workSheet()},5000);
+    o.onclick=e=>{
+      if(e.target.closest('[data-wx]')){if(wkPick){wkPick=false;return workSheet()}return workSheet(true)}
+      const add=e.target.closest('[data-wadd]');if(add){wkPick=true;return workSheet()}
+      const pk=e.target.closest('[data-wpick]');
+      if(pk){if(S.work.length<WORKMAX&&S.items.some(i=>i.id===pk.dataset.wpick)&&!S.work.some(w=>w.id===pk.dataset.wpick)){S.work.push({id:pk.dataset.wpick,t:Date.now()});save();sfx('tap')}wkPick=false;if(!$('#tab-col').hidden)renderCol();return workSheet()}
+      const rm=e.target.closest('[data-wrm]');
+      if(rm){const w=S.work.find(x=>x.id===rm.dataset.wrm),it=w&&S.items.find(i=>i.id===w.id);if(w&&it){const g=workAcc(w,it);if(g>0)S.coins+=g}S.work=S.work.filter(x=>x.id!==rm.dataset.wrm);save();render();if(!$('#tab-col').hidden)renderCol();return workSheet()}
+      if(e.target.closest('[data-wclaim]')){
+        let sum=0;workList().forEach(w=>{const it=S.items.find(i=>i.id===w.id);if(it){sum+=workAcc(w,it);w.t=Date.now()}});
+        if(sum>0){S.coins+=sum;save();render();sfx('coins');hap('n','success');toast(`Заработано: +${fmt(sum)} 🪙`);if(!$('#tab-col').hidden)renderCol()}
+        return workSheet()}
+    }}
+  const list=workList();
+  if(wkPick){
+    const its=S.items.filter(i=>!list.some(w=>w.id===i.id)).sort((a,b)=>val(b.t,b.p,b.n)-val(a.t,a.p,a.n));
+    o.innerHTML=`<div class="sbg" data-wx="1"></div><div class="sbox casebox"><div class="shead"><b>Кого отправить работать?</b><button class="btn sm" data-wx="1">‹</button></div>`+
+      (its.length?its.map(x=>`<button class="item wpk" data-wpick="${x.id}" style="--tc:${T[x.t].c}"><div><b>@${escH(x.n)}</b><small>${T[x.t].n}</small></div><span>+${fmt(workRate(x))} 🪙/ч</span></button>`).join(''):'<div class="pcard lbmsg"><small>Все ники уже работают или коллекция пуста.</small></div>')+`</div>`;
+    return;
+  }
+  const tot=workTotal();
+  const slot=i=>{const w=list[i];if(!w)return `<button class="wslot empty" data-wadd="1"><b>＋ Поставить ник</b><small>Свободное место ${i+1} из ${WORKMAX}</small></button>`;
+    const it=S.items.find(x=>x.id===w.id),rate=workRate(it),acc=workAcc(w,it),full=Date.now()-w.t>=WORKCAP;
+    return `<div class="wslot" style="--tc:${T[it.t].c}"><div class="wtop"><div><b>@${escH(it.n)}</b><small>${T[it.t].n} · +${fmt(rate)} 🪙/ч</small></div><button class="btn sm" data-wrm="${it.id}">Снять</button></div>
+    <div class="wbar"><i style="width:${Math.min(100,(Date.now()-w.t)/WORKCAP*100)}%"></i></div><small class="wacc">${full?'Склад полон — забери монеты':'Накоплено'}: <b>${fmt(acc)} 🪙</b></small></div>`};
+  o.innerHTML=`<div class="sbg" data-wx="1"></div><div class="sbox casebox"><div class="shead"><b>⛏️ Ники на работе</b><button class="btn sm" data-wx="1">✕</button></div>
+    <p class="cdesc3">Каждый ник приносит 0,25% своей цены в час. Копится до 8 часов, потом нужно зайти и забрать.</p>
+    ${[0,1,2].map(slot).join('')}
+    <button class="btn main cwide" data-wclaim="1"${tot>0?'':' disabled'}>${tot>0?`Забрать всё · +${fmt(tot)} 🪙`:'Пока нечего забирать'}</button></div>`;
+}
+// ---------- Моментальная лотерея: три одинаковых символа — приз ----------
+var LOTP=100000,LOT=[{s:'🍒',v:200000,p:.07},{s:'🍋',v:300000,p:.035},{s:'🔔',v:600000,p:.018},{s:'⭐',v:1500000,p:.006},{s:'💎',v:5000000,p:.0012},{s:'👑',v:25000000,p:.0001},{s:'🔮',nick:1,p:.0002}],lt={t:null,done:false};
+function lotCard(){return `<button class="lotcard${S.coins<LOTP?' poor':''}" id="lot-open"><span class="lci">🎟️</span><div><b>Моментальная лотерея</b><small>Билет ${fmt(LOTP)} 🪙 · три одинаковых — приз</small></div><span class="lcp">›</span></button>`}
+function lotRoll(){
+  let r=Math.random(),w=null;for(const x of LOT){if(r<x.p){w=x;break}r-=x.p}
+  const coin=LOT.filter(x=>!x.nick).map(x=>x.s);
+  if(w)return{syms:[w.s,w.s,w.s],w};
+  let a;do{a=[P(coin),P(coin),P(coin)]}while(a[0]===a[1]&&a[1]===a[2]);
+  return{syms:a,w:null};
+}
+function claimLot(){
+  const p=S.lotp;if(!p)return '';
+  S.lotp=null;let msg;
+  if(p.k==='c'){S.coins+=+p.v;msg=`+${fmt(+p.v)} 🪙`}
+  else{const r=score(p.name);if(S.items.length<MAX){addItem(p.name,r.t,r.p);msg=`секретный ник @${p.name}`}else{const v=val(r.t,r.p,p.name);S.coins+=v;S.sold++;msg=`@${p.name} продан за ${fmt(v)} 🪙 (нет места)`}}
+  save();render();return msg;
+}
+function lotScratch(cv,done){
+  const dpr=Math.min(2,devicePixelRatio||1),w=cv.clientWidth,h=cv.clientHeight;cv.width=w*dpr;cv.height=h*dpr;
+  const g=cv.getContext('2d');g.scale(dpr,dpr);
+  const gr=g.createLinearGradient(0,0,w,h);gr.addColorStop(0,'#9AA3B2');gr.addColorStop(.45,'#E9EDF4');gr.addColorStop(1,'#9AA3B2');g.fillStyle=gr;g.fillRect(0,0,w,h);
+  g.fillStyle='rgba(55,65,85,.55)';g.font='800 14px sans-serif';g.textAlign='center';g.fillText('СОТРИ ЗАЩИТНЫЙ СЛОЙ',w/2,h/2+5);
+  g.globalCompositeOperation='destination-out';g.lineCap='round';g.lineWidth=40;
+  let down=false,last=null,lastT=0,fin=false;
+  const pt=e=>{const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]};
+  const seg=(a,b)=>{g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke()};
+  const check=()=>{if(fin)return;const d=g.getImageData(0,0,cv.width,cv.height).data;let c=0,t=0;for(let i=3;i<d.length;i+=4*29){t++;if(d[i]<20)c++}if(c/t>.5){fin=true;done()}};
+  cv.onpointerdown=e=>{down=true;try{cv.setPointerCapture(e.pointerId)}catch(x){}last=pt(e);seg(last,last);e.preventDefault()};
+  cv.onpointermove=e=>{if(!down)return;const q=pt(e);seg(last,q);last=q;const n=Date.now();if(n-lastT>140){lastT=n;check();sfx('tick')}};
+  cv.onpointerup=cv.onpointercancel=()=>{down=false;check()};
+  cv.wipe=()=>{if(fin)return;fin=true;done()};
+}
+function lotSheet(close){
+  let o=document.getElementById('lotsh');
+  if(close){if(o)o.remove();if(S.lotp){const m=claimLot();if(m)toast('Приз лотереи: '+m)}lt.t=null;lt.done=false;return}
+  if(!o){o=document.createElement('div');o.id='lotsh';o.className='usheet';document.body.append(o);
+    o.onclick=e=>{
+      if(e.target.closest('[data-lx]'))return lotSheet(true);
+      if(e.target.closest('#lot-wipe')){const cv=$('#lot-cv');cv&&cv.wipe&&cv.wipe();return}
+      if(e.target.closest('#lot-buy')){
+        if(S.coins<LOTP)return toast('Не хватает монет');
+        if(S.lotp){const m=claimLot();if(m)toast('Приз лотереи: '+m)}
+        const r=lotRoll();S.coins-=LOTP;S.lotn++;
+        r.nm=P(SECRETS);S.lotp=r.w?(r.w.nick?{k:'n',name:r.nm}:{k:'c',v:r.w.v}):null;   // приз записан сразу: закрытие приложения его не отменит
+        save();render();lt.t=r;lt.done=false;sfx('upstart');lotSheet();
+      }}}
+  const t=lt.t,poor=S.coins<LOTP;
+  const symsHtml=t?t.syms.map(x=>`<span class="lsy">${x}</span>`).join(''):'';
+  const res=t&&lt.done?(t.w?`<div class="lotres win"><b>Выигрыш!</b><span>${t.w.nick?'Секретный ник: @'+escH(t.nm||''):'+'+fmt(t.w.v)+' 🪙'}</span></div>`:'<div class="lotres lose"><b>Не повезло</b><span>Символы не совпали</span></div>'):'';
+  o.innerHTML=`<div class="sbg" data-lx="1"></div><div class="sbox casebox lotbox"><div class="shead"><b>🎟️ Моментальная лотерея</b><button class="btn sm" data-lx="1">✕</button></div>
+    <p class="cdesc3">Сотри защитный слой. Три одинаковых символа — приз твой сразу.</p>
+    <div class="ticket"><div class="thd"><b>МОМЕНТАЛЬНАЯ ЛОТЕРЕЯ</b><span>№ ${S.lotn?String(S.lotn).padStart(6,'0'):'—'}</span></div>
+      <div class="lscr${t&&lt.done&&t.w?' win':''}">${t?`<div class="lsyms">${symsHtml}</div>${lt.done?'':'<canvas id="lot-cv"></canvas>'}`:'<div class="lph"><span>🎟️</span><b>Купи билет ниже</b></div>'}</div></div>
+    ${res}
+    ${t&&!lt.done?'<button class="btn cwide" id="lot-wipe">Стереть всё</button>':`<button class="btn main cwide" id="lot-buy"${poor?' disabled':''}>${poor?'Не хватает монет':(t?'Купить ещё · ':'Купить билет · ')+fmt(LOTP)+' 🪙'}</button>`}
+    <details class="lodds"><summary>Шансы и призы</summary>${LOT.map(x=>`<div class="lrw"><span>${x.s}${x.s} ${x.s}</span><b>${x.nick?'случайный секретный ник':fmt(x.v)+' 🪙'}</b><small>${(x.p*100).toFixed(x.p<.001?2:1).replace('.',',')}%</small></div>`).join('')}<small class="sum">Общий шанс выигрыша около ${(LOT.reduce((a,x)=>a+x.p,0)*100).toFixed(1).replace('.',',')}%. Без совпадения приза нет.</small></details></div>`;
+  const cv=$('#lot-cv');
+  if(cv&&t&&!lt.done)lotScratch(cv,()=>{
+    lt.done=true;cv.style.transition='opacity .45s';cv.style.opacity='0';
+    setTimeout(()=>{
+      if(t.w){const m=claimLot();sfx(t.w.v>=1500000||t.w.nick?'ach':'coins');hap('n','success');try{boom('#FFC933',t.w.v>=1500000||t.w.nick?5:3)}catch(x){}if(m)toast('Приз: '+m)}
+      else{sfx('lose');hap('n','warning')}
+      lotSheet();render();
+    },reduce?0:420);
+  });
+}
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#lot-open')){lt.t=null;lt.done=false;lotSheet()}});
+try{const m=claimLot();if(m)setTimeout(()=>toast('Приз лотереи: '+m),1500)}catch(e){}
+
 renderCases();
 
 // ---------- Рынок между игроками ----------
