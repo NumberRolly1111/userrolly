@@ -1,5 +1,11 @@
 const $=s=>document.querySelector(s),tg=window.Telegram&&Telegram.WebApp;
-if(tg){tg.ready();tg.expand();try{tg.setHeaderColor('#0D0B1A');tg.setBackgroundColor('#0D0B1A')}catch(e){}}
+// отступ сверху под системную панель Telegram («Закрыть», «…»): берём из SDK, иначе запасной
+function safeTop(){
+  let t=0;try{t=((tg.safeAreaInset||{}).top||0)+((tg.contentSafeAreaInset||{}).top||0)}catch(e){}
+  if(tg&&tg.isFullscreen&&t<90)t=90;   // полноэкранный режим: панель Telegram поверх страницы
+  document.documentElement.style.setProperty('--top',t?t+'px':'env(safe-area-inset-top)');
+}
+if(tg){tg.ready();tg.expand();safeTop();['safeAreaChanged','contentSafeAreaChanged','fullscreenChanged','viewportChanged'].forEach(ev=>{try{tg.onEvent(ev,safeTop)}catch(e){}});try{tg.setHeaderColor('#0D0B1A');tg.setBackgroundColor('#0D0B1A')}catch(e){}}
 const hap=(k,v)=>{try{tg&&tg.HapticFeedback&&(k==='n'?tg.HapticFeedback.notificationOccurred(v):tg.HapticFeedback.impactOccurred(v))}catch(e){}};
 const T=[{n:'Обычный',c:'#9AA5DB',v:13},{n:'Необычный',c:'#27D9BD',v:49},{n:'Редкий',c:'#9B7BFF',v:160},{n:'Эпический',c:'#FF5FA2',v:590},{n:'Легендарный',c:'#FFC933',v:2400},{n:'Мифический',c:'#FF4B3E',v:12600},{n:'Секретный',c:'#EAF1FF',v:35000}]
 T.forEach((t,i)=>t.s=['Обычн.','Необыч.','Редкий','Эпик','Легенд.','Миф.','Секрет'][i]);;
@@ -259,8 +265,8 @@ function showSel(i,fresh){
   const c=cur[i],t=T[c.t],reel=row.querySelector('.reel'),meta=row.querySelector('.rmeta');
   row.style.setProperty('--tc',t.c);
   if(!fresh)build(c.name,false,reel);
-  row.classList.remove('hit','shake','mythic','secret');void row.offsetWidth;
-  row.classList.add('hit');row.classList.toggle('shake',c.t>=3);row.classList.toggle('mythic',c.t===5);row.classList.toggle('secret',c.t===6);
+  row.classList.remove('hit','shake','mythic','secret');row.classList.toggle('calm',!fresh);void row.offsetWidth;   // calm: при переключении без тряски и вспышек
+  row.classList.add('hit');row.classList.toggle('shake',fresh&&c.t>=3);row.classList.toggle('mythic',c.t===5);row.classList.toggle('secret',c.t===6);
   renderPicks();renderMeta();
   requestAnimationFrame(()=>requestAnimationFrame(()=>meta.classList.add('on')));
   if(fresh){if(c.t>=2)hap('n','success');if(c.t>=3)boom(t.c,c.t)}
