@@ -19,13 +19,14 @@ const val=(t,p,n)=>{
   if(!p)return T[t].v;
   return Math.max(1,Math.round(PRICE_BASE*Math.exp(PRICE_K*(p-30))));
 };
-const rar=(t,p)=>t===6?'только бонусы и апгрейд':'1 из '+oneIn(p);
 
 const SECRETS=[...new Set(['ww','xxx','lot','лох','god','333','666','777','888','999','000','dead','#','111','222','444','555','13','69','420','1337','lol','wow','kek','zzz','www','w','x','1','0','11','007','404','gg','xd','omg','wtf','rip','лол','кек','бог','вау','$','%','@','?','!','*','~','_'])];
 const ADJ=['dark','night','silent','red','blue','cold','wild','swift','lazy','crazy','happy','lucky','toxic','epic','mega','ultra','neo','pixel','cyber','royal'];
 const NOUN=['wolf','fox','cat','bear','tiger','panda','ghost','king','queen','ninja','pilot','mage','hero','dragon','falcon','raven','shark','cobra','rider','hunter'];
 const AFFIX=['pro','dev','real','official','the','its','mr','im'];
 const KEYS=['qwerty','asdfgh','zxcvbn','qazwsx','qweasd','asdfg','zxcvb','qwert','poiuy','wasd1'];
+const NAMES=['alex','max','ivan','dima','anna','maria','sasha','kate','oleg','nikita','artem','denis','sergey','andrey','olga','julia','katya','vlad','egor','roman','danil','lena','sonya','misha','kirill','pavel','igor','masha','tanya','ruslan','timur','amir','aidar','aigerim','dana','aruzhan','nurlan','askar','dauren','madina'];
+const SURN=['smith','ivanov','petrov','k','m','s','official','real','life','play','game','music','art','photo','travel'];
 const LEET={a:'4',e:'3',o:'0',i:'1',s:'5',t:'7'},UNLEET={4:'a',3:'e',0:'o',1:'i',5:'s',7:'t'};
 const leet=w=>[...w].map((c,i)=>i&&LEET[c]&&R(2)?LEET[c]:c).join('');
 function genNew(){
@@ -44,9 +45,24 @@ function genNew(){
     default:return a+nn+R(100);
   }
 }
+// самые обычные имена: alex2003, ivan_petrov, anna_k, its_max
+function plain(){
+  const n=P(NAMES);let s;
+  switch(R(7)){
+    case 0:s=n+(1985+R(30));break;
+    case 1:s=n+R(100);break;
+    case 2:s=n+'_'+P(SURN);break;
+    case 3:s=P(NAMES)+'_'+n;break;
+    case 4:s='its_'+n;break;
+    case 5:s=n+String(R(1000)).padStart(3,'0');break;
+    default:s=n+'_'+(R(90)+10);
+  }
+  return s.length<5?s+R(10)+R(10):s;
+}
 function gen(){
   const q=Math.random();
   if(q<.00065){const a=P(L),b=P(L.replace(a,''));return R(2)?a.repeat(5):a+b+a+b+a}
+  if(q<.1)return plain();
   if(q<.4)return genNew();
   const r=Math.random(),n=P([5,6,6,7,7,7,8,8,8,8]);let s;
   if(r<.38)s=rnd(n);
@@ -83,12 +99,7 @@ function score(s){
   return{t:tierOf(p),tags:t,p};
 }
 
-const SAMPLE=(()=>{const a=[];for(let i=0;i<60000;i++)a.push(score(gen()).p);return a.sort((x,y)=>x-y)})();
-const above=p=>{let lo=0,hi=SAMPLE.length;while(lo<hi){const m=(lo+hi)>>1;if(SAMPLE[m]<p)lo=m+1;else hi=m}return SAMPLE.length-lo};
-const oneIn=p=>p>=999?6700:p>=150?2000:Math.max(2,Math.round(SAMPLE.length/Math.max(1,above(p))));
-const TIERP=T.map((_,t)=>SAMPLE.filter(p=>tierOf(p)===t).length/SAMPLE.length);
-TIERP[5]=Math.max(TIERP[5],.0004);TIERP[6]=0;
-const def={coins:3000,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:3,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]}};
+const def={coins:3000,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:3,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,inv:0,tri:0,luck:0,five:0,ach:null};
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 if(S.econ!==3){S.coins=3000;S.items=S.items.slice(0,MAX);S.econ=3}
 if(!Array.isArray(S.cnt)||S.cnt.length<7)S.cnt=[0,0,0,0,0,0,0];
@@ -97,6 +108,7 @@ if(!S.uid){const id=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUn
 const save=()=>{try{localStorage.setItem('nameroulette',JSON.stringify(S))}catch(e){}};
 if(!S.login||typeof S.login!=='object')S.login={n:0,last:''};
 if(!S.q||!Array.isArray(S.q.list))S.q={wk:'',list:[]};
+S.maxStreak=Math.max(S.maxStreak||0,S.login.n||0);
 
 // ---------- Бонусы: ядро (ежедневный вход, ежедневная рулетка, недельные задания) ----------
 // Награды за 14 дней входа подряд (после 14-го дня круг начинается заново)
@@ -138,73 +150,133 @@ function bonAvail(){return !loginInfo().done||S.wheel!==todayK()||S.q.list.some(
 function updBonDot(){const d=document.querySelector('#bon-btn .dot');if(d)d.hidden=!bonAvail()}
 function addQuest(id,n=1){ensureQuests();const q=S.q.list.find(x=>x.id===id);if(q&&!q.got&&q.p<q.n){q.p=Math.min(q.n,q.p+n);save()}updBonDot()}
 ensureQuests();
-let mode=0,count=1,busy=false,cur=[],tt;
+// ---------- Достижения (50) ----------
+// A(иконка, название, описание, текущее значение, цель)
+const A=(i,n,d,cur,goal=1)=>({i,n,d,cur,goal});
+const ACH=[
+  ...[1,100,500,1000,5000].map(n=>A('🎰',n===1?'Первая крутка':n+' круток',n===1?'Сделай первую крутку':`Сделай ${fmt(n)} круток`,()=>S.spins,n)),
+  ...[1,10,50,100].map(n=>A('⚡',n===1?'Первый успех':n+' успешных апгрейдов',n===1?'Выиграй первый апгрейд':`Выиграй ${n} апгрейдов`,()=>S.upw,n)),
+  A('🔧','Мастер апгрейда','Сделай 100 апгрейдов',()=>S.ups,100),
+  ...[1,10,50,100].map(n=>A('📦',n===1?'Первый в коллекции':'Коллекция из '+n+' ников',n===1?'Сохрани первый ник':`Собери за всё время ${n} ников в коллекцию`,()=>S.saved,n)),
+  ...[[1000,'Тысячник'],[10000,'Десятитысячник'],[35000,'Цена секрета'],[100000,'Самый дорогой ник']].map(([n,t])=>A('💎',t,`Получи ник ценой от ${fmt(n)} 🪙`,()=>S.bestv,n)),
+  ...[1,2,3,4,5,6].map(t=>A('✨',t===6?'Первая секретка':'Первый '+T[t].n.toLowerCase().replace(/ий$/,'ий'),`Получи ник редкости «${T[t].n}»`,()=>S.cnt[t],1)),
+  A('🟣','10 Редких','Получи 10 редких ников',()=>S.cnt[2],10),
+  A('🌸','10 Эпических','Получи 10 эпических ников',()=>S.cnt[3],10),
+  A('👑','5 Легендарных','Получи 5 легендарных ников',()=>S.cnt[4],5),
+  A('🔥','3 Мифических','Получи 3 мифических ника',()=>S.cnt[5],3),
+  A('💰','Первая продажа','Продай ник',()=>S.sold,1),
+  A('🏷️','Торговец','Продай 50 ников',()=>S.sold,50),
+  ...[1,7,30].map(n=>A('🎡',n===1?'Первая рулетка':n+' ежедневных рулеток',n===1?'Прокрути ежедневную рулетку':`Прокрути ежедневную рулетку ${n} раз`,()=>S.wheelN,n)),
+  ...[3,7,14].map(n=>A('📅','Серия '+n+' '+dw(n),`Заходи ${n} ${dw(n)} подряд`,()=>S.maxStreak,n)),
+  ...[1,10,30].map(n=>A('✅',n===1?'Первое задание':n+' заданий',n===1?'Выполни задание недели':`Выполни ${n} заданий недели`,()=>S.qn,n)),
+  ...[[10000,'10 тысяч'],[100000,'100 тысяч'],[1000000,'Миллионер']].map(([n,t])=>A('🪙',t,`Накопи ${fmt(n)} 🪙`,()=>S.maxCoins,n)),
+  A('⏱️','Час в игре','Проведи в игре 1 час',()=>Math.floor(S.time/60),60),
+  A('🌙','Сутки в игре','Проведи в игре 24 часа',()=>Math.floor(S.time/3600),24),
+  A('📨','Позвал друзей','Отправь приглашение другу',()=>S.inv,1),
+  A('🗄️','Полная коллекция',`Собери ${MAX} из ${MAX} ников`,()=>S.items.length,MAX),
+  A('🎲','Три за раз','Открой 10 раз по 3 ника',()=>S.tri,10),
+  A('🍀','Невероятная удача','Выиграй апгрейд с шансом 10% или меньше',()=>S.luck,1),
+  A('🖐️','Пять в ставку','Поставь в апгрейд сразу 5 ников',()=>S.five,1),
+];
+// «Не вышло» 10 раз
+ACH.push(A('🧱','Упорный','Проиграй 10 апгрейдов',()=>S.ups-S.upw,10));
+const achOk=(a,i)=>S.ach.includes(i)||a.cur()>=a.goal;
+let achLock=0;
+function checkAch(){
+  S.maxCoins=Math.max(S.maxCoins,S.coins);
+  if(busy||xbusy)return;
+  const silent=!Array.isArray(S.ach);if(silent)S.ach=[];
+  const fresh=[];ACH.forEach((a,i)=>{if(!S.ach.includes(i)&&a.cur()>=a.goal){S.ach.push(i);fresh.push(a)}});
+  if(!fresh.length)return;save();
+  if(!silent){clearTimeout(achLock);achLock=setTimeout(()=>{toast('🏆 '+fresh[0].n+(fresh.length>1?` и ещё ${fresh.length-1}`:''));hap('n','success')},900)}
+}
+
+let mode=0,count=1,busy=false,cur=[],tt,sel=0,xbusy=0;
 const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
 function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),2600)}
 
-const SEC={start:900,step:1200,dur:1000};
+const SEC={start:900,step:1200,dur:1000},MYT={start:350,step:260,dur:650};
 function vigOn(reel){
   const v=$('#vig');try{reel.scrollIntoView({block:'center',behavior:'smooth'})}catch(e){}
   const place=()=>{const r=reel.getBoundingClientRect();v.style.setProperty('--vx',(r.left+r.width/2)+'px');v.style.setProperty('--vy',(r.top+r.height/2)+'px')};
   place();setTimeout(place,450);v.classList.add('on');
 }
 const vigOff=()=>$('#vig').classList.remove('on');
-function build(name,animate,reel=$('#reel'),slow=false){
+function build(name,animate,reel=$('#reel'),kind=0){
   reel.innerHTML='';reel.dataset.name=name;reel.classList.toggle('idle',!animate&&name.includes('?'));
   reel.style.fontSize=Math.max(14,Math.min(46,Math.floor((reel.parentElement.clientWidth-24-(name.length+1)*6)/(name.length*.94+.6))))+'px';
-  const sec=slow&&animate&&!reduce;   // секретный ник: символы выходят по одному, остальное затемнено
-  const at=document.createElement('div');at.className='at'+(sec?' sec':'');at.textContent='@';reel.append(at);
+  const sec=kind===6&&animate&&!reduce,myt=kind===5&&animate&&!reduce;   // секретный: медленно по одному с виньеткой; мифический: короткая вспышка
+  const at=document.createElement('div');at.className='at'+(sec?' sec':myt?' myt':'');at.textContent='@';reel.append(at);
   if(sec)vigOn(reel);
   [...name].forEach((ch,i)=>{
-    const c=document.createElement('div'),st=document.createElement('div');c.className='cell'+(sec?' sec':'');st.className='strip'+(animate&&!sec?' go':'');c.style.setProperty('--i',i);
-    const n=animate&&!sec?12+i*3:0,chars=Array.from({length:n},()=>P(POOL));chars.push(ch);
+    const c=document.createElement('div'),st=document.createElement('div');c.className='cell'+(sec?' sec':myt?' myt':'');st.className='strip'+(animate&&!sec&&!myt?' go':'');c.style.setProperty('--i',i);
+    const n=animate&&!sec&&!myt?12+i*3:0,chars=Array.from({length:n},()=>P(POOL));chars.push(ch);
     st.innerHTML=chars.map(x=>`<span>${x}</span>`).join('');c.append(st);reel.append(c);
     if(n){const d=reduce?1:1000+i*260;st.style.transitionDuration=d+'ms';
       requestAnimationFrame(()=>requestAnimationFrame(()=>st.style.transform=`translateY(${-n*1.5}em)`));
       setTimeout(()=>{st.classList.remove('go');c.classList.add('land');if(!reduce)hap('i','light')},d)}
+    if(myt){c.style.animationDelay=(MYT.start+i*MYT.step)+'ms';setTimeout(()=>hap('i','light'),MYT.start+i*MYT.step)}
     if(sec)setTimeout(()=>{c.classList.add('in');hap('i','medium');setTimeout(()=>c.classList.remove('sec','in'),SEC.dur)},SEC.start+i*SEC.step);
   });
   if(sec){
     setTimeout(()=>at.classList.add('in'),200);setTimeout(()=>at.classList.remove('sec','in'),200+SEC.dur);
     const total=SEC.start+(name.length-1)*SEC.step+SEC.dur+250;setTimeout(vigOff,total+500);return total;
   }
+  if(myt)return MYT.start+(name.length-1)*MYT.step+MYT.dur+100;
   return reduce?60:1000+(name.length-1)*260+150;
 }
 // показать результат на табло и включить эффекты редкости
 function playStage(st,reel,r,fresh){
-  const wait=build(r.name,fresh,reel,r.t===6);
+  const wait=build(r.name,fresh,reel,r.t>=5?r.t:0);
   const fx2=()=>{st.classList.add('hit');st.classList.toggle('shake',r.t>=3);st.classList.toggle('mythic',r.t===5);st.classList.toggle('secret',r.t===6)};
   if(fresh)setTimeout(()=>{fx2();hap('n','success');if(r.t>=3)boom(T[r.t].c,r.t)},wait);else fx2();
 }
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-const mkRow=()=>{const d=document.createElement('div');d.className='stage rrow';d.innerHTML='<div class="reel" aria-live="polite"></div><div class="rmeta"></div>';return d};
+const mkRow=()=>{const d=document.createElement('div');d.className='stage rrow';d.innerHTML='<div class="reel" aria-live="polite"></div><div class="picks"></div><div class="rmeta"></div>';return d};
 function showIdle(){const box=$('#reels');box.innerHTML='';const r=mkRow();box.append(r);build('??????',false,r.querySelector('.reel'));$('#idle').hidden=false}
-function roll(m){let best=null;for(let i=0;i<3000;i++){const s=gen(),r=score(s);if(!best||r.t>best.t)best={name:s,...r};if(r.t>=m.min)break}return{...best,kept:false}}
+function roll(m){let best=null;for(let i=0;i<3000;i++){const s=gen(),r=score(s);if(!best||r.t>best.t)best={name:s,...r};if(r.t>=m.min)break}return{...best,kept:false,res:''}}
 function flushPrev(){const left=cur.filter(c=>!c.kept);cur.forEach(c=>c.kept=true);S.pend=null;if(left.length)toast('Прошлые ники: '+stashAll(left))}
 async function spin(){
   if(busy)return;const m=MODES[mode],cost=m.cost*count;
   if(S.coins<cost){toast('Не хватает монет. Продай ники в коллекции или загляни в бонусы.');return}
-  flushPrev();busy=true;S.coins-=cost;S.spins+=count;addQuest('spins',count);
+  flushPrev();busy=true;S.coins-=cost;S.spins+=count;if(count>1)S.tri++;addQuest('spins',count);
   cur=Array.from({length:count},()=>roll(m));
-  cur.forEach(c=>{S.cnt[c.t]++;S.best=Math.max(S.best,c.t)});
+  cur.forEach(c=>{S.cnt[c.t]++;S.best=Math.max(S.best,c.t);S.bestv=Math.max(S.bestv,val(c.t,c.p,c.name))});
   S.pend=cur.map(({name,t,p})=>({name,t,p}));save();
+  // одна общая анимация: крутится лучший ник из выпавших, остальные видны в переключателе после неё
+  sel=cur.reduce((b,c,i)=>c.t>cur[b].t||(c.t===cur[b].t&&c.p>cur[b].p)?i:b,0);
   $('#idle').hidden=true;render();
-  const box=$('#reels');box.innerHTML='';
-  const rows=cur.map(()=>{const r=mkRow();box.append(r);return r});
-  await Promise.all(rows.map(async(r,i)=>{await sleep(i*240);const w=build(cur[i].name,true,r.querySelector('.reel'),cur[i].t===6);await sleep(w);revealRow(r,cur[i],i)}));
+  const box=$('#reels');box.innerHTML='';const row=mkRow();box.append(row);
+  const c=cur[sel],w=build(c.name,true,row.querySelector('.reel'),c.t>=5?c.t:0);
+  await sleep(w);
+  showSel(sel,true);
   busy=false;render();
 }
-function revealRow(row,c,i){
-  const t=T[c.t];row.style.setProperty('--tc',t.c);
+// показать выбранный ник: fresh = сразу после анимации (эффекты и конфетти), иначе мгновенное переключение
+function showSel(i,fresh){
+  const row=document.querySelector('#reels .rrow');if(!row||!cur[i])return;sel=i;
+  const c=cur[i],t=T[c.t],reel=row.querySelector('.reel'),meta=row.querySelector('.rmeta');
+  row.style.setProperty('--tc',t.c);
+  if(!fresh)build(c.name,false,reel);
+  row.classList.remove('hit','shake','mythic','secret');void row.offsetWidth;
   row.classList.add('hit');row.classList.toggle('shake',c.t>=3);row.classList.toggle('mythic',c.t===5);row.classList.toggle('secret',c.t===6);
-  const meta=row.querySelector('.rmeta');
-  meta.innerHTML=`<div class="badge"><i></i>${t.n}</div><div class="tags"><span class="tag odd">Круче или равен: ${rar(c.t,c.p)}</span>${c.tags.map(x=>`<span class="tag">${x}</span>`).join('')}</div>
-  <div class="acts"><button class="btn main" data-ra="keep" data-i="${i}">Сохранить</button><button class="btn" data-ra="sell" data-i="${i}">Продать за ${fmt(val(c.t,c.p,c.name))} 🪙</button><button class="btn" data-ra="copy" data-i="${i}">Копировать</button><button class="btn" data-ra="share" data-i="${i}">Поделиться</button></div>`;
+  renderPicks();renderMeta();
   requestAnimationFrame(()=>requestAnimationFrame(()=>meta.classList.add('on')));
-  if(c.t>=2)hap('n','success');if(c.t>=3)boom(t.c,c.t);
+  if(fresh){if(c.t>=2)hap('n','success');if(c.t>=3)boom(t.c,c.t)}
 }
-function markDone(row,text){row.querySelectorAll('[data-ra="keep"],[data-ra="sell"]').forEach(x=>x.disabled=true);row.querySelector('[data-ra="keep"]').textContent=text}
+function renderMeta(){
+  const row=document.querySelector('#reels .rrow');if(!row)return;const c=cur[sel],t=T[c.t],meta=row.querySelector('.rmeta');
+  meta.innerHTML=`<div class="badge"><i></i>${t.n}</div><div class="tags">${c.tags.map(x=>`<span class="tag">${x}</span>`).join('')}</div>
+  <div class="acts">`+(c.kept
+    ?`<button class="btn main" disabled>${c.res}</button>`
+    :`<button class="btn main" data-ra="keep">Сохранить</button><button class="btn" data-ra="sell">Продать за ${fmt(val(c.t,c.p,c.name))} 🪙</button>`)+`</div>`;
+  meta.querySelector('.acts').classList.toggle('one',c.kept);
+}
+function renderPicks(){
+  const row=document.querySelector('#reels .rrow');if(!row)return;const pk=row.querySelector('.picks');
+  pk.innerHTML=cur.length>1?cur.map((c,i)=>`<button class="pk${i===sel?' on':''}${c.kept?' done':''}" data-pk="${i}" style="--tc:${T[c.t].c}"><i></i><b>@${c.name}</b><small>${c.kept?(c.res.startsWith('Прод')?'продан':'сохранён'):T[c.t].n}</small></button>`).join(''):'';
+}
 // confetti
 const fx=$('#fx'),cx=fx.getContext('2d');let ps=[],raf=0;
 function boom(col,tr=3){
@@ -218,15 +290,13 @@ function tick(){
   ps=ps.filter(p=>p.a>0);raf=ps.length?requestAnimationFrame(tick):0;
 }
 
-const link=n=>`https://t.me/${encodeURIComponent(n)}`;
 const openTg=u=>tg&&tg.openTelegramLink?tg.openTelegramLink(u):window.open(u,'_blank');
 async function copy(n){try{await navigator.clipboard.writeText('@'+n);toast('Скопировано: @'+n)}catch(e){toast('Не удалось скопировать. Выдели ник вручную: @'+n)}}
-function share(n,t){const u=`https://t.me/share/url?url=${encodeURIComponent(link(n))}&text=${encodeURIComponent(`Мне выпал ник @${n} (${T[t].n}) в Нейм-рулетке`)}`;openTg(u)}
 const ask=(msg,ok)=>{try{if(tg&&tg.showConfirm&&tg.isVersionAtLeast&&tg.isVersionAtLeast('6.2')){tg.showConfirm(msg,y=>y&&ok());return}}catch(e){}if(confirm(msg))ok()};
-function addItem(n,t,p){S.items.unshift({id:Date.now()+''+R(1000),n,t,p})}
+function addItem(n,t,p){S.items.unshift({id:Date.now()+''+R(1000),n,t,p});S.saved++}
 // забрать ники в коллекцию; если места нет, продать
 function stashAll(list){
-  let k=0,s=0;list.forEach(c=>{if(S.items.length<MAX){addItem(c.name,c.t,c.p);k++}else{S.coins+=val(c.t,c.p,c.name);s++}});
+  let k=0,s=0;list.forEach(c=>{if(S.items.length<MAX){addItem(c.name,c.t,c.p);k++}else{S.coins+=val(c.t,c.p,c.name);S.sold++;s++}});
   return [k?`сохранено: ${k}`:'',s?`продано из-за полной коллекции: ${s}`:''].filter(Boolean).join(', ');
 }
 const pl=n=>n%10===1&&n%100!==11?'ник':[2,3,4].includes(n%10)&&![12,13,14].includes(n%100)?'ника':'ников';
@@ -254,23 +324,20 @@ function renderCol(){
   if(!its.length){colSel=null;h=`<div class="empty">Коллекция пуста.<br>Крути рулетку и забирай понравившиеся ники.<br><button class="btn" data-go="game">К рулетке</button></div>`}
   else h=`<div class="chead"><div><h2>Моя коллекция</h2><p class="sum">Ников: ${its.length} / ${MAX} · Если продать всё: ${fmt(its.reduce((a,x)=>a+val(x.t,x.p,x.n),0))} 🪙</p></div>`+
     (colSel?`<div class="cbtns"><button class="btn sm" data-a="all">Все</button><button class="btn sm" data-a="cancel">Отмена</button></div>`:`<button class="btn sm" data-a="selmode">Выбрать</button>`)+`</div>`+
-    its.map(x=>{const sub=`<small>${T[x.t].n}${x.p?' · '+rar(x.t,x.p):''}</small>`,pr=fmt(val(x.t,x.p,x.n));
+    its.map(x=>{const sub=`<small>${T[x.t].n}</small>`,pr=fmt(val(x.t,x.p,x.n));
       return colSel?`<label class="item pick" style="--tc:${T[x.t].c}"><input type="checkbox" data-cs="${x.id}"${colSel.has(x.id)?' checked':''}><div><b>@${x.n}</b>${sub}</div><span>${pr} 🪙</span></label>`
       :`<div class="item" style="--tc:${T[x.t].c}"><div><b>@${x.n}</b>${sub}</div><button data-a="copy" data-id="${x.id}" aria-label="Копировать">⧉</button><button data-a="sell" data-id="${x.id}" aria-label="Продать">${pr} 🪙</button></div>`}).join('');
   setHtml(col,h);updSelbar();
 }
 function render(){
   setCoins();
-  ensureQuests();updBonDot();
-  const m=MODES[mode],seg=$('#seg'),cn=$('#cnt'),od=$('#odds');
+  ensureQuests();updBonDot();checkAch();
+  const m=MODES[mode],seg=$('#seg'),cn=$('#cnt');
   if(!seg.firstChild)seg.innerHTML=MODES.map((x,i)=>`<button aria-pressed="false" data-m="${i}">${x.l}<small>${fmt(x.cost)} 🪙</small></button>`).join('');
   if(!cn.firstChild)cn.innerHTML=[1,3].map(n=>`<button aria-pressed="false" data-n="${n}">×${n}<small>${n===1?'один ник':'три ника'}</small></button>`).join('');
   [...seg.children].forEach((b,i)=>b.setAttribute('aria-pressed',i===mode));
   [...cn.children].forEach(b=>b.setAttribute('aria-pressed',+b.dataset.n===count));
   const sp=$('#spin');sp.textContent=`Крутить${count>1?' ×'+count:''} · ${fmt(m.cost*count)} 🪙`;sp.disabled=busy;
-  if(!od.firstChild)od.innerHTML=T.slice(0,6).map(t=>`<span class="od" style="--tc:${t.c}"><b></b><small>${t.s}</small></span>`).join('');
-  const pm=TIERP.slice(0,6).map((p,i)=>i>=m.min?p:0),sm=pm.reduce((a,b)=>a+b,0)||1;
-  [...od.children].forEach((s,i)=>{const v=pm[i]/sm*100;s.firstChild.textContent=v?(v<1?v.toFixed(1):Math.round(v))+'%':'—'});
   $('#st-spins').textContent=`Круток: ${fmt(S.spins)}`;
   $('#st-best').innerHTML=`Лучший: <b class="chip" style="background:${T[S.best].c}">${S.spins?T[S.best].n:'—'}</b>`;
   renderCol();
@@ -283,17 +350,15 @@ $('#spin').onclick=spin;
 $('#seg').onclick=e=>{const b=e.target.closest('[data-m]');if(b&&!busy){mode=+b.dataset.m;render()}};
 $('#cnt').onclick=e=>{const b=e.target.closest('[data-n]');if(b&&!busy){count=+b.dataset.n;render()}};
 $('#reels').onclick=e=>{
-  const b=e.target.closest('[data-ra]');if(!b||b.disabled)return;
-  const c=cur[+b.dataset.i],a=b.dataset.ra;if(!c)return;
-  if(a==='copy')return copy(c.name);
-  if(a==='share')return share(c.name,c.t);
-  if(c.kept)return;
-  const row=b.closest('.rrow');
-  if(a==='keep'){
+  const pk=e.target.closest('[data-pk]');
+  if(pk){if(!busy&&+pk.dataset.pk!==sel)showSel(+pk.dataset.pk,false);return}
+  const b=e.target.closest('[data-ra]');if(!b||b.disabled||busy)return;
+  const c=cur[sel];if(!c||c.kept)return;
+  if(b.dataset.ra==='keep'){
     if(S.items.length>=MAX){toast(`Коллекция заполнена (${MAX}/${MAX}). Продай ник или освободи место.`);return}
-    addItem(c.name,c.t,c.p);c.kept=true;addQuest('save',1);markDone(row,'Сохранено ✓');hap('i','medium');
-  }else{const v=val(c.t,c.p,c.name);S.coins+=v;c.kept=true;addQuest('sell',1);markDone(row,`Продано за ${fmt(v)} 🪙`)}
-  S.pend=cur.filter(x=>!x.kept).map(({name,t,p})=>({name,t,p}));save();render();
+    addItem(c.name,c.t,c.p);c.kept=true;c.res='Сохранено ✓';addQuest('save',1);hap('i','medium');
+  }else{const v=val(c.t,c.p,c.name);S.coins+=v;S.sold++;c.kept=true;c.res=`Продано за ${fmt(v)} 🪙`;addQuest('sell',1)}
+  S.pend=cur.filter(x=>!x.kept).map(({name,t,p})=>({name,t,p}));save();renderPicks();renderMeta();render();
 };
 $('#tab-col').onclick=e=>{
   const g=e.target.closest('[data-go]');if(g)return tab(g.dataset.go);
@@ -304,7 +369,7 @@ $('#tab-col').onclick=e=>{
   const x=S.items.find(i=>i.id===b.dataset.id);if(!x)return;
   if(a==='copy')copy(x.n);
   else if(a==='sell'){const v=val(x.t,x.p,x.n);
-    ask(`Продать @${x.n} за ${fmt(v)} 🪙?`,()=>collapse([b.closest('.item')],()=>{if(!S.items.includes(x))return;S.items=S.items.filter(i=>i!==x);S.coins+=v;addQuest('sell',1);save();toast(`Продано за ${fmt(v)} 🪙`);render()}))}
+    ask(`Продать @${x.n} за ${fmt(v)} 🪙?`,()=>collapse([b.closest('.item')],()=>{if(!S.items.includes(x))return;S.items=S.items.filter(i=>i!==x);S.coins+=v;S.sold++;addQuest('sell',1);save();toast(`Продано за ${fmt(v)} 🪙`);render()}))}
 };
 $('#tab-col').onchange=e=>{const i=e.target.closest('[data-cs]');if(!i||!colSel)return;i.checked?colSel.add(i.dataset.cs):colSel.delete(i.dataset.cs);updSelbar()};
 $('#selsell').onclick=()=>{
@@ -313,7 +378,7 @@ $('#selsell').onclick=()=>{
   ask(`Продать ${its.length} ${pl(its.length)} за ${fmt(sum)} 🪙?`,()=>{
     const els=[...document.querySelectorAll('#tab-col .item')].filter(el=>el.querySelector('input:checked'));
     $('#selbar').classList.remove('on');
-    collapse(els,()=>{const ids=new Set(its.map(i=>i.id));S.items=S.items.filter(i=>!ids.has(i.id));S.coins+=sum;colSel=null;addQuest('sell',its.length);save();toast(`Продано: ${its.length} ${pl(its.length)} за ${fmt(sum)} 🪙`);render()});
+    collapse(els,()=>{const ids=new Set(its.map(i=>i.id));S.items=S.items.filter(i=>!ids.has(i.id));S.coins+=sum;S.sold+=its.length;colSel=null;addQuest('sell',its.length);save();toast(`Продано: ${its.length} ${pl(its.length)} за ${fmt(sum)} 🪙`);render()});
   });
 };
 {const arr=Array.isArray(S.pend)?S.pend:S.pend?[S.pend]:[];S.pend=null;if(arr.length){const m=stashAll(arr);save();setTimeout(()=>toast('Прошлые ники: '+m),500)}}
@@ -337,19 +402,31 @@ function prizePool(){
   return POOLN=a.sort((x,y)=>x.price-y.price);
 }
 // цена приза = 90% ставки / шанс; берём ближайший по цене ник из пула
-function pickPrize(s,again){
+function pickPrize(s){
   const target=.9*s.v/(up.c/100),ok=prizePool().filter(x=>x.price>s.v);
   if(!ok.length){up.prize=null;return}
   const dist=x=>Math.abs(x.price-target),best=Math.min(...ok.map(dist));
   const near=ok.filter(x=>dist(x)<=best+Math.max(2,target*.03));
-  up.prize=again?P(near):near.reduce((a,x)=>dist(x)<dist(a)?x:a);
+  up.prize=near.reduce((a,x)=>dist(x)<dist(a)?x:a);
 }
 // win: undefined = превью, true/false = исход для ячейки под указателем
 const rlCells=(ch,win)=>Array.from({length:RL.n},(_,i)=>{const w=i===RL.idx&&win!==undefined?win:Math.random()<ch;return `<b class="rc ${w?'w':'l'}">${w?'✓':'✕'}</b>`}).join('');
-function fillUp(){
+// плавно ведём число (и, при thumb, ползунок) до процента, который подобрался автоматически
+let pctRaf=0;
+function tweenPct(from,to,thumb){
+  cancelAnimationFrame(pctRaf);const out=$('#ch-out'),sl=$('#chs');if(!out)return;
+  const setv=v=>{out.textContent=v+'%';if(thumb&&sl)sl.value=v};
+  if(reduce||from===to){setv(to);return}
+  const t0=performance.now(),d=Math.min(1000,300+Math.abs(to-from)*20);
+  const st=n=>{const k=Math.min(1,(n-t0)/d),e=1-Math.pow(1-k,3);setv(Math.round(from+(to-from)*e));if(k<1)pctRaf=requestAnimationFrame(st)};
+  pctRaf=requestAnimationFrame(st);
+}
+function fillUp(thumb=true){
   const s=stake(),pr=up.prize,ok=s.its.length&&pr,ch=ok?chanceOf(s,pr):0,col=ok?T[pr.t].c:'#6A63B0';
-  $('#ch-out').textContent=ok?Math.round(ch*100)+'%':'—';
-  $('#prize').innerHTML=ok?`<div class="pz" style="--tc:${col}"><div><small>Выпадет</small><b>@${pr.name}</b><em>${T[pr.t].n} · ${rar(pr.t,pr.p)}</em></div><div class="pp"><small>Цена</small><b>${fmt(pr.price)} 🪙</b></div></div><button class="btn" id="reroll">Другой ник</button>`
+  const out=$('#ch-out');
+  if(ok){const sl=$('#chs'),to=Math.round(ch*100),from=thumb?+sl.value:(parseInt(out.textContent)||+sl.value);tweenPct(from,to,thumb);if(thumb)up.c=to}
+  else{cancelAnimationFrame(pctRaf);out.textContent='—'}
+  $('#prize').innerHTML=ok?`<div class="pz" style="--tc:${col}"><div><small>Выпадет</small><b>@${pr.name}</b><em>${T[pr.t].n}</em></div><div class="pp"><small>Цена</small><b>${fmt(pr.price)} 🪙</b></div></div>`
     :`<p class="sum">${s.its.length?'Нет ников дороже ставки. Поставь меньше.':'Отметь ники для ставки'}</p>`;
   $('#rl').style.setProperty('--tc',col);$('#rlt').innerHTML=rlCells(ch);$('#do-up').disabled=!ok;
 }
@@ -364,14 +441,15 @@ function renderUp(){
   h+=`<p class="sum cap">Ставка: <b>${up.sel.size} / ${UPMAX}</b></p><div class="stake">`+its.map(x=>`<label class="item pick" style="--tc:${T[x.t].c}"><input type="checkbox" data-sel="${x.id}"${up.sel.has(x.id)?' checked':''}${full&&!up.sel.has(x.id)?' disabled':''}><div><b>@${x.n}</b><small>${T[x.t].n}</small></div><span>${fmt(val(x.t,x.p,x.n))} 🪙</span></label>`).join('')+`</div>`;
   h+=`<div class="slider"><div class="srow"><span>Шанс</span><b id="ch-out"></b></div><input type="range" id="chs" min="1" max="85" step="1" value="${up.c}"${s.its.length?'':' disabled'} aria-label="Шанс апгрейда"></div><div id="prize"></div>`;
   h+=`<div class="rl" id="rl"><i class="ptr"></i><div class="rl-track" id="rlt"></div></div><button class="spin" id="do-up">Крутить апгрейд</button>`;
-  h+=`<div class="upres">${up.msg}${up.res?`<div class="stage" id="upstage" style="--tc:${T[up.res.t].c}"><div class="reel" id="upreel"></div><div class="badge"><i></i>${T[up.res.t].n}</div><div class="tags"><span class="tag odd">${up.res.t===6?rar(6):'Круче или равен: 1 из '+oneIn(up.res.p)}</span></div></div>`:''}</div>`;
+  h+=`<div class="upres">${up.msg}${up.res?`<div class="stage" id="upstage" style="--tc:${T[up.res.t].c}"><div class="reel" id="upreel"></div><div class="badge"><i></i>${T[up.res.t].n}</div></div>`:''}</div>`;
   const oldSt=el.querySelector('.stake'),top=oldSt?oldSt.scrollTop:0;el.innerHTML=h;{const n=el.querySelector('.stake');if(n)n.scrollTop=top}fillUp();
   if(up.res){const fresh=up.fresh;up.fresh=false;playStage($('#upstage'),$('#upreel'),up.res,fresh)}
 }
 async function doUp(){
   const s=stake(),pr=up.prize;if(up.busy||!pr||!s.its.length)return;
   const ch=chanceOf(s,pr),won=Math.random()<ch;
-  up.busy=true;up.res=null;up.msg='';
+  if(s.its.length>=UPMAX)S.five=1;
+  up.busy=true;xbusy=1;up.res=null;up.msg='';
   document.querySelectorAll('#tab-up button,#tab-up input').forEach(e=>e.disabled=true);
   const rl=$('#rl'),trk=$('#rlt'),W=rl.clientWidth,pitch=RL.w+RL.gap,off=(Math.random()-.5)*RL.w*.7,dur=reduce?50:4800;
   trk.style.transition='none';trk.style.transform='translateX(0)';trk.innerHTML=rlCells(ch,won);void trk.offsetWidth;
@@ -386,24 +464,24 @@ async function doUp(){
   await new Promise(r=>setTimeout(r,reduce?0:700));
   S.items=S.items.filter(i=>!up.sel.has(i.id));S.ups++;addQuest('ups',1);
   if(won){
-    S.upw++;S.cnt[pr.t]++;addItem(pr.name,pr.t,pr.p);
+    S.upw++;if(ch<=.1)S.luck=1;S.cnt[pr.t]++;S.bestv=Math.max(S.bestv,pr.price);addItem(pr.name,pr.t,pr.p);
     up.res={name:pr.name,t:pr.t,p:pr.p};up.fresh=true;
     up.msg=`<div class="win" style="--tc:${T[pr.t].c}"><b>Успех!</b> Шанс был ${Math.round(ch*100)}%, ник уже в коллекции.</div>`;
   }else{up.msg=`<div class="lose"><b>Не вышло.</b> Ставка сгорела, шанс был ${Math.round(ch*100)}%.</div>`;hap('n','error')}
-  up.sel.clear();up.prize=null;up.busy=false;save();render();
+  up.sel.clear();up.prize=null;up.busy=false;xbusy=0;save();render();
 }
 $('#tab-up').onclick=e=>{
   const g=e.target.closest('[data-go]');if(g)return tab(g.dataset.go);
   if(up.busy)return;
-  if(e.target.id==='reroll'){const s=stake();if(s.its.length){pickPrize(s,true);fillUp()}return}
   if(e.target.id==='do-up')doUp();
 };
 $('#tab-up').onchange=e=>{
+  if(e.target.id==='chs'&&!up.busy){const s=stake();if(s.its.length&&up.prize)fillUp(true);return}   // отпустили ползунок: он плавно встаёт на подобранный процент
   const i=e.target.closest('[data-sel]');if(!i||up.busy)return;
   if(i.checked){if(up.sel.size>=UPMAX){i.checked=false;toast(`Максимум ${UPMAX} ников в ставке`);return}up.sel.add(i.dataset.sel)}else up.sel.delete(i.dataset.sel);
   up.msg='';up.res=null;up.prize=null;renderUp();
 };
-$('#tab-up').oninput=e=>{if(e.target.id!=='chs'||up.busy)return;up.c=+e.target.value;const s=stake();if(s.its.length){pickPrize(s);fillUp()}};
+$('#tab-up').oninput=e=>{if(e.target.id!=='chs'||up.busy)return;up.c=+e.target.value;const s=stake();if(s.its.length){pickPrize(s);fillUp(false)}};
 
 // ---------- Профиль ----------
 const TN=['Обычных','Необычных','Редких','Эпических','Легендарных','Мифических','Секретных'];
@@ -417,7 +495,10 @@ function renderProf(){
   <div class="pcard"><h3>Статистика</h3>
     <div class="pgrid"><div class="pt"><small>Круток</small><b>${fmt(S.spins)}</b></div><div class="pt"><small>Удачных апгрейдов</small><b>${fmt(S.upw)}</b></div>
     <div class="pt"><small>В игре за всё время</small><b id="tm-all">${fmtT(S.time)}</b></div><div class="pt"><small>В игре сегодня</small><b id="tm-day">${fmtT(todaySec())}</b></div></div>
-    <div class="pgrid tiers">${T.map((t,i)=>`<div class="pt${i===6?' last':''}" style="--tc:${t.c}"><small>${TN[i]}</small><b>${fmt(S.cnt[i])}</b></div>`).join('')}</div></div>`;
+    <div class="pgrid tiers">${T.map((t,i)=>`<div class="pt${i===6?' last':''}" style="--tc:${t.c}"><small>${TN[i]}</small><b>${fmt(S.cnt[i])}</b></div>`).join('')}</div></div>
+  <div class="pcard"><div class="bhead"><h3>Достижения</h3><span class="bsub">${ACH.filter(achOk).length} / ${ACH.length}</span></div>
+    <div class="qbar"><i style="width:${ACH.filter(achOk).length/ACH.length*100}%"></i></div>
+    <div class="agrid">${ACH.map((a,i)=>{const ok=achOk(a,i),c=Math.min(a.cur(),a.goal);return `<div class="ach${ok?' on':''}"><span class="ai">${a.i}</span><div><b>${a.n}</b><small>${a.d}</small>${ok||a.goal===1?'':`<em>${fmt(c)} / ${fmt(a.goal)}</em>`}</div></div>`}).join('')}</div></div>`;
 }
 setInterval(()=>{
   if(document.hidden)return;
@@ -431,7 +512,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
 addEventListener('pagehide',save);
 $('#tab-prof').onclick=e=>{
   if(e.target.id!=='invite')return;
-  addQuest('invite',1);
+  addQuest('invite',1);S.inv=1;save();
   const base=APP_LINK||location.href.split('#')[0].split('?')[0];
   openTg(`https://t.me/share/url?url=${encodeURIComponent(base)}&text=${encodeURIComponent('Заходи в Нейм-рулетку: выбивай редкие юзернеймы и собирай коллекцию!')}`);
 };
@@ -451,16 +532,13 @@ function tab(n){
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 // ---------- Бонусы: вкладка ----------
-const bon={busy:false,res:null,fresh:false};
-const WT={n:70,w:78,gap:6,idx:52};
+const bon={busy:false,res:null};
 const wpick=()=>{let r=Math.random()*WTOT;for(const p of WHEEL){r-=p.w;if(r<0)return p}return WHEEL[0]};
-const wlab=p=>p.k==='c'?(p.v>=1000?p.v/1000+'K':p.v):T[p.t].s;
-const wtile=p=>p.k==='c'?`<b class="wt co"><em>${wlab(p)}</em><small>монет</small></b>`:`<b class="wt" style="--tc:${T[p.t].c}"><em>${wlab(p)}</em><small>ник</small></b>`;
 const kfmt=r=>r>=1000?r/1000+'K':String(r);
 function wresHtml(){
   const r=bon.res;if(!r)return '';
   if(r.k==='c')return `<div class="win" style="--tc:#FFC933"><b>+${fmt(r.v)} 🪙</b> Монеты уже на балансе.</div>`;
-  return `<div class="stage" id="wstage" style="--tc:${T[r.t].c}"><div class="reel" id="wreel"></div><div class="badge"><i></i>${T[r.t].n}</div><div class="tags"><span class="tag odd">${r.t===6?rar(6):'Круче или равен: '+rar(r.t,r.p)}</span></div></div>`+
+  return `<div class="stage" id="wstage" style="--tc:${T[r.t].c}"><div class="reel" id="wreel"></div><div class="badge"><i></i>${T[r.t].n}</div></div>`+
     `<div class="win" style="--tc:${T[r.t].c}">${r.saved?'Ник добавлен в коллекцию.':`Коллекция заполнена, ник продан за ${fmt(r.v)} 🪙.`}</div>`;
 }
 function updTimers(){document.querySelectorAll('#tab-bon [data-t]').forEach(s=>s.textContent=leftT(s.dataset.t==='day'?msToDay():msToWeek()))}
@@ -476,8 +554,7 @@ function renderBon(){
       :`<button class="btn main" data-b="login">Забрать день ${li.idx+1}: ${fmt(LOGIN[li.idx])} 🪙</button>`)+
     (!li.done&&!li.alive&&S.login.n>0?`<p class="sum">Серия прервалась, награды идут с первого дня.</p>`:'')+`</div>`;
   h+=`<div class="pcard"><div class="bhead"><h3>Ежедневная рулетка</h3><span class="bsub">1 попытка в сутки</span></div>
-    <div class="rl wl" id="wl"><i class="ptr"></i><div class="rl-track" id="wlt"></div></div>
-    <div class="wodds">${WHEEL.map(p=>`<span class="od" style="--tc:${p.k==='c'?'#FFC933':T[p.t].c}"><b>${p.w}%</b><small>${wlab(p)}</small></span>`).join('')}</div>`+
+    <p class="sum">Призы: от ${fmt(Math.min(...WHEEL.filter(p=>p.k==='c').map(p=>p.v)))} до ${fmt(Math.max(...WHEEL.filter(p=>p.k==='c').map(p=>p.v)))} 🪙 и ники от «${T[Math.min(...WHEEL.filter(p=>p.k==='n').map(p=>p.t))].n}» до «${T[Math.max(...WHEEL.filter(p=>p.k==='n').map(p=>p.t))].n}».</p>`+
     (can?`<button class="spin" data-b="wheel">Крутить рулетку</button>`:`<button class="spin" disabled>Уже крутили · ещё <span data-t="day"></span></button>`)+
     `<div class="upres">${wresHtml()}</div></div>`;
   h+=`<div class="pcard"><div class="bhead"><h3>Задания недели</h3><span class="bsub">обновятся через <span data-t="week"></span></span></div>`+
@@ -486,43 +563,30 @@ function renderBon(){
       `<div class="qbot"><small>${q.p} / ${q.n}</small>${q.got?'<em>Получено ✓</em>':ok?`<button class="btn main sm" data-b="quest" data-i="${i}">Забрать</button>`:''}</div></div>`}).join('')+`</div>`;
   if(el._h!==h){
     el.innerHTML=h;el._h=h;
-    const t=$('#wlt');if(t)t.innerHTML=Array.from({length:WT.n},wpick).map(wtile).join('');
-    if(bon.res&&bon.res.k==='n'){const fresh=bon.fresh;bon.fresh=false;playStage($('#wstage'),$('#wreel'),bon.res,fresh)}else bon.fresh=false;
+    if(bon.res&&bon.res.k==='n')playStage($('#wstage'),$('#wreel'),bon.res,false);
   }
   updTimers();
 }
 function claimLogin(){
   const i=loginInfo();if(i.done)return;
-  const r=LOGIN[i.idx];S.login={n:i.n+1,last:todayK()};S.coins+=r;save();
+  const r=LOGIN[i.idx];S.login={n:i.n+1,last:todayK()};S.maxStreak=Math.max(S.maxStreak,S.login.n);S.coins+=r;save();
   toast(`День ${i.idx+1}: +${fmt(r)} 🪙`);hap('n','success');if(r>=20000)boom('#FFC933',4);render();
 }
 function claimQuest(i){
   const q=S.q.list[i];if(!q||q.got||q.p<q.n)return;
-  const r=QDEF[q.id].r;q.got=true;S.coins+=r;save();toast(`Задание выполнено: +${fmt(r)} 🪙`);hap('n','success');render();
+  const r=QDEF[q.id].r;q.got=true;S.qn++;S.coins+=r;save();toast(`Задание выполнено: +${fmt(r)} 🪙`);hap('n','success');render();
 }
-async function doWheel(){
-  if(bon.busy||S.wheel===todayK())return;
-  const win=wpick(),pick=win.k==='n'?P(prizePool().filter(x=>x.t===win.t)):null;   // пул строим заранее, чтобы не подвисло в анимации
-  bon.busy=true;bon.res=null;
-  document.querySelectorAll('#tab-bon button').forEach(b=>b.disabled=true);
-  const rl=$('#wl'),trk=$('#wlt'),W=rl.clientWidth,pitch=WT.w+WT.gap,off=(Math.random()-.5)*WT.w*.6,dur=reduce?50:5200;
-  trk.style.transition='none';trk.style.transform='translateX(0)';
-  trk.innerHTML=Array.from({length:WT.n},(_,i)=>wtile(i===WT.idx?win:wpick())).join('');void trk.offsetWidth;
-  trk.style.transition=`transform ${dur}ms cubic-bezier(.08,.6,.12,1)`;
-  trk.style.transform=`translateX(${W/2-(WT.idx*pitch+WT.w/2+off)}px)`;
-  if(!reduce){let last=-1,lt=0;const t0=performance.now();
-    (function tk(){const x=new DOMMatrix(getComputedStyle(trk).transform).m41,i=Math.floor((W/2-x)/pitch),now=performance.now();
-      if(i!==last&&now-lt>70){last=i;lt=now;hap('i','light')}
-      if(now-t0<dur)requestAnimationFrame(tk)})()}
-  await sleep(dur+250);trk.children[WT.idx].classList.add('on');await sleep(reduce?0:700);
-  S.wheel=todayK();addQuest('wheel',1);
+function doWheel(){
+  if(S.wheel===todayK())return;
+  const win=wpick(),pick=win.k==='n'?P(prizePool().filter(x=>x.t===win.t)):null;
+  S.wheel=todayK();S.wheelN++;addQuest('wheel',1);hap('n','success');
   if(win.k==='c'){S.coins+=win.v;bon.res={k:'c',v:win.v};if(win.v>=20000)boom('#FFC933',win.v>=50000?5:4)}
   else{
-    S.cnt[pick.t]++;
+    S.cnt[pick.t]++;S.bestv=Math.max(S.bestv,pick.price);
     if(S.items.length<MAX){addItem(pick.name,pick.t,pick.p);bon.res={k:'n',name:pick.name,t:pick.t,p:pick.p,saved:true}}
-    else{const v=val(pick.t,pick.p,pick.name);S.coins+=v;bon.res={k:'n',name:pick.name,t:pick.t,p:pick.p,saved:false,v}}
+    else{const v=val(pick.t,pick.p,pick.name);S.coins+=v;S.sold++;bon.res={k:'n',name:pick.name,t:pick.t,p:pick.p,saved:false,v}}
   }
-  bon.fresh=true;bon.busy=false;save();render();
+  save();render();
 }
 $('#tab-bon').onclick=e=>{
   const b=e.target.closest('[data-b]');if(!b||b.disabled||bon.busy)return;
