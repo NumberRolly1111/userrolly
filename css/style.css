@@ -53,10 +53,6 @@ h1{font:800 15px var(--head);letter-spacing:-.02em}
 .btn:active:not(:disabled){transform:translate(3px,3px);box-shadow:0 0 0 var(--sh)}
 .btn.main{background:var(--tc);border-color:var(--tc);color:var(--dark)}
 
-.odds{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:0 0 14px}
-.od{background:var(--paper);border:2px solid var(--line);border-top:6px solid var(--tc);border-radius:10px;padding:5px 2px 6px;text-align:center}
-.od b{display:block;font:800 13px var(--head)}
-.od small{display:block;font-size:9px;color:var(--mute);line-height:1.2;overflow:hidden;text-overflow:ellipsis}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--paper);border:var(--bw) solid var(--line);border-radius:18px;padding:5px;margin:20px 0 14px;box-shadow:4px 4px 0 var(--sh)}
 .seg button{padding:9px 4px;border-radius:12px;font-size:13px;font-weight:700;transition:background .2s,color .2s}
 .seg small{display:block;font-size:11px;font-weight:500;opacity:.75}
@@ -233,7 +229,6 @@ button,.pick,.tg{transition-property:transform,box-shadow,background,color,opaci
 .wt em{font:800 17px var(--head);font-style:normal}
 .wt small{font-size:10px;color:var(--mute)}
 .wt.on{outline:3px solid #fff;outline-offset:2px;animation:land .5s}
-.wodds{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:12px 0 12px}
 .bon .upres{margin-top:14px}
 .bon .upres .stage{margin-bottom:12px}
 .quest{padding:12px 0;border-top:2px solid var(--line)}
@@ -251,3 +246,26 @@ button,.pick,.tg{transition-property:transform,box-shadow,background,color,opaci
 .cap{margin:0 0 8px}
 .cap b{color:var(--fg)}
 .pick:has(input:disabled){opacity:.4;cursor:default}
+
+/* переключатель ников после ×3 */
+.picks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}
+.picks:empty{display:none}
+.pk{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;padding:9px 6px 8px;background:var(--tile);border:2px solid var(--line);border-top:5px solid var(--tc);border-radius:12px;color:var(--fg);font:inherit;cursor:pointer;transition:transform .2s,border-color .2s,background .2s,opacity .2s}
+.pk b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 12px var(--head)}
+.pk small{font-size:10px;color:var(--mute)}
+.pk.on{border-color:var(--tc);background:#241E52;transform:translateY(-2px)}
+.pk.done{opacity:.55}
+.pk:active{transform:scale(.97)}
+.acts.one{grid-template-columns:1fr}
+/* мифический: вспышка букв, проще секретной */
+.cell.myt,.at.myt{opacity:0;animation:mytIn .65s cubic-bezier(.2,.8,.2,1) both}
+.at.myt{animation-delay:.15s}
+@keyframes mytIn{0%{opacity:0;transform:scale(1.7);filter:blur(7px)}55%{opacity:1;filter:blur(1px);box-shadow:0 0 28px 4px rgba(255,75,62,.7)}100%{opacity:1;transform:none;filter:none}}
+/* достижения */
+.agrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.ach{display:flex;gap:8px;align-items:flex-start;padding:9px 10px;background:var(--tile);border:2px solid var(--line);border-radius:12px;opacity:.5;filter:grayscale(.8)}
+.ach.on{opacity:1;filter:none;border-color:#FFC933}
+.ach .ai{font-size:20px;line-height:1.1}
+.ach b{display:block;font:700 12px var(--head);line-height:1.25}
+.ach small{display:block;font-size:11px;color:var(--mute);margin-top:2px;line-height:1.25}
+.ach em{display:block;font:600 11px var(--head);font-style:normal;color:#FFC933;margin-top:3px}
