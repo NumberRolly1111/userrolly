@@ -555,9 +555,11 @@ $('#tab-prof').onclick=e=>{
 };
 function renderAch(){
   const n=ACH.filter(achOk).length,tot=ACH.length,C=2*Math.PI*54;
+  const near=ACH.map((x,i)=>({x,i,ok:achOk(x,i)})).filter(o=>!o.ok).sort((p,q)=>Math.min(q.x.cur()/q.x.goal,1)-Math.min(p.x.cur()/p.x.goal,1))[0];
   const list=ACH.map((x,i)=>({x,i,ok:achOk(x,i)})).sort((a,b)=>b.ok-a.ok||a.i-b.i);
   const h=`<div class="ahead"><button class="btn sm" id="ach-back">‹ Профиль</button><h2>Достижения</h2></div>
-  <div class="ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" class="rb"/><circle cx="60" cy="60" r="54" class="rf" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-n/tot)}"/></svg><div><b>${n} / ${tot}</b><small>выполнено</small></div></div>
+  <div class="asum"><div class="ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" class="rb"/><circle cx="60" cy="60" r="54" class="rf" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-n/tot)}"/></svg><div><b>${n}</b><small>из ${tot}</small></div></div>
+    <div class="ainfo"><small class="cap2">Выполнено</small><b class="big">${Math.round(n/tot*100)}%</b><div class="chips"><span class="chip2">🏆 ${n} открыто</span><span class="chip2">🔒 ${tot-n} осталось</span></div>${near?`<p>Ближайшее: ${near.x.n}, ${fmt(Math.min(near.x.cur(),near.x.goal))} из ${fmt(near.x.goal)}</p>`:'<p>Все достижения открыты!</p>'}</div></div>
   <div class="alist">`+list.map(({x,i,ok})=>{const c=Math.min(x.cur(),x.goal);return `<div class="ach${ok?' on':''}"><span class="ai">${x.i}</span><div class="at2"><b>${x.n}</b><small>${x.d}</small>${x.goal>1?`<div class="qbar"><i style="width:${(ok?1:c/x.goal)*100}%"></i></div><em>${ok?'Выполнено ✓':fmt(c)+' / '+fmt(x.goal)}</em>`:`<em>${ok?'Выполнено ✓':'Не выполнено'}</em>`}</div></div>`}).join('')+`</div>`;
   setHtml($('#tab-ach'),h);
 }
