@@ -187,36 +187,36 @@ function bonAvail(){return !loginInfo().done||S.wheel!==todayK()||S.q.list.some(
 function updBonDot(){const d=document.querySelector('#bon-btn .dot');if(d)d.hidden=!bonAvail()}
 function addQuest(id,n=1){ensureQuests();const q=S.q.list.find(x=>x.id===id);if(q&&!q.got&&q.p<q.n){q.p=Math.min(q.n,q.p+n);save()}updBonDot()}
 ensureQuests();
-// ---------- Достижения (50) ----------
+// ---------- Достижения (25) ----------
 // A(иконка, название, описание, текущее значение, цель)
 const A=(i,n,d,cur,goal=1)=>({i,n,d,cur,goal});
 const ACH=[
-  ...[1,100,500,1000,5000].map(n=>A('🎰',n===1?'Первая крутка':n+' круток',n===1?'Сделай первую крутку':`Сделай ${fmt(n)} круток`,()=>S.spins,n)),
-  ...[1,10,50,100].map(n=>A('⚡',n===1?'Первый успех':n+' успешных апгрейдов',n===1?'Выиграй первый апгрейд':`Выиграй ${n} апгрейдов`,()=>S.upw,n)),
+  A('🎰','100 круток','Сделай 100 круток',()=>S.spins,100),
+  A('🎰','1000 круток','Сделай 1000 круток',()=>S.spins,1000),
+  A('⚡','Первый успех','Выиграй первый апгрейд',()=>S.upw,1),
+  A('⚡','10 успешных апгрейдов','Выиграй 10 апгрейдов',()=>S.upw,10),
   A('🔧','Мастер апгрейда','Сделай 100 апгрейдов',()=>S.ups,100),
-  ...[1,10,50,100].map(n=>A('📦',n===1?'Первый в коллекции':'Коллекция из '+n+' ников',n===1?'Сохрани первый ник':`Собери за всё время ${n} ников в коллекцию`,()=>S.saved,n)),
-  ...[[1000,'Тысячник'],[10000,'Десятитысячник'],[35000,'Цена секрета'],[100000,'Самый дорогой ник']].map(([n,t])=>A('💎',t,`Получи ник ценой от ${fmt(n)} 🪙`,()=>S.bestv,n)),
-  ...[1,2,3,4,5,6].map(t=>A('✨',t===6?'Первая секретка':'Первый '+T[t].n.toLowerCase().replace(/ий$/,'ий'),`Получи ник редкости «${T[t].n}»`,()=>S.cnt[t],1)),
-  A('🟣','10 Редких','Получи 10 редких ников',()=>S.cnt[2],10),
-  A('🌸','10 Эпических','Получи 10 эпических ников',()=>S.cnt[3],10),
-  A('👑','5 Легендарных','Получи 5 легендарных ников',()=>S.cnt[4],5),
-  A('🔥','3 Мифических','Получи 3 мифических ника',()=>S.cnt[5],3),
+  A('📦','Первый в коллекции','Сохрани первый ник',()=>S.saved,1),
+  A('📦','Коллекция из 50 ников','Собери за всё время 50 ников в коллекцию',()=>S.saved,50),
+  A('💎','Десятитысячник','Получи ник ценой от 10 000 🪙',()=>S.bestv,10000),
+  A('💎','Самый дорогой ник','Получи ник ценой от 100 000 🪙',()=>S.bestv,100000),
+  A('✨','Первый редкий','Получи ник редкости «Редкий»',()=>S.cnt[2],1),
+  A('✨','Первый эпический','Получи ник редкости «Эпический»',()=>S.cnt[3],1),
+  A('✨','Первый легендарный','Получи ник редкости «Легендарный»',()=>S.cnt[4],1),
+  A('🔥','Первый мифический','Получи ник редкости «Мифический»',()=>S.cnt[5],1),
+  A('🕶️','Первая секретка','Получи ник редкости «Секретный»',()=>S.cnt[6],1),
+  A('🌸','10 эпических','Получи 10 эпических ников',()=>S.cnt[3],10),
   A('💰','Первая продажа','Продай ник',()=>S.sold,1),
   A('🏷️','Торговец','Продай 50 ников',()=>S.sold,50),
-  ...[1,7,30].map(n=>A('🎡',n===1?'Первая рулетка':n+' ежедневных рулеток',n===1?'Прокрути ежедневную рулетку':`Прокрути ежедневную рулетку ${n} раз`,()=>S.wheelN,n)),
-  ...[3,7,14].map(n=>A('📅','Серия '+n+' '+dw(n),`Заходи ${n} ${dw(n)} подряд`,()=>S.maxStreak,n)),
-  ...[1,10,30].map(n=>A('✅',n===1?'Первое задание':n+' заданий',n===1?'Выполни задание недели':`Выполни ${n} заданий недели`,()=>S.qn,n)),
-  ...[[10000,'10 тысяч'],[100000,'100 тысяч'],[1000000,'Миллионер']].map(([n,t])=>A('🪙',t,`Накопи ${fmt(n)} 🪙`,()=>S.maxCoins,n)),
-  A('⏱️','Час в игре','Проведи в игре 1 час',()=>Math.floor(S.time/60),60),
+  A('🎡','Первая рулетка','Прокрути ежедневную рулетку',()=>S.wheelN,1),
+  A('🎡','30 ежедневных рулеток','Прокрути ежедневную рулетку 30 раз',()=>S.wheelN,30),
+  A('📅','Серия 7 дней','Заходи 7 дней подряд',()=>S.maxStreak,7),
+  A('📅','Серия 14 дней','Заходи 14 дней подряд',()=>S.maxStreak,14),
+  A('✅','10 заданий','Выполни 10 заданий недели',()=>S.qn,10),
+  A('🪙','Миллионер','Накопи 1 000 000 🪙',()=>S.maxCoins,1000000),
   A('🌙','Сутки в игре','Проведи в игре 24 часа',()=>Math.floor(S.time/3600),24),
-  A('📨','Позвал друзей','Отправь приглашение другу',()=>S.inv,1),
   A('🗄️','Полная коллекция',`Собери ${MAX} из ${MAX} ников`,()=>S.items.length,MAX),
-  A('🎲','Три за раз','Открой 10 раз по 3 ника',()=>S.tri,10),
-  A('🍀','Невероятная удача','Выиграй апгрейд с шансом 10% или меньше',()=>S.luck,1),
-  A('🖐️','Пять в ставку','Поставь в апгрейд сразу 5 ников',()=>S.five,1),
 ];
-// «Не вышло» 10 раз
-ACH.push(A('🧱','Упорный','Проиграй 10 апгрейдов',()=>S.ups-S.upw,10));
 const achOk=(a,i)=>S.ach.includes(i)||a.cur()>=a.goal;
 let achLock=0;
 function checkAch(){
@@ -380,6 +380,7 @@ function render(){
   renderCol();
   if(!$('#tab-prof').hidden)renderProf();
   if(!$('#tab-bon').hidden)renderBon();
+  if(!$('#tab-ach').hidden)renderAch();
   if(!$('#tab-up').hidden)setTimeout(renderUp,0);
 }
 
@@ -533,9 +534,7 @@ function renderProf(){
     <div class="pgrid"><div class="pt"><small>Круток</small><b>${fmt(S.spins)}</b></div><div class="pt"><small>Удачных апгрейдов</small><b>${fmt(S.upw)}</b></div>
     <div class="pt"><small>В игре за всё время</small><b id="tm-all">${fmtT(S.time)}</b></div><div class="pt"><small>В игре сегодня</small><b id="tm-day">${fmtT(todaySec())}</b></div></div>
     <div class="pgrid tiers">${T.map((t,i)=>`<div class="pt${i===6?' last':''}" style="--tc:${t.c}"><small>${TN[i]}</small><b>${fmt(S.cnt[i])}</b></div>`).join('')}</div></div>
-  <div class="pcard"><div class="bhead"><h3>Достижения</h3><span class="bsub">${ACH.filter(achOk).length} / ${ACH.length}</span></div>
-    <div class="qbar"><i style="width:${ACH.filter(achOk).length/ACH.length*100}%"></i></div>
-    <div class="agrid">${ACH.map((a,i)=>{const ok=achOk(a,i),c=Math.min(a.cur(),a.goal);return `<div class="ach${ok?' on':''}"><span class="ai">${a.i}</span><div><b>${a.n}</b><small>${a.d}</small>${ok||a.goal===1?'':`<em>${fmt(c)} / ${fmt(a.goal)}</em>`}</div></div>`}).join('')}</div></div>`;
+  <button class="pcard achbtn" id="ach-open"><div><b>Достижения</b><small>Открыто ${ACH.filter(achOk).length} из ${ACH.length}</small></div><span class="mini" style="--p:${ACH.filter(achOk).length/ACH.length*100}"><i>${ACH.filter(achOk).length}</i></span></button>`;
 }
 setInterval(()=>{
   if(document.hidden)return;
@@ -548,16 +547,26 @@ setInterval(()=>{
 document.addEventListener('visibilitychange',()=>{if(document.hidden){save();if(cloudDone)cloudPush()}});
 addEventListener('pagehide',()=>{save();if(cloudDone)cloudPush()});
 $('#tab-prof').onclick=e=>{
+  if(e.target.closest('#ach-open'))return tab('ach');
   if(e.target.id!=='invite')return;
   addQuest('invite',1);S.inv=1;save();
   const base=APP_LINK||location.href.split('#')[0].split('?')[0];
   openTg(`https://t.me/share/url?url=${encodeURIComponent(base)}&text=${encodeURIComponent('Заходи в Нейм-рулетку: выбивай редкие юзернеймы и собирай коллекцию!')}`);
 };
+function renderAch(){
+  const n=ACH.filter(achOk).length,tot=ACH.length,C=2*Math.PI*54;
+  const list=ACH.map((x,i)=>({x,i,ok:achOk(x,i)})).sort((a,b)=>b.ok-a.ok||a.i-b.i);
+  const h=`<div class="ahead"><button class="btn sm" id="ach-back">‹ Профиль</button><h2>Достижения</h2></div>
+  <div class="ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" class="rb"/><circle cx="60" cy="60" r="54" class="rf" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-n/tot)}"/></svg><div><b>${n} / ${tot}</b><small>выполнено</small></div></div>
+  <div class="alist">`+list.map(({x,i,ok})=>{const c=Math.min(x.cur(),x.goal);return `<div class="ach${ok?' on':''}"><span class="ai">${x.i}</span><div class="at2"><b>${x.n}</b><small>${x.d}</small>${x.goal>1?`<div class="qbar"><i style="width:${(ok?1:c/x.goal)*100}%"></i></div><em>${ok?'Выполнено ✓':fmt(c)+' / '+fmt(x.goal)}</em>`:`<em>${ok?'Выполнено ✓':'Не выполнено'}</em>`}</div></div>`}).join('')+`</div>`;
+  setHtml($('#tab-ach'),h);
+}
+$('#tab-ach').onclick=e=>{if(e.target.closest('#ach-back'))tab('prof')};
 $('#prof-btn').onclick=()=>tab($('#tab-prof').hidden?'prof':'game');
 
 function tab(n){
   document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===n));
-  ['game','col','up','prof','bon'].forEach(k=>{const e=$('#tab-'+k);
+  ['game','col','up','prof','bon','ach'].forEach(k=>{const e=$('#tab-'+k);
     if(k===n){if(e.hidden){e.hidden=false;e.classList.remove('tabin');void e.offsetWidth;e.classList.add('tabin')}}else e.hidden=true});
   $('#prof-btn').setAttribute('aria-pressed',n==='prof');
   $('#bon-btn').setAttribute('aria-pressed',n==='bon');
@@ -566,6 +575,8 @@ function tab(n){
   if(n==='up')renderUp();
   if(n==='prof')renderProf();
   if(n==='bon')renderBon();
+  if(n==='ach')renderAch();
+  scrollTo(0,0);
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 // ---------- Бонусы: вкладка ----------
