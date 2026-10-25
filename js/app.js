@@ -1,3 +1,6 @@
+// показать ошибку на экране, если что-то сломалось (пригодится для диагностики на телефоне)
+addEventListener('error',e=>{try{let b=document.getElementById('errbar');if(!b){b=document.createElement('div');b.id='errbar';b.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:99;background:#B3261E;color:#fff;font:12px/1.35 monospace;padding:8px 10px;border-radius:10px;word-break:break-all';b.onclick=()=>b.remove();document.body.append(b)}b.textContent='Ошибка: '+e.message+' ('+String(e.filename||'').split('/').pop()+':'+e.lineno+') · нажми, чтобы скрыть'}catch(x){}});
+addEventListener('unhandledrejection',e=>{try{console.error(e.reason)}catch(x){}});
 const $=s=>document.querySelector(s),tg=window.Telegram&&Telegram.WebApp;
 // отступ сверху под системную панель Telegram («Закрыть», «…»): берём из SDK, иначе запасной
 function safeTop(){
@@ -111,7 +114,35 @@ if(S.econ!==3){S.coins=3000;S.items=S.items.slice(0,MAX);S.econ=3}
 if(!Array.isArray(S.cnt)||S.cnt.length<7)S.cnt=[0,0,0,0,0,0,0];
 if(!S.tday||typeof S.tday!=='object')S.tday={d:'',s:0};
 if(!S.uid){const id=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.id;S.uid=id?(id%999999)+1:R(999999)+1}
-const save=()=>{try{localStorage.setItem('nameroulette',JSON.stringify(S))}catch(e){}};
+// ---------- Сохранение: на устройстве (localStorage) и в облаке Telegram (CloudStorage), чтобы прогресс переезжал между устройствами ----------
+var CS=null,cloudTm=0,cloudDone=false;
+try{if(tg&&tg.CloudStorage&&tg.isVersionAtLeast&&tg.isVersionAtLeast('6.9'))CS=tg.CloudStorage}catch(e){}
+const save=()=>{S.ts=Date.now();try{localStorage.setItem('nameroulette',JSON.stringify(S))}catch(e){}if(CS&&cloudDone){clearTimeout(cloudTm);cloudTm=setTimeout(cloudPush,2500)}};
+function cloudPush(){
+  if(!CS)return;clearTimeout(cloudTm);cloudTm=0;
+  try{const j=JSON.stringify(S),parts=[];for(let i=0;i<j.length;i+=3000)parts.push(j.slice(i,i+3000));
+    const nop=()=>{};parts.forEach((p,i)=>CS.setItem('nr_'+i,p,nop));CS.setItem('nr_n',String(parts.length),nop)}catch(e){}   // счётчик пишем последним
+}
+function fixState(){
+  if(!Array.isArray(S.cnt)||S.cnt.length<7)S.cnt=[0,0,0,0,0,0,0];
+  if(!S.tday||typeof S.tday!=='object')S.tday={d:'',s:0};
+  if(!S.login||typeof S.login!=='object')S.login={n:0,last:''};
+  if(!S.q||!Array.isArray(S.q.list))S.q={wk:'',list:[]};
+  if(!Array.isArray(S.items))S.items=[];S.items=S.items.slice(0,MAX);
+}
+function cloudLoad(){
+  if(!CS){return}
+  const done=()=>{cloudDone=true;cloudPush()};
+  try{CS.getItem('nr_n',(e,n)=>{
+    n=+n;if(e||!n){done();return}
+    CS.getItems(Array.from({length:n},(_,i)=>'nr_'+i),(e2,v)=>{
+      let o=null;try{if(!e2)o=JSON.parse(Array.from({length:n},(_,i)=>v['nr_'+i]||'').join(''))}catch(x){}
+      if(o&&typeof o==='object'&&((o.time||0)>(S.time||0)||((o.time||0)===(S.time||0)&&(o.ts||0)>(S.ts||0)))&&!busy&&!xbusy){
+        S={...def,...o};fixState();ensureQuests();localStorage.setItem('nameroulette',JSON.stringify(S));shownCoins=S.coins;cur=[];S.pend=null;showIdle();render();
+      }
+      done();
+    })})}catch(e){cloudDone=true}
+}
 if(!S.login||typeof S.login!=='object')S.login={n:0,last:''};
 if(!S.q||!Array.isArray(S.q.list))S.q={wk:'',list:[]};
 S.maxStreak=Math.max(S.maxStreak||0,S.login.n||0);
@@ -514,8 +545,8 @@ setInterval(()=>{
   if(!$('#tab-bon').hidden)updTimers();
   const kk=todayK()+weekK();if(kk!==lastK){lastK=kk;ensureQuests();render()}
 },1000);
-document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
-addEventListener('pagehide',save);
+document.addEventListener('visibilitychange',()=>{if(document.hidden){save();if(cloudDone)cloudPush()}});
+addEventListener('pagehide',()=>{save();if(cloudDone)cloudPush()});
 $('#tab-prof').onclick=e=>{
   if(e.target.id!=='invite')return;
   addQuest('invite',1);S.inv=1;save();
@@ -600,3 +631,4 @@ $('#tab-bon').onclick=e=>{
 };
 $('#bon-btn').onclick=()=>tab($('#tab-bon').hidden?'bon':'game');
 renderUp();
+cloudLoad();
