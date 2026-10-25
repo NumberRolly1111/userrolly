@@ -10,9 +10,9 @@ function safeTop(){
 }
 if(tg){tg.ready();tg.expand();safeTop();['safeAreaChanged','contentSafeAreaChanged','fullscreenChanged','viewportChanged'].forEach(ev=>{try{tg.onEvent(ev,safeTop)}catch(e){}});try{tg.setHeaderColor('#0D0B1A');tg.setBackgroundColor('#0D0B1A')}catch(e){}}
 const hap=(k,v)=>{try{tg&&tg.HapticFeedback&&(k==='n'?tg.HapticFeedback.notificationOccurred(v):tg.HapticFeedback.impactOccurred(v))}catch(e){}};
-const T=[{n:'Обычный',c:'#9AA5DB',v:13},{n:'Необычный',c:'#27D9BD',v:49},{n:'Редкий',c:'#9B7BFF',v:160},{n:'Эпический',c:'#FF5FA2',v:590},{n:'Легендарный',c:'#FFC933',v:2400},{n:'Мифический',c:'#FF4B3E',v:12600},{n:'Секретный',c:'#EAF1FF',v:35000}]
+const T=[{n:'Обычный',c:'#9AA5DB',v:390},{n:'Необычный',c:'#27D9BD',v:1470},{n:'Редкий',c:'#9B7BFF',v:4800},{n:'Эпический',c:'#FF5FA2',v:17700},{n:'Легендарный',c:'#FFC933',v:72000},{n:'Мифический',c:'#FF4B3E',v:378000},{n:'Секретный',c:'#EAF1FF',v:1000000}]
 T.forEach((t,i)=>t.s=['Обычн.','Необыч.','Редкий','Эпик','Легенд.','Миф.','Секрет'][i]);;
-const MODES=[{l:'Любой',min:0,cost:100},{l:'Редкий+',min:2,cost:350},{l:'Эпик+',min:3,cost:1000}];
+const MODES=[{l:'Любой',min:0,cost:3000},{l:'Редкий+',min:2,cost:10500},{l:'Эпик+',min:3,cost:30000}];
 const WORDS=['storm','night','wolf9','cyber','pixel','ghost','nova7','lunar','ember','frost','raven','blaze','orbit','pulse','zenith','vortex','shadow','dragon','falcon','comet','atlas','magic','royal','alpha','omega','delta','sigma','ninja','panda','tiger','cobalt','cipher','quartz','rocket','silent','golden','crystal','phoenix','nexus','vector','matrix','legend','hunter','pirate','wizard','spirit','shiver','velvet','copper','jungle'].filter(w=>/^[a-z]{5,}$/.test(w));
 const L='abcdefghijklmnopqrstuvwxyz',V='aeiouy',K='bcdfghjklmnprstvwxz',POOL=L+'0123456789_#$%@';
 const R=n=>Math.floor(Math.random()*n),P=a=>a[R(a.length)];
@@ -20,15 +20,18 @@ const rnd=n=>Array.from({length:n},()=>P(L)).join(''),syl=n=>Array.from({length:
 const rev=s=>[...s].reverse().join('');
 const MAX0=10,MAXSLOTS=30;   // стартовый и предельный размер коллекции
 let MAX=MAX0;                // текущий размер коллекции (растёт за монеты, хранится в S.slots)
-const slotPrice=n=>Math.round(2500*Math.pow(1.35,n-MAX0)/100)*100;   // цена следующего места при n местах
+const slotPrice=n=>Math.round(75000*Math.pow(1.35,n-MAX0)/1000)*1000;   // цена следующего места при n местах
 const EN_CAP=15,EN_INT=15*60*1000;   // запас энергии и время накопления одной единицы (15 минут)
 const AUTO=['выключена','ниже необычного','ниже редкого','ниже эпического','ниже легендарного','ниже мифического'];
 const APP_LINK='';            // ссылка на Mini App для кнопки «Позвать друзей», например https://t.me/твой_бот/app
 const fmt=n=>Math.round(n).toLocaleString('ru-RU');
+const short=n=>n>=1e6?(n/1e6).toFixed(n%1e6?2:0).replace(/\.?0+$/,'').replace('.',',')+'M':n>=1e3?(n/1e3).toFixed(n%1e3?1:0).replace(/\.0$/,'')+'K':String(n);   // 1 500 000 → 1,5M
+const fmtC=n=>n>=1e7?(n/1e6).toFixed(1).replace('.',',')+' млн':fmt(n);   // для узких мест: 27,7 млн
 // цена ника плавно растёт с его баллами (без «пустот» между редкостями); секретные цены фиксированы
-const PRICE_BASE=12,PRICE_K=.056;
+const PRICE_BASE=360,PRICE_K=.056;   // цена обычных ников от баллов; общий масштаб экономики: ×30 к версии 3
+const START=90000;                   // стартовый баланс
 const val=(t,p,n)=>{
-  if(t>=6){const l=n?n.length:3;return Math.round(T[6].v*(l<=1?1.6:l===2?1.2:1))}
+  if(t>=6){const l=n?[...n].length:3;return Math.round(T[6].v*(l<=1?5:l===2?3:l===3?2:1))}   // секретные: 1 символ 5 млн, 2: 3 млн, 3: 2 млн, 4+: 1 млн
   if(!p)return T[t].v;
   return Math.max(1,Math.round(PRICE_BASE*Math.exp(PRICE_K*(p-30))));
 };
@@ -112,10 +115,9 @@ function score(s){
   return{t:tierOf(p),tags:t,p};
 }
 
-const def={coins:3000,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:3,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
+const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 fixState();
-if(S.econ!==3){S.coins=3000;S.items=S.items.slice(0,MAX);S.econ=3}
 if(!S.uid){const id=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.id;S.uid=id?(id%999999)+1:R(999999)+1}
 // ---------- Сохранение: на устройстве (localStorage) и в облаке Telegram (CloudStorage), чтобы прогресс переезжал между устройствами ----------
 var CS=null,cloudTm=0,cloudDone=false;
@@ -131,9 +133,12 @@ function xpNeed(l){return 100+l*40}   // опыт до следующего ур
 function fixState(){
   if(!S||typeof S!=='object')S={...def};
   const num=(k,d)=>{S[k]=typeof S[k]==='number'&&isFinite(S[k])?S[k]:d};
-  num('coins',3000);S.coins=Math.max(0,S.coins);
+  num('coins',START);S.coins=Math.max(0,S.coins);
+  num('bestv',0);num('maxCoins',0);
   ['spins','ups','upw','time','saved','sold','bestv','wheelN','maxStreak','qn','maxCoins','inv','tri','luck','five'].forEach(k=>{num(k,0);S[k]=Math.max(0,S[k])});
   num('best',0);S.best=Math.min(6,Math.max(0,Math.floor(S.best)));
+  if(S.econ===3){S.coins=Math.round(S.coins*30);S.bestv=Math.round((S.bestv||0)*30);S.maxCoins=Math.round((S.maxCoins||0)*30);S.econ=4}   // экономика ×30: переносим баланс игрока
+  else if(S.econ!==4){S.coins=START;S.econ=4}
   num('uid',0);num('en',EN_CAP);S.en=Math.max(0,Math.min(999,Math.floor(S.en)));num('enT',0);if(S.src!=='free'&&S.src!=='coin')S.src='free';S.snd=S.snd!==false;num('lvl',1);S.lvl=Math.max(1,Math.floor(S.lvl));num('xp',0);S.xp=Math.max(0,Math.floor(S.xp));
   S.show=Array.isArray(S.show)?[...new Set(S.show.filter(n=>n===0||n===1||n===2))]:[];
   S.cnt=Array.isArray(S.cnt)?Array.from({length:7},(_,i)=>Math.max(0,+S.cnt[i]||0)):[0,0,0,0,0,0,0];
@@ -172,19 +177,20 @@ S.maxStreak=Math.max(S.maxStreak||0,S.login.n||0);
 
 // ---------- Бонусы: ядро (ежедневный вход, ежедневная рулетка, недельные задания) ----------
 // Награды за 14 дней входа подряд (после 14-го дня круг начинается заново)
-const LOGIN=[1000,1500,2000,3000,4000,5000,7500,10000,12500,15000,20000,25000,35000,50000];
+const LOGIN=[30000,45000,60000,90000,120000,150000,225000,300000,375000,450000,600000,750000,1050000,1500000];
 // Призы ежедневной рулетки; w = шанс в процентах (сумма 100). k:'c' монеты, k:'n' ник редкости t
-const WHEEL=[{k:'c',v:5000,w:32},{k:'c',v:10000,w:22},{k:'c',v:20000,w:13},{k:'c',v:35000,w:7},{k:'c',v:50000,w:3.5},{k:'c',v:100000,w:1},
+const WHEEL0=[{k:'c',v:150000,w:32},{k:'c',v:300000,w:22},{k:'c',v:600000,w:13},{k:'c',v:1000000,w:7},{k:'c',v:1500000,w:3.5},{k:'c',v:3000000,w:1},
   {k:'n',t:3,w:11},{k:'n',t:4,w:6},{k:'n',t:5,w:3.5},{k:'n',t:6,w:1}];
+const WHEEL=[0,8,3,6,5,1,9,2,7,4].map(i=>WHEEL0[i]);   // секторы расставлены вперемешку; шансы остаются прежними
 const WTOT=WHEEL.reduce((a,p)=>a+p.w,0);
 // Недельные задания: n цель, r награда в монетах. Каждую неделю выбираются 3 из 6
 const QDEF={
-  spins:{n:30,r:10000,t:n=>`Сделай ${n} круток`},
-  wheel:{n:3,r:8000,t:n=>n===1?'Прокрути ежедневную рулетку':`Прокрути ежедневную рулетку ${n} раза`},
-  invite:{n:1,r:5000,t:()=>'Позови друга',h:'Засчитывается, когда ты отправишь приглашение'},
-  ups:{n:25,r:15000,t:n=>`Сделай ${n} апгрейдов`},
-  sell:{n:10,r:8000,t:n=>`Продай ${n} ников`},
-  save:{n:5,r:6000,t:n=>`Сохрани ${n} ников`},
+  spins:{n:30,r:300000,t:n=>`Сделай ${n} круток`},
+  wheel:{n:3,r:240000,t:n=>n===1?'Прокрути ежедневную рулетку':`Прокрути ежедневную рулетку ${n} раза`},
+  invite:{n:1,r:150000,t:()=>'Позови друга',h:'Засчитывается, когда ты отправишь приглашение'},
+  ups:{n:25,r:450000,t:n=>`Сделай ${n} апгрейдов`},
+  sell:{n:10,r:240000,t:n=>`Продай ${n} ников`},
+  save:{n:5,r:180000,t:n=>`Сохрани ${n} ников`},
 };
 const dkey=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const todayK=()=>dkey(new Date());
@@ -231,31 +237,31 @@ ensureQuests();
 // A(иконка, название, описание, текущее значение, цель)
 const A=(i,n,d,cur,goal,r)=>({i,n,d,cur,goal,r});   // r: награда в монетах
 const ACH=[
-  A('🎰','100 круток','Сделай 100 круток',()=>S.spins,100,3000),
-  A('🎰','1000 круток','Сделай 1000 круток',()=>S.spins,1000,20000),
-  A('⚡','Первый успех','Выиграй первый апгрейд',()=>S.upw,1,1500),
-  A('⚡','10 успешных апгрейдов','Выиграй 10 апгрейдов',()=>S.upw,10,8000),
-  A('🔧','Мастер апгрейда','Сделай 100 апгрейдов',()=>S.ups,100,25000),
-  A('📦','Первый в коллекции','Сохрани первый ник',()=>S.saved,1,1000),
-  A('📦','Коллекция из 50 ников','Собери за всё время 50 ников в коллекцию',()=>S.saved,50,15000),
-  A('💎','Десятитысячник','Получи ник ценой от 10 000 🪙',()=>S.bestv,10000,10000),
-  A('💎','Самый дорогой ник','Получи ник ценой от 100 000 🪙',()=>S.bestv,100000,100000),
-  A('✨','Первый редкий','Получи ник редкости «Редкий»',()=>S.cnt[2],1,2000),
-  A('✨','Первый эпический','Получи ник редкости «Эпический»',()=>S.cnt[3],1,5000),
-  A('✨','Первый легендарный','Получи ник редкости «Легендарный»',()=>S.cnt[4],1,15000),
-  A('🔥','Первый мифический','Получи ник редкости «Мифический»',()=>S.cnt[5],1,50000),
-  A('🕶️','Первая секретка','Получи ник редкости «Секретный»',()=>S.cnt[6],1,100000),
-  A('🌸','10 эпических','Получи 10 эпических ников',()=>S.cnt[3],10,20000),
-  A('💰','Первая продажа','Продай ник',()=>S.sold,1,1000),
-  A('🏷️','Торговец','Продай 50 ников',()=>S.sold,50,10000),
-  A('🎡','Первая рулетка','Прокрути ежедневную рулетку',()=>S.wheelN,1,1500),
-  A('🎡','30 ежедневных рулеток','Прокрути ежедневную рулетку 30 раз',()=>S.wheelN,30,20000),
-  A('📅','Серия 7 дней','Заходи 7 дней подряд',()=>S.maxStreak,7,8000),
-  A('📅','Серия 14 дней','Заходи 14 дней подряд',()=>S.maxStreak,14,25000),
-  A('✅','10 заданий','Выполни 10 заданий недели',()=>S.qn,10,10000),
-  A('🪙','Миллионер','Накопи 1 000 000 🪙',()=>S.maxCoins,1000000,150000),
-  A('🌙','Сутки в игре','Проведи в игре 24 часа',()=>Math.floor(S.time/3600),24,15000),
-  A('🗄️','Полная коллекция',`Собери ${MAX0} из ${MAX0} ников`,()=>S.items.length,MAX0,5000),
+  A('🎰','100 круток','Сделай 100 круток',()=>S.spins,100,90000),
+  A('🎰','1000 круток','Сделай 1000 круток',()=>S.spins,1000,600000),
+  A('⚡','Первый успех','Выиграй первый апгрейд',()=>S.upw,1,45000),
+  A('⚡','10 успешных апгрейдов','Выиграй 10 апгрейдов',()=>S.upw,10,240000),
+  A('🔧','Мастер апгрейда','Сделай 100 апгрейдов',()=>S.ups,100,750000),
+  A('📦','Первый в коллекции','Сохрани первый ник',()=>S.saved,1,30000),
+  A('📦','Коллекция из 50 ников','Собери за всё время 50 ников в коллекцию',()=>S.saved,50,450000),
+  A('💎','Ценный ник','Получи ник ценой от 300 000 🪙',()=>S.bestv,300000,300000),
+  A('💎','Самый дорогой ник','Получи ник ценой от 3 000 000 🪙',()=>S.bestv,3000000,3000000),
+  A('✨','Первый редкий','Получи ник редкости «Редкий»',()=>S.cnt[2],1,60000),
+  A('✨','Первый эпический','Получи ник редкости «Эпический»',()=>S.cnt[3],1,150000),
+  A('✨','Первый легендарный','Получи ник редкости «Легендарный»',()=>S.cnt[4],1,450000),
+  A('🔥','Первый мифический','Получи ник редкости «Мифический»',()=>S.cnt[5],1,1500000),
+  A('🕶️','Первая секретка','Получи ник редкости «Секретный»',()=>S.cnt[6],1,3000000),
+  A('🌸','10 эпических','Получи 10 эпических ников',()=>S.cnt[3],10,600000),
+  A('💰','Первая продажа','Продай ник',()=>S.sold,1,30000),
+  A('🏷️','Торговец','Продай 50 ников',()=>S.sold,50,300000),
+  A('🎡','Первая рулетка','Прокрути ежедневную рулетку',()=>S.wheelN,1,45000),
+  A('🎡','30 ежедневных рулеток','Прокрути ежедневную рулетку 30 раз',()=>S.wheelN,30,600000),
+  A('📅','Серия 7 дней','Заходи 7 дней подряд',()=>S.maxStreak,7,240000),
+  A('📅','Серия 14 дней','Заходи 14 дней подряд',()=>S.maxStreak,14,750000),
+  A('✅','10 заданий','Выполни 10 заданий недели',()=>S.qn,10,300000),
+  A('🪙','Магнат','Накопи 30 000 000 🪙',()=>S.maxCoins,30000000,4500000),
+  A('🌙','Сутки в игре','Проведи в игре 24 часа',()=>Math.floor(S.time/3600),24,450000),
+  A('🗄️','Полная коллекция',`Собери ${MAX0} из ${MAX0} ников`,()=>S.items.length,MAX0,150000),
 ];
 const achOk=(a,i)=>S.ach.includes(i)||a.cur()>=a.goal;
 const achReady=()=>ACH.map((x,i)=>i).filter(i=>achOk(ACH[i],i)&&!S.achGot.includes(i));
@@ -364,7 +370,7 @@ function epic(r){
 }
 
 // ---------- Уровень игрока ----------
-const lvReward=l=>({c:300+l*120,e:l%5===0?7:2});
+const lvReward=l=>({c:9000+l*3600,e:l%5===0?7:2});
 const RANKS=[[1,'Бронза','#D08A4A'],[10,'Серебро','#C5CCDB'],[20,'Золото','#FFC933'],[35,'Платина','#6FE3E0'],[50,'Алмаз','#7FA8FF']];
 const rankOf=l=>{let r=RANKS[0];RANKS.forEach(x=>{if(l>=x[0])r=x});return r};
 function addXp(n){
@@ -496,10 +502,10 @@ function collapse(els,done){els.forEach(e=>{e.style.maxHeight=e.offsetHeight+'px
 let shownCoins=S.coins,twRaf=0,colSel=null;
 function setCoins(){
   const el=$('#coins'),from=shownCoins,to=S.coins;
-  if(from===to){el.textContent=fmt(to)+' 🪙';return}
+  if(from===to){el.textContent=fmtC(to)+' 🪙';return}
   cancelAnimationFrame(twRaf);el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');
   const t0=performance.now(),d=reduce?1:450;
-  const step=n=>{const k=Math.min(1,(n-t0)/d),e=1-Math.pow(1-k,3);shownCoins=k<1?Math.round(from+(to-from)*e):to;el.textContent=fmt(shownCoins)+' 🪙';if(k<1)twRaf=requestAnimationFrame(step)};
+  const step=n=>{const k=Math.min(1,(n-t0)/d),e=1-Math.pow(1-k,3);shownCoins=k<1?Math.round(from+(to-from)*e):to;el.textContent=fmtC(shownCoins)+' 🪙';if(k<1)twRaf=requestAnimationFrame(step)};
   twRaf=requestAnimationFrame(step);
 }
 const setHtml=(el,h)=>{if(el._h!==h){el.innerHTML=h;el._h=h}};
@@ -511,11 +517,11 @@ function updSelbar(){
 // ---------- Витрины: наборы ников, за каждый собранный набор награда ----------
 // slots: [подпись, условие]; для сбора нужны РАЗНЫЕ ники. r: награда монетами и энергией
 const SHOW=[
-  {n:'Радуга редкостей',d:'По одному нику каждой редкости: от «Необычного» до «Легендарного»',c:'#FF5FA2',r:{c:80000,e:10},
+  {n:'Радуга редкостей',d:'По одному нику каждой редкости: от «Необычного» до «Легендарного»',c:'#FF5FA2',r:{c:2400000,e:10},
     slots:[['Необычный',x=>x.t===1],['Редкий',x=>x.t===2],['Эпический',x=>x.t===3],['Легендарный',x=>x.t===4]]},
-  {n:'Клуб длины',d:'Четыре ника разной длины',c:'#27D9BD',r:{c:20000,e:5},
+  {n:'Клуб длины',d:'Четыре ника разной длины',c:'#27D9BD',r:{c:600000,e:5},
     slots:[['5 символов',x=>x.n.length===5],['6 символов',x=>x.n.length===6],['7 символов',x=>x.n.length===7],['8+ символов',x=>x.n.length>=8]]},
-  {n:'Зал элиты',d:'Самые редкие ники игры, вместе в одной коллекции',c:'#FFC933',r:{c:400000,e:20},
+  {n:'Зал элиты',d:'Самые редкие ники игры, вместе в одной коллекции',c:'#FFC933',r:{c:12000000,e:20},
     slots:[['Эпический+',x=>x.t>=3],['Легендарный+',x=>x.t>=4],['Мифический',x=>x.t===5],['Секретный',x=>x.t===6]]},
 ];
 function vMatch(slots,items){   // подбираем разные ники под слоты так, чтобы заполнить максимум
@@ -757,7 +763,7 @@ function renderProf(){
   <div class="lvrow"><b>Уровень ${S.lvl}</b><small>${fmt(S.xp)} / ${fmt(need)} опыта</small></div>
   <div class="xbar"><i style="width:${pct}%"></i></div>
   <div class="path"><span class="pi">🧭</span><b>Путь игрока</b><small>${S.lvl+1} ур.: +${fmt(nr.c)} 🪙 и +${nr.e} ⚡</small></div>
-  <div class="tri"><div><small>Капитал</small><b>${fmt(S.coins)} 🪙</b></div><div><small>Коллекция</small><b>${S.items.length} из ${S.slots}</b></div><div><small>Витрины</small><b>${doneV} из ${SHOW.length}</b></div></div></div>
+  <div class="tri"><div><small>Капитал</small><b>${fmtC(S.coins)} 🪙</b></div><div><small>Коллекция</small><b>${S.items.length} из ${S.slots}</b></div><div><small>Витрины</small><b>${doneV} из ${SHOW.length}</b></div></div></div>
   <div class="pcard sndrow"><div><b>Звуки</b><small>Эффекты рулетки, наград и колеса</small></div><button class="sw${S.snd?' on':''}" id="snd-tg" role="switch" aria-checked="${S.snd}" aria-label="Звуки"><i></i></button></div>
   <div class="pcard inv"><div><b>Позвать друзей</b><small>Отправь друзьям ссылку на игру</small></div><button class="btn main" id="invite">Позвать</button></div>
   <div class="pcard"><h3>Статистика</h3>
@@ -807,7 +813,7 @@ $('#prof-btn').onclick=()=>tab($('#tab-prof').hidden?'prof':'game');
 function tab(n){
   document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===(n==='show'?'col':n)));
   ['game','col','up','prof','bon','ach','show'].forEach(k=>{const e=$('#tab-'+k);
-    if(k===n){if(e.hidden){e.hidden=false;e.classList.remove('tabin');void e.offsetWidth;e.classList.add('tabin')}}else e.hidden=true});
+    if(k===n){if(e.hidden){e.hidden=false;e.classList.remove('tabin');void e.offsetWidth;e.classList.add('tabin');clearTimeout(e._ti);e._ti=setTimeout(()=>e.classList.remove('tabin'),900)}}else e.hidden=true});
   $('#prof-btn').setAttribute('aria-pressed',n==='prof');
   $('#bon-btn').setAttribute('aria-pressed',n==='bon');
   if(n!=='col')colSel=null;
@@ -825,7 +831,7 @@ const bon={busy:false,res:null,ang:0,win:-1,fresh:false};
 // ---------- Колесо ежедневной рулетки ----------
 const WN=WHEEL.length,WSL=360/WN;
 const wpt=(deg,r)=>{const a=deg*Math.PI/180;return [(r*Math.sin(a)).toFixed(2),(-r*Math.cos(a)).toFixed(2)]};
-const wcol=p=>p.k==='n'?T[p.t].c:['#FFD866','#FFC933','#FFB62E','#FFA526','#FF9419','#FF7F11'][Math.min(5,Math.max(0,['5000','10000','20000','35000','50000','100000'].indexOf(String(p.v))))];
+const wcol=p=>{if(p.k==='n')return T[p.t].c;const cs=WHEEL.filter(x=>x.k==='c').map(x=>x.v),i=cs.indexOf(p.v);return ['#FFD866','#FFC933','#FFB62E','#FFA526','#FF9419','#FF7F11'][Math.min(5,Math.max(0,i))]};
 function wheelHtml(){
   const segs=WHEEL.map((p,i)=>{
     const a0=i*WSL,a1=a0+WSL,m=a0+WSL/2,[x0,y0]=wpt(a0,88),[x1,y1]=wpt(a1,88),col=wcol(p),isN=p.k==='n';
@@ -838,9 +844,9 @@ function wheelHtml(){
   return `<div class="wheel${bon.busy?' spinning':''}${bon.win>=0?' haswin':''}" id="wheel"><i class="wptr" id="wptr"></i>
     <div class="wrot" id="wrot" style="transform:rotate(${bon.ang}deg)"><svg viewBox="-100 -100 200 200"><circle r="99" fill="#241F4A" stroke="#4B4399" stroke-width="2"/>${lights}${segs}<circle r="12" fill="#0D0B1A"/></svg></div><div class="whub">🎁</div></div>`;
 }
-const wlab=p=>p.k==='c'?(p.v>=1000?p.v/1000+'K':p.v):'';
+const wlab=p=>p.k==='c'?short(p.v):'';
 const wpick=()=>{let r=Math.random()*WTOT;for(const p of WHEEL){r-=p.w;if(r<0)return p}return WHEEL[0]};
-const kfmt=r=>r>=1000?r/1000+'K':String(r);
+const kfmt=short;
 function wresHtml(){
   const r=bon.res;if(!r)return '';
   if(r.k==='c')return `<div class="win" style="--tc:#FFC933"><b>+<span class="cu" data-to="${r.v}">${fmt(r.v)}</span> 🪙</b> Монеты уже на балансе.</div>`;
