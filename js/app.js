@@ -859,7 +859,7 @@ function renderAch(){
   const near=ACH.map((x,i)=>({x,i,ok:achOk(x,i)})).filter(o=>!o.ok).sort((p,q)=>Math.min(q.x.cur()/q.x.goal,1)-Math.min(p.x.cur()/p.x.goal,1))[0];
   const rank=o=>o.ok&&!S.achGot.includes(o.i)?0:!o.ok?1:2;
   const list=ACH.map((x,i)=>({x,i,ok:achOk(x,i)})).sort((a,b)=>rank(a)-rank(b)||a.i-b.i);
-  const h=`<div class="ahead"><button class="btn sm" id="ach-back">‹ Профиль</button><h2>Достижения</h2></div>
+  const h=`<div class="ahead"><h2>Достижения</h2></div>
   <div class="asum"><div class="ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" class="rb"/><circle cx="60" cy="60" r="54" class="rf" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-n/tot)}"/></svg><div><b>${n}</b><small>из ${tot}</small></div></div>
     <div class="ainfo"><small class="cap2">Получено наград</small><b class="big">${fmt(got)} 🪙</b><div class="chips"><span class="chip2">🏆 ${n} открыто</span><span class="chip2">🔒 ${tot-n} осталось</span></div>${near?`<p>Ближайшее: ${near.x.n}, ${fmt(Math.min(near.x.cur(),near.x.goal))} из ${fmt(near.x.goal)}</p>`:'<p>Все достижения открыты!</p>'}</div></div>
   ${rd?`<button class="btn main cwide" data-claim="all">Забрать все награды · +${fmt(achReady().reduce((s,i)=>s+ACH[i].r,0))} 🪙</button>`:''}
@@ -872,7 +872,15 @@ $('#tab-show').onclick=e=>{if(e.target.closest('#show-back'))return tab('col');c
 $('#tab-ach').onclick=e=>{if(e.target.closest('#ach-back'))return tab('prof');const b=e.target.closest('[data-claim]');if(b)claimAch(b.dataset.claim)};
 $('#prof-btn').onclick=()=>tab($('#tab-prof').hidden?'prof':'game');
 
+// Страницы: index.html (игра), rating.html (рейтинг), achievements.html (достижения). Состояние общее — в localStorage и облаке Telegram.
+const PAGE=document.body.dataset.page||'main',PAGES={top:'rating.html',ach:'achievements.html'};
 function tab(n){
+  const here=PAGE==='main'?['game','col','up','prof','bon','show']:[PAGE];
+  if(here.includes(n))return tabIn(n);
+  save();try{if(cloudDone)cloudPush()}catch(e){}
+  location.href=(PAGES[n]||'index.html')+(PAGES[n]||n==='game'?'':'#'+n);
+}
+function tabIn(n){
   document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===(n==='show'?'col':n)));
   ['game','col','up','prof','bon','ach','show','top'].forEach(k=>{const e=$('#tab-'+k);
     if(k===n){if(e.hidden){e.hidden=false;e.classList.remove('tabin');void e.offsetWidth;e.classList.add('tabin');clearTimeout(e._ti);e._ti=setTimeout(()=>e.classList.remove('tabin'),900)}}else e.hidden=true});
@@ -912,7 +920,7 @@ async function lbPush(force){
 async function openTop(){
   renderTop();if(!API||!tg||!tg.initData)return;
   lb.load=true;lb.err='';renderTop();
-  try{await lbPush(true);lb.data[lb.by]=await lbReq('/top?by='+lb.by)}catch(e){lb.err=e.message==='wait'?'Подожди несколько секунд и попробуй снова':'Не удалось загрузить рейтинг'}
+  try{await lbPush(true);lb.data[lb.by]=await lbReq('/top?by='+lb.by)}catch(e){const m=String(e.message||e);lb.err=m==='wait'?'Подожди несколько секунд и попробуй снова':'Не удалось загрузить рейтинг ('+(m==='http 401'?'ошибка проверки Telegram: проверь BOT_TOKEN':m==='http 500'?'ошибка сервера: проверь привязку базы DB':/Failed to fetch|Load failed|NetworkError/i.test(m)?'нет связи с сервером':m)+')'}
   lb.load=false;if(!$('#tab-top').hidden)renderTop();
 }
 function renderTop(){
@@ -922,13 +930,13 @@ function renderTop(){
   if(!API)body='<div class="pcard lbmsg"><b>Рейтинг пока не подключён</b><small>Нужно развернуть сервер из папки rating-worker и вписать его адрес в app.js (константа API). Подробности в README.</small></div>';
   else if(!tg||!tg.initData)body='<div class="pcard lbmsg"><b>Рейтинг доступен в Telegram</b><small>Открой игру через бота, чтобы видеть таблицу и попасть в неё.</small></div>';
   else if(lb.load&&!d)body='<div class="pcard lbmsg"><small>Загружаю…</small></div>';
-  else if(lb.err&&!d)body=`<div class="pcard lbmsg"><b>${lb.err}</b><button class="btn main" id="top-retry">Повторить</button></div>`;
+  else if(lb.err&&!d)body=`<div class="pcard lbmsg"><b>${escH(lb.err)}</b><button class="btn main" id="top-retry">Повторить</button></div>`;
   else if(d){
     const me=d.me;
     body=`<div class="pcard lbme"><small>Твоё место</small><b>${me&&me.rank?'#'+fmt(me.rank):'—'}</b><span>${val2(net?Math.round(netWorth()):S.bestv)}${!net&&S.bestn?` · ${escH(S.bestn)}`:''}</span></div>
     <div class="lbl">`+(d.top.length?d.top.map((r,i)=>`<div class="lbr${r.me?' me':''}"><em>${medal[i]||i+1}</em><div class="lbn"><b>${escH(r.name)}</b><small>${net?`${r.lvl} ур.`:escH(r.bestn||'—')}</small></div><span>${val2(r.v)}</span></div>`).join(''):'<div class="pcard lbmsg"><small>Пока никого нет — стань первым!</small></div>')+'</div>';
   }else body='';
-  setHtml($('#tab-top'),`<div class="ahead"><button class="btn sm" id="top-back">‹ Профиль</button><h2>Рейтинг</h2></div>
+  setHtml($('#tab-top'),`<div class="ahead"><h2>Рейтинг</h2></div>
   <div class="seg two"><button data-by="net" aria-pressed="${net}">Капитал</button><button data-by="best" aria-pressed="${!net}">Лучший ник</button></div>
   ${body}
   <div class="pcard sndrow"><div><b>Показывать меня</b><small>Если выключить, тебя не будет в таблице</small></div><button class="sw${S.hide?'':' on'}" id="top-hide" role="switch" aria-checked="${!S.hide}"></button></div>`);
@@ -1046,4 +1054,7 @@ $('#tab-bon').onclick=e=>{
 };
 $('#bon-btn').onclick=()=>tab($('#tab-bon').hidden?'bon':'game');
 renderUp();
+if(PAGE!=='main')tabIn(PAGE);
+else{const h=location.hash.slice(1);if(['col','up','prof','bon','show'].includes(h))tabIn(h)}
+try{if(PAGE!=='main'&&tg&&tg.BackButton){tg.BackButton.show();tg.BackButton.onClick(()=>{location.href='index.html'})}}catch(e){}
 cloudLoad();
