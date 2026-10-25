@@ -104,6 +104,8 @@ async function handle(req, env) {
     }
     const cr = await clanRoutes(url, req, env, uid, json);
     if (cr) return cr;
+    const mr = await marketRoutes(url, req, env, uid, json);
+    if (mr) return mr;
     return json({ error: 'not found' }, 404);
   }
 }
@@ -250,6 +252,81 @@ async function clanRoutes(url, req, env, uid, json) {
     if (target === uid) return json({ error: 'self' }, 400);
     await db.prepare('DELETE FROM members WHERE uid=? AND clan=?').bind(target, c.id).run();
     return json({ ok: true });
+  }
+  return json({ error: 'not found' }, 404);
+}
+
+
+// ======================= РЫНОК МЕЖДУ ИГРОКАМИ =======================
+// Сервер хранит лоты и сделки. Ник при выставлении «замораживается» в лоте, покупатель получает его после успешной покупки,
+// продавец забирает выручку кнопкой (комиссия MARKET_FEE). Тип и цену ника клиент пересчитывает сам по названию.
+const MARKET_FEE = 0.05, MARKET_MAX_LOTS = 10, MARKET_MIN = 10, MARKET_MAX = 2_000_000_000;
+const NICK_RE = /^[\p{L}\p{N}_#$%@?!*~.\-]{1,24}$/u;
+
+async function marketRoutes(url, req, env, uid, json) {
+  const p = url.pathname;
+  if (!p.startsWith('/market')) return null;
+  const db = env.DB;
+
+  if (p === '/market' && req.method === 'GET') {
+    const q = clean(url.searchParams.get('q') || '', 24), sort = url.searchParams.get('sort');
+    const order = sort === 'cheap' ? 'm.price ASC' : sort === 'exp' ? 'm.price DESC' : 'm.id DESC';
+    const base = `SELECT m.id,m.name,m.price,m.seller,p.name AS sname,p.hide FROM market m LEFT JOIN players p ON p.uid=m.seller WHERE m.status=0`;
+    const rows = (q
+      ? await db.prepare(base + " AND m.name LIKE ?1 ESCAPE '\\' ORDER BY " + order + ' LIMIT 60').bind(like(q)).all()
+      : await db.prepare(base + ' ORDER BY ' + order + ' LIMIT 60').all()).results;
+    return json({ lots: rows.map((r) => ({ id: r.id, name: r.name, price: r.price, seller: r.hide ? 'Игрок' : (r.sname || 'Игрок'), mine: r.seller === uid ? 1 : 0 })) });
+  }
+
+  if (p === '/market/my' && req.method === 'GET') {
+    const act = (await db.prepare('SELECT id,name,price FROM market WHERE seller=? AND status=0 ORDER BY id DESC').bind(uid).all()).results;
+    const sold = (await db.prepare('SELECT id,name,price FROM market WHERE seller=? AND status=1 AND claimed=0 ORDER BY id DESC').bind(uid).all()).results;
+    return json({ active: act, sold: sold.map((s) => ({ ...s, get: Math.floor(s.price * (1 - MARKET_FEE)) })), fee: MARKET_FEE, max: MARKET_MAX_LOTS });
+  }
+
+  if (req.method !== 'POST') return json({ error: 'not found' }, 404);
+  let b; try { b = await req.json(); } catch { b = {}; }
+
+  if (p === '/market/list') {
+    const name = String(b.name || ''), price = Math.round(Number(b.price));
+    if (!NICK_RE.test(name)) return json({ error: 'name' }, 400);
+    if (!(price >= MARKET_MIN && price <= MARKET_MAX)) return json({ error: 'price' }, 400);
+    if (!(await db.prepare('SELECT 1 AS x FROM players WHERE uid=?').bind(uid).first())) return json({ error: 'sync' }, 400);
+    const c = await db.prepare('SELECT COUNT(*) AS n FROM market WHERE seller=? AND status=0').bind(uid).first();
+    if (c.n >= MARKET_MAX_LOTS) return json({ error: 'toomany' }, 400);
+    const r = await db.prepare('INSERT INTO market(seller,name,price,status,claimed,ts) VALUES(?,?,?,0,0,?)').bind(uid, name, price, Date.now()).run();
+    return json({ ok: true, id: r.meta.last_row_id });
+  }
+
+  if (p === '/market/cancel') {
+    const id = Number(b.id) || 0;
+    const lot = await db.prepare('SELECT name FROM market WHERE id=? AND seller=? AND status=0').bind(id, uid).first();
+    if (!lot) return json({ error: 'gone' }, 404);
+    const r = await db.prepare('UPDATE market SET status=2 WHERE id=? AND seller=? AND status=0').bind(id, uid).run();
+    if (!r.meta.changes) return json({ error: 'gone' }, 404);
+    return json({ ok: true, name: lot.name });
+  }
+
+  if (p === '/market/buy') {
+    const id = Number(b.id) || 0;
+    const lot = await db.prepare('SELECT name,price,seller FROM market WHERE id=? AND status=0').bind(id).first();
+    if (!lot) return json({ error: 'gone' }, 404);
+    if (lot.seller === uid) return json({ error: 'own' }, 400);
+    if (Number(b.max) && lot.price > Number(b.max)) return json({ error: 'changed' }, 409);
+    // атомарно: лот достаётся только тому, кто первым сменил статус
+    const r = await db.prepare('UPDATE market SET status=1,buyer=?,sold_ts=? WHERE id=? AND status=0').bind(uid, Date.now(), id).run();
+    if (!r.meta.changes) return json({ error: 'gone' }, 404);
+    return json({ ok: true, name: lot.name, price: lot.price });
+  }
+
+  if (p === '/market/claim') {
+    const rows = (await db.prepare('SELECT id,price FROM market WHERE seller=? AND status=1 AND claimed=0').bind(uid).all()).results;
+    let sum = 0, n = 0;
+    for (const r of rows) {
+      const u = await db.prepare('UPDATE market SET claimed=1 WHERE id=? AND claimed=0').bind(r.id).run();
+      if (u.meta.changes) { sum += Math.floor(r.price * (1 - MARKET_FEE)); n++; }
+    }
+    return json({ sum, n });
   }
   return json({ error: 'not found' }, 404);
 }
