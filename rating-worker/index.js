@@ -106,6 +106,8 @@ async function handle(req, env) {
     if (cr) return cr;
     const mr = await marketRoutes(url, req, env, uid, json);
     if (mr) return mr;
+    const mu = await museumRoutes(url, req, env, uid, json);
+    if (mu) return mu;
     return json({ error: 'not found' }, 404);
   }
 }
@@ -327,6 +329,36 @@ async function marketRoutes(url, req, env, uid, json) {
       if (u.meta.changes) { sum += Math.floor(r.price * (1 - MARKET_FEE)); n++; }
     }
     return json({ sum, n });
+  }
+  return json({ error: 'not found' }, 404);
+}
+
+
+// ======================= МУЗЕЙ =======================
+// Игрок навсегда ставит ник в музей: имя может висеть только у одного игрока. Сервер хранит имя, поданную клиентом оценку (только чтобы
+// отобрать лучшие экспонаты) и владельца. Реальную цену ника клиенты считают сами по названию и по ней же сортируют список.
+const MUSEUM_PER_PLAYER = 3, MUSEUM_SHOW = 200;
+async function museumRoutes(url, req, env, uid, json) {
+  const p = url.pathname;
+  if (!p.startsWith('/museum')) return null;
+  const db = env.DB;
+  if (p === '/museum' && req.method === 'GET') {
+    const rows = (await db.prepare('SELECT m.name,m.v,m.owner,m.ts,p.name AS oname,p.hide FROM museum m LEFT JOIN players p ON p.uid=m.owner ORDER BY m.v DESC, m.ts ASC LIMIT ?').bind(MUSEUM_SHOW).all()).results;
+    const total = await db.prepare('SELECT COUNT(*) AS n FROM museum').first();
+    const mine = await db.prepare('SELECT COUNT(*) AS n FROM museum WHERE owner=?').bind(uid).first();
+    return json({ items: rows.map((r) => ({ name: r.name, v: r.v, ts: r.ts, owner: r.hide ? 'Игрок' : (r.oname || 'Игрок'), mine: r.owner === uid ? 1 : 0 })), total: total.n, mine: mine.n, max: MUSEUM_PER_PLAYER });
+  }
+  if (p === '/museum/add' && req.method === 'POST') {
+    let b; try { b = await req.json(); } catch { b = {}; }
+    const name = String(b.name || ''), v = Math.round(Number(b.v));
+    if (!NICK_RE.test(name)) return json({ error: 'name' }, 400);
+    if (!(v >= 1 && v <= 1e10)) return json({ error: 'price' }, 400);
+    if (!(await db.prepare('SELECT 1 AS x FROM players WHERE uid=?').bind(uid).first())) return json({ error: 'sync' }, 400);
+    const c = await db.prepare('SELECT COUNT(*) AS n FROM museum WHERE owner=?').bind(uid).first();
+    if (c.n >= MUSEUM_PER_PLAYER) return json({ error: 'many' }, 400);
+    const r = await db.prepare('INSERT OR IGNORE INTO museum(name,v,owner,ts) VALUES(?,?,?,?)').bind(name, v, uid, Date.now()).run();
+    if (!r.meta.changes) return json({ error: 'taken' }, 409);
+    return json({ ok: true });
   }
   return json({ error: 'not found' }, 404);
 }
