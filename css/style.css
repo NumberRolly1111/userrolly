@@ -384,3 +384,82 @@ button,.pick,.tg{transition-property:transform,box-shadow,background,color,opaci
 @keyframes hubpop{30%{transform:translate(-50%,-50%) scale(1.25)}60%{transform:translate(-50%,-50%) scale(.95)}}
 
 .wl1.tn{font-size:9.5px;letter-spacing:-.2px}
+
+/* профиль */
+.ptitle{margin:0 0 12px}
+.pro{background:repeating-linear-gradient(115deg,rgba(255,255,255,.03) 0 2px,transparent 2px 12px),var(--paper)}
+.ptop{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.av{--p:0;position:relative;flex:none;width:72px;height:72px;border-radius:50%;background:conic-gradient(#27D96B calc(var(--p)*1%),var(--tile) 0);display:grid;place-items:center}
+.avi{width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#9B7BFF,#5B6BFF);display:grid;place-items:center;overflow:hidden;position:relative;border:3px solid var(--paper)}
+.avi b{font:800 24px var(--head);color:#fff}
+.avi img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.lvb{position:absolute;right:-4px;bottom:-4px;min-width:26px;height:26px;padding:0 6px;border-radius:999px;background:var(--bg);border:2px solid var(--fg);font:800 12px/22px var(--head);font-style:normal;text-align:center}
+.pnm{min-width:0;display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+.pname{font:800 18px var(--head);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank{font:700 12px var(--body);color:var(--rc);background:color-mix(in srgb,var(--rc) 16%,transparent);border:1.5px solid color-mix(in srgb,var(--rc) 55%,transparent);border-radius:999px;padding:3px 10px}
+.pnm small{color:var(--mute);font-size:12px}
+.pid{display:flex;align-items:center;gap:10px;padding:8px 10px;margin-bottom:14px;border:2px solid var(--fg);border-radius:14px;background:var(--bg)}
+.idtag{background:#7B6BFF;color:#fff;font:800 12px var(--head);padding:5px 8px;border-radius:8px}
+.pid b{flex:1;font:800 22px var(--head);letter-spacing:.04em}
+.pid button{width:34px;height:34px;border-radius:10px;background:var(--tile);color:var(--fg);font-size:16px}
+.lvrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.lvrow b{font:800 17px var(--head)}
+.lvrow small{color:var(--mute);font-size:12px}
+.xbar{height:10px;border-radius:999px;background:var(--tile);overflow:hidden;margin:8px 0 12px}
+.xbar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#27D96B,#7CF29B);transition:width .5s}
+.path{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:12px;border-radius:12px;background:rgba(39,217,107,.1);border:1.5px solid rgba(39,217,107,.35)}
+.path .pi{width:28px;height:28px;border-radius:8px;background:#1d6b45;display:grid;place-items:center;font-size:15px}
+.path b{font:800 13px var(--head)}
+.path small{margin-left:auto;text-align:right;color:var(--mute);font-size:12px;line-height:1.25}
+.tri{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tri>div{background:var(--tile);border-radius:12px;padding:9px 10px;min-width:0}
+.tri small{display:block;color:var(--mute);font-size:11px}
+.tri b{display:block;font:800 13px var(--head);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sndrow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sndrow b{display:block;font:800 15px var(--head)}
+.sndrow small{display:block;color:var(--mute);font-size:12px;margin-top:2px}
+.sw{position:relative;flex:none;width:54px;height:30px;border-radius:999px;background:var(--tile);border:2px solid var(--line);transition:background .25s,border-color .25s}
+.sw i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--mute);transition:transform .25s,background .25s}
+.sw.on{background:#1d6b45;border-color:#27D96B}
+.sw.on i{transform:translateX(24px);background:#7CF29B}
+
+/* ---------- эпичная сцена: мифический и секретный ---------- */
+.ep{position:fixed;inset:0;z-index:90;display:grid;place-items:center;overflow:hidden;background:#000;animation:epIn .3s both;touch-action:manipulation}
+.ep.out{animation:epOut .48s both}
+@keyframes epIn{from{opacity:0}}
+@keyframes epOut{to{opacity:0}}
+.ep-bg,.ep-fx{position:absolute;inset:0;pointer-events:none}
+.ep-box{position:relative;text-align:center;padding:0 12px;max-width:100%;animation:epBox .7s .2s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes epBox{from{transform:scale(.3);opacity:0}}
+.ep-tier{font:800 clamp(16px,5.5vw,28px) var(--head);letter-spacing:.28em;text-transform:uppercase;margin-bottom:22px}
+.ep-name{display:flex;justify-content:center;font:800 var(--sz) var(--head);line-height:1.1}
+.ep-name span{display:inline-block;opacity:0;color:#fff;animation:epLet .8s calc(var(--st) + var(--i)*var(--sp)) cubic-bezier(.2,1.5,.4,1) both}
+.ep-name .at{animation-delay:calc(var(--st) - 300ms)}
+.ep-skip{position:absolute;bottom:calc(28px + env(safe-area-inset-bottom));left:0;right:0;text-align:center;font-size:12px;color:rgba(255,255,255,.55);animation:epSkip .6s 1.2s both}
+@keyframes epSkip{from{opacity:0}}
+@keyframes epLet{0%{opacity:0;transform:scale(3) translateY(-14px);filter:blur(14px)}55%{opacity:1;filter:blur(2px)}100%{opacity:1;transform:none;filter:none}}
+/* мифический: огонь, лучи, искры */
+.ep.myt .ep-bg{background:radial-gradient(circle at 50% 50%,#8a1409 0,#2c0905 45%,#070101 100%);animation:epPulse 1.1s ease-in-out infinite}
+@keyframes epPulse{50%{filter:brightness(1.4)}}
+.ep-rays{position:absolute;left:50%;top:50%;width:220vmax;height:220vmax;margin:-110vmax 0 0 -110vmax;pointer-events:none;background:repeating-conic-gradient(rgba(255,128,64,.38) 0 5deg,transparent 5deg 17deg);-webkit-mask:radial-gradient(circle,#000 0,transparent 46%);mask:radial-gradient(circle,#000 0,transparent 46%);animation:epSpin 10s linear infinite}
+@keyframes epSpin{to{transform:rotate(360deg)}}
+.ep-ring{position:absolute;left:50%;top:50%;width:22vmin;height:22vmin;margin:-11vmin 0 0 -11vmin;border-radius:50%;border:4px solid #ffb199;opacity:0;pointer-events:none;animation:epRing 1.7s ease-out .25s infinite}
+.ep-ring.r2{animation-delay:1.1s;border-color:#ffd9a0}
+@keyframes epRing{0%{transform:scale(.2);opacity:.95}100%{transform:scale(7.5);opacity:0}}
+.ep.myt .ep-tier{color:#ffd9cf;text-shadow:0 0 16px #ff4b3e,0 0 40px #ff2a14;animation:epTier 1.4s .5s ease-in-out infinite alternate}
+@keyframes epTier{to{letter-spacing:.36em;text-shadow:0 0 24px #ffb199,0 0 60px #ff2a14}}
+.ep.myt .ep-name span{text-shadow:0 0 14px #ff4b3e,0 0 38px #ff2a14}
+.ep-fx span{position:absolute;bottom:-12px;width:var(--s);height:var(--s);border-radius:50%;background:#ffb347;box-shadow:0 0 10px #ff6a00;opacity:0;animation:epRise var(--d) var(--dl) linear infinite}
+@keyframes epRise{0%{transform:translate(0,0);opacity:0}12%{opacity:1}100%{transform:translate(var(--x),-112vh);opacity:0}}
+/* секретный: тьма, глитч, сканлайны, финальная вспышка */
+.ep.sec .ep-bg{background:radial-gradient(circle at 50% 50%,#1d1d30 0,#000 72%);animation:epFlick 2.6s steps(1) infinite}
+@keyframes epFlick{0%,90%,100%{opacity:1}91%{opacity:.35}93%{opacity:1}96%{opacity:.6}}
+.ep.sec .ep-rays{inset:0;width:auto;height:auto;margin:0;-webkit-mask:none;mask:none;animation:epScan 5s linear infinite;background:repeating-linear-gradient(0deg,rgba(255,255,255,.06) 0 2px,transparent 2px 5px)}
+@keyframes epScan{to{background-position:0 100px}}
+.ep.sec::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle,transparent 18%,#000 88%)}
+.ep.sec::after{content:"";position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;animation:epFlash .9s var(--fd) both}
+@keyframes epFlash{0%{opacity:0}35%{opacity:1}100%{opacity:0}}
+.ep.sec .ep-ring{border-color:#fff;animation-duration:2.4s}
+.ep.sec .ep-tier{color:#fff;text-shadow:3px 0 #FF2D55,-3px 0 #00E5FF;animation:epBox .7s .2s cubic-bezier(.2,1.4,.4,1) both,epGl .55s steps(2) 1s infinite}
+@keyframes epGl{25%{transform:translate(-4px,1px) skewX(-5deg)}50%{transform:translate(4px,-1px)}75%{transform:translate(-2px,0) skewX(4deg)}}
+.ep.sec .ep-name span{text-shadow:3px 0 #FF2D55,-3px 0 #00E5FF,0 0 34px #fff}
