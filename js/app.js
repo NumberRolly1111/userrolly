@@ -1225,3 +1225,4 @@ else{const h=location.hash.slice(1);if(['col','up','prof','bon','show'].includes
 try{if(PAGE!=='main'&&tg&&tg.BackButton){tg.BackButton.show();tg.BackButton.onClick(()=>{location.href='index.html'})}}catch(e){}
 refInit();
 cloudLoad();
+try{window.bootDone&&bootDone()}catch(e){}   // игра готова: убираем загрузочный экран
