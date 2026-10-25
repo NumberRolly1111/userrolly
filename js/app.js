@@ -173,7 +173,7 @@ function score(s){
   return{t:tierOf(p),tags:t,p};
 }
 
-const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
+const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,upl:0,uph:[],inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 fixState();
 if(!S.uid){const id=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.id;S.uid=id?(id%999999)+1:R(999999)+1}
@@ -198,6 +198,7 @@ function fixState(){
   if(S.econ===3){S.coins=Math.round(S.coins*30);S.bestv=Math.round((S.bestv||0)*30);S.maxCoins=Math.round((S.maxCoins||0)*30);S.econ=4}   // экономика ×30: переносим баланс игрока
   else if(S.econ!==4){S.coins=START;S.econ=4}
   if(typeof S.bestn!=='string')S.bestn='';S.hide=S.hide?1:0;
+  num('upl',0);S.upl=Math.max(0,Math.floor(S.upl));S.uph=Array.isArray(S.uph)?S.uph.filter(x=>x&&typeof x==='object'&&typeof x.s==='string').slice(0,30):[];
   num('uid',0);num('en',EN_CAP);S.en=Math.max(0,Math.min(999,Math.floor(S.en)));num('enT',0);if(S.src!=='free'&&S.src!=='coin')S.src='free';S.snd=S.snd!==false;num('lvl',1);S.lvl=Math.max(1,Math.floor(S.lvl));num('xp',0);S.xp=Math.max(0,Math.floor(S.xp));
   S.show=Array.isArray(S.show)?[...new Set(S.show.filter(n=>n===0||n===1||n===2))]:[];
   S.cnt=Array.isArray(S.cnt)?Array.from({length:7},(_,i)=>Math.max(0,+S.cnt[i]||0)):[0,0,0,0,0,0,0];
@@ -709,10 +710,11 @@ render();showIdle();
 addEventListener('resize',()=>{if(busy||$('#tab-game').hidden)return;document.querySelectorAll('#reels .reel').forEach(r=>r.dataset.name&&build(r.dataset.name,false,r))});
 
 // ---------- Апгрейд ----------
-const UPMAX=5;   // максимум ников в ставке апгрейда
-let up={sel:new Set(),c:50,prize:null,busy:false,msg:'',res:null,fresh:false};
-const RL={n:70,w:64,gap:6,idx:52};
-const chanceOf=(s,pr)=>Math.min(.85,Math.max(.01,.9*s.v/pr.price));
+const UPMAX=5;                 // максимум ников в ставке
+const MULTS=[2,3,5,10];        // быстрые множители цели
+const UPK=.95,UPLOSS=5,INSFEE=.25;   // шанс = цена ставки ÷ цена цели × 0,95; защита после 5 неудач подряд; страховка = 25% цены ставки
+let up={sel:new Set(),mode:2,c:30,prize:null,busy:false,msg:'',res:null,fresh:false,sheet:'',ins:false,rot:0};
+const chanceOf=(s,pr)=>Math.min(.85,Math.max(.01,UPK*s.v/pr.price));
 function stake(){const its=S.items.filter(i=>up.sel.has(i.id)).slice(0,UPMAX);return{its,v:its.reduce((a,x)=>a+val(x.t,x.p,x.n),0),mx:its.reduce((a,x)=>Math.max(a,x.t),-1)}}
 // пул призов: ники всех редкостей с ценами (строится один раз). Секретные есть только здесь
 let POOLN=null;
@@ -724,87 +726,173 @@ function prizePool(){
   for(const c of L){add(c.repeat(5));for(const d of L)if(d!==c)add(c+d+c+d+c)}
   return POOLN=a.sort((x,y)=>x.price-y.price);
 }
-// цена приза = 90% ставки / шанс; берём ближайший по цене ник из пула
+// цель: по множителю (×2…×10) или по заданному шансу; берём ближайший по цене ник из пула
 function pickPrize(s){
-  const target=.9*s.v/(up.c/100),ok=prizePool().filter(x=>x.price>s.v);
-  if(!ok.length){up.prize=null;return}
+  const target=up.mode==='c'?UPK*s.v/(up.c/100):s.v*up.mode,ok=prizePool().filter(x=>x.price>s.v);
+  if(!ok.length||!s.its.length){up.prize=null;return}
   const dist=x=>Math.abs(x.price-target),best=Math.min(...ok.map(dist));
   const near=ok.filter(x=>dist(x)<=best+Math.max(2,target*.03));
   up.prize=near.reduce((a,x)=>dist(x)<dist(a)?x:a);
 }
-// win: undefined = превью, true/false = исход для ячейки под указателем
-const rlCells=(ch,win)=>Array.from({length:RL.n},(_,i)=>{const w=i===RL.idx&&win!==undefined?win:Math.random()<ch;return `<b class="rc ${w?'w':'l'}">${w?'✓':'✕'}</b>`}).join('');
-// плавно ведём число (и, при thumb, ползунок) до процента, который подобрался автоматически
+// ----- циферблат шанса -----
+const DR=82,DC=2*Math.PI*DR;
+function dialSvg(){
+  let tk='';for(let i=0;i<60;i++)tk+=`<line x1="100" y1="36" x2="100" y2="${i%5?39:43}" transform="rotate(${i*6} 100 100)"/>`;
+  return `<svg viewBox="0 0 200 200" aria-hidden="true"><g id="dring" style="transform-origin:50% 50%;transform:rotate(${up.rot}deg)">
+    <circle class="dtr" cx="100" cy="100" r="${DR}"/><circle class="dwin" id="dwin" cx="100" cy="100" r="${DR}" transform="rotate(-90 100 100)" stroke-dasharray="0 ${DC}"/>
+    <g class="dtk">${tk}</g></g><path class="dptr" d="M91 0H109L100 17Z"/></svg>`;
+}
 let pctRaf=0;
-function tweenPct(from,to,thumb){
-  cancelAnimationFrame(pctRaf);const out=$('#ch-out'),sl=$('#chs');if(!out)return;
-  const setv=v=>{out.textContent=v+'%';if(thumb&&sl)sl.value=v};
+function tweenPct(to){
+  cancelAnimationFrame(pctRaf);const out=$('#dpct');if(!out)return;
+  if(to==null){out.textContent='—';return}
+  const from=parseInt(out.textContent)||0,setv=v=>out.textContent=v+'%';
   if(reduce||from===to){setv(to);return}
-  const t0=performance.now(),d=Math.min(1000,300+Math.abs(to-from)*20);
+  const t0=performance.now(),d=Math.min(900,260+Math.abs(to-from)*14);
   const st=n=>{const k=Math.min(1,(n-t0)/d),e=1-Math.pow(1-k,3);setv(Math.round(from+(to-from)*e));if(k<1)pctRaf=requestAnimationFrame(st)};
   pctRaf=requestAnimationFrame(st);
 }
-function fillUp(thumb=true){
-  const s=stake(),pr=up.prize,ok=s.its.length&&pr,ch=ok?chanceOf(s,pr):0,col=ok?T[pr.t].c:'#6A63B0';
-  const out=$('#ch-out');
-  if(ok){const sl=$('#chs'),to=Math.round(ch*100),from=thumb?+sl.value:(parseInt(out.textContent)||+sl.value);tweenPct(from,to,thumb);if(thumb)up.c=to}
-  else{cancelAnimationFrame(pctRaf);out.textContent='—'}
-  $('#prize').innerHTML=ok?`<div class="pz" style="--tc:${col}"><div><small>Выпадет</small><b>@${pr.name}</b><em>${T[pr.t].n}</em></div><div class="pp"><small>Цена</small><b>${fmt(pr.price)} 🪙</b></div></div>`
-    :`<p class="sum">${s.its.length?'Нет ников дороже ставки. Поставь меньше.':'Отметь ники для ставки'}</p>`;
-  $('#rl').style.setProperty('--tc',col);$('#rlt').innerHTML=rlCells(ch);$('#do-up').disabled=!ok;
+const multWord=m=>m===2?'в 2 раза':`в ${m} раз`;
+const insFee=s=>Math.round(s.v*INSFEE);
+function upSkeleton(){
+  return `<h2>Апгрейд</h2>
+  <div class="slots"><button class="slot" id="up-stake"></button><i class="sarw">→</i><div class="slot" id="up-target"></div></div>
+  <div class="pcard updial">
+    <div class="mults" id="mults">${MULTS.map(m=>`<button data-m="${m}">×${m}</button>`).join('')}<button data-m="c">Свой</button></div>
+    <div class="cust" id="cust" hidden><span>Шанс</span><input type="range" id="upcs" min="1" max="85" step="1" value="${up.c}" aria-label="Свой шанс"><b id="upcv">${up.c}%</b></div>
+    <div class="dial" id="dial">${dialSvg()}<div class="dctr"><b id="dpct">—</b><small>шанс</small></div></div>
+    <div class="hist"><div class="hstrip" id="hstrip"></div><button class="hlink" id="up-hist">История ›</button></div>
+    <p class="hint">Выбери ники из коллекции и цель. Шанс = цена ставки ÷ цена цели × 0,95. Не повезёт — ставка сгорит. Защита от серий: если ${UPLOSS} раз подряд не везёт, следующий апгрейд выигрывает точно.</p>
+    <p class="pity" id="pity"></p>
+  </div>
+  <div class="pcard sndrow"><div><b>Страховка</b><small id="ins-sub"></small></div><button class="sw" id="up-ins" role="switch" aria-checked="false" aria-label="Страховка"><i></i></button></div>
+  <button class="spin" id="up-main">Выбрать из коллекции</button>
+  <div class="upres" id="upres"></div>
+  <div class="usheet" id="usheet" hidden></div>`;
+}
+function fillUp(){
+  const s=stake(),pr=up.prize,ok=!!(s.its.length&&pr),ch=ok?chanceOf(s,pr):0,col=ok?T[pr.t].c:'#6A63B0';
+  // слоты
+  const st=$('#up-stake'),tg=$('#up-target');
+  if(s.its.length){const nm=s.its.slice(0,2).map(x=>'@'+escH(x.n)).join(', ')+(s.its.length>2?` +${s.its.length-2}`:'');
+    st.className='slot full';st.style.setProperty('--tc',T[s.mx].c);st.innerHTML=`<small class="cap">Ставка</small><b class="sn">${nm}</b><span class="sv">${fmt(s.v)} 🪙</span><em class="slnk">Изменить · ${s.its.length}/${UPMAX}</em>`}
+  else{st.className='slot';st.style.removeProperty('--tc');st.innerHTML=`<small class="cap">Ставка</small><span class="plus">+</span><em class="slnk">${S.items.length?'Выбрать из коллекции':'Коллекция пуста'}</em>`}
+  if(ok){tg.className='slot full';tg.style.setProperty('--tc',col);tg.innerHTML=`<small class="cap">Цель</small><b class="sn">@${escH(pr.name)}</b><em class="tier" style="color:${col}">${T[pr.t].n}</em><span class="sv">${fmt(pr.price)} 🪙</span>`}
+  else{tg.className='slot';tg.style.removeProperty('--tc');tg.innerHTML=`<small class="cap">Цель</small><span class="tghint">${s.its.length?'Нет ников дороже ставки':up.mode==='c'?`С шансом ${up.c}%`:`${multWord(up.mode)} дороже`}</span>`}
+  // множители
+  document.querySelectorAll('#mults [data-m]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.m===String(up.mode))));
+  $('#cust').hidden=up.mode!=='c';
+  // циферблат
+  const w=$('#dwin');w.style.stroke=col;w.setAttribute('stroke-dasharray',`${DC*ch} ${DC}`);$('#dial').style.setProperty('--wc',col);
+  tweenPct(ok?Math.round(ch*100):null);
+  if(ok&&up.mode==='c'){const v=Math.round(ch*100);$('#upcv').textContent=up.c+'%';if(v!==up.c)$('#upcv').textContent=up.c+'% → '+v+'%'}
+  // история и защита
+  const h=S.uph.slice(0,10);
+  $('#hstrip').innerHTML=h.length?h.map(x=>`<i class="hs ${x.w?'ok':'no'}">${x.w?'✓':'✕'}</i>`).join(''):'<span class="hnone">Пока нет апгрейдов</span>';
+  const pl=Math.min(S.upl,UPLOSS);
+  $('#pity').innerHTML=S.upl>=UPLOSS?'🛡 Защита сработает: следующий апгрейд выиграет точно!':`🛡 Защита от серий: ${pl} / ${UPLOSS}`;
+  $('#pity').classList.toggle('on',S.upl>=UPLOSS);
+  // страховка
+  const fee=s.its.length?insFee(s):0,sw=$('#up-ins');
+  $('#ins-sub').textContent=s.its.length?`Не повезёт — ставка останется · ${fmt(fee)} 🪙`:'Не повезёт — ставка останется';
+  sw.classList.toggle('on',up.ins);sw.setAttribute('aria-checked',String(up.ins));
+  // главная кнопка
+  const mb=$('#up-main');
+  if(!S.items.length&&!s.its.length){mb.textContent='К рулетке';mb.dataset.act='go';mb.disabled=false}
+  else if(!s.its.length){mb.textContent='+ Выбрать из коллекции';mb.dataset.act='pick';mb.disabled=false}
+  else if(!ok){mb.textContent='Нет цели дороже ставки';mb.dataset.act='';mb.disabled=true}
+  else{mb.textContent=up.ins?`Крутить · страховка ${fmt(fee)} 🪙`:'Крутить апгрейд';mb.dataset.act='spin';mb.disabled=false}
+}
+function renderRes(){
+  const r=$('#upres');if(!r)return;
+  r.innerHTML=`${up.msg}${up.res?`<div class="stage" id="upstage" style="--tc:${T[up.res.t].c}"><div class="reel" id="upreel"></div><div class="badge"><i></i>${T[up.res.t].n}</div></div>`:''}`;
+  if(up.res){const fresh=up.fresh;up.fresh=false;playStage($('#upstage'),$('#upreel'),up.res,fresh)}
+}
+function renderSheet(){
+  const sh=$('#usheet');if(!sh)return;
+  if(!up.sheet){sh.hidden=true;sh.innerHTML='';return}
+  sh.hidden=false;
+  if(up.sheet==='pick'){
+    const its=[...S.items].sort((a,b)=>b.t-a.t||val(b.t,b.p,b.n)-val(a.t,a.p,a.n)),full=up.sel.size>=UPMAX;
+    sh.innerHTML=`<div class="sbg" data-close="1"></div><div class="sbox"><div class="shead"><b>Ставка</b><span id="scnt">${up.sel.size} / ${UPMAX}</span></div>
+    <div class="slist">${its.length?its.map(x=>`<label class="item pick" style="--tc:${T[x.t].c}"><input type="checkbox" data-sel="${x.id}"${up.sel.has(x.id)?' checked':''}${full&&!up.sel.has(x.id)?' disabled':''}><div><b>@${escH(x.n)}</b><small>${T[x.t].n}</small></div><span>${fmt(val(x.t,x.p,x.n))} 🪙</span></label>`).join(''):'<p class="sum">В коллекции пока пусто.</p>'}</div>
+    <button class="btn main" data-close="1">Готово</button></div>`;
+  }else{
+    const h=S.uph;
+    sh.innerHTML=`<div class="sbg" data-close="1"></div><div class="sbox"><div class="shead"><b>История апгрейдов</b><span>${h.length}</span></div>
+    <div class="slist">${h.length?h.map(x=>`<div class="hrow ${x.w?'ok':'no'}"><i class="hs ${x.w?'ok':'no'}">${x.w?'✓':'✕'}</i><div><b>${x.w?'@'+escH(x.p):x.i?'Ставка осталась':'Ставка сгорела'}</b><small>${escH(x.s)} · шанс ${x.ch}%${x.g?' · защита':''}</small></div><span>${fmt(x.x)} 🪙</span></div>`).join(''):'<p class="sum">История пока пуста.</p>'}</div>
+    <button class="btn main" data-close="1">Закрыть</button></div>`;
+  }
 }
 function renderUp(){
   if(up.busy)return;
   up.sel=new Set([...up.sel].filter(id=>S.items.some(i=>i.id===id)).slice(0,UPMAX));
-  const s=stake(),el=$('#tab-up'),its=[...S.items].sort((a,b)=>b.t-a.t);
-  if(!s.its.length)up.prize=null;else if(!up.prize)pickPrize(s);
-  let h=`<h2>Апгрейд</h2><p class="sum">Поставь ники из коллекции и двигай ползунок: чем ниже шанс, тем дороже ник выпадет. Если стрелка остановится на ✕, ставка сгорит. В ставку можно поставить до ${UPMAX} ников.</p>`;
-  if(!its.length&&!up.res&&!up.msg){el.innerHTML=h+`<div class="empty">Ставить пока нечего.<br>Сохрани ники в коллекцию.<br><button class="btn" data-go="game">К рулетке</button></div>`;return}
-  const full=up.sel.size>=UPMAX;
-  h+=`<p class="sum cap">Ставка: <b>${up.sel.size} / ${UPMAX}</b></p><div class="stake">`+its.map(x=>`<label class="item pick" style="--tc:${T[x.t].c}"><input type="checkbox" data-sel="${x.id}"${up.sel.has(x.id)?' checked':''}${full&&!up.sel.has(x.id)?' disabled':''}><div><b>@${x.n}</b><small>${T[x.t].n}</small></div><span>${fmt(val(x.t,x.p,x.n))} 🪙</span></label>`).join('')+`</div>`;
-  h+=`<div class="slider"><div class="srow"><span>Шанс</span><b id="ch-out"></b></div><input type="range" id="chs" min="1" max="85" step="1" value="${up.c}"${s.its.length?'':' disabled'} aria-label="Шанс апгрейда"></div><div id="prize"></div>`;
-  h+=`<div class="rl" id="rl"><i class="ptr"></i><div class="rl-track" id="rlt"></div></div><button class="spin" id="do-up">Крутить апгрейд</button>`;
-  h+=`<div class="upres">${up.msg}${up.res?`<div class="stage" id="upstage" style="--tc:${T[up.res.t].c}"><div class="reel" id="upreel"></div><div class="badge"><i></i>${T[up.res.t].n}</div></div>`:''}</div>`;
-  const oldSt=el.querySelector('.stake'),top=oldSt?oldSt.scrollTop:0;el.innerHTML=h;{const n=el.querySelector('.stake');if(n)n.scrollTop=top}fillUp();
-  if(up.res){const fresh=up.fresh;up.fresh=false;playStage($('#upstage'),$('#upreel'),up.res,fresh)}
+  const el=$('#tab-up');if(!el.querySelector('#dring'))el.innerHTML=upSkeleton();
+  const s=stake();if(!s.its.length)up.prize=null;else if(!up.prize)pickPrize(s);
+  fillUp();renderRes();renderSheet();
 }
 async function doUp(){
   const s=stake(),pr=up.prize;if(up.busy||!pr||!s.its.length)return;
-  const ch=chanceOf(s,pr),won=Math.random()<ch;
+  const fee=up.ins?insFee(s):0;
+  if(fee>S.coins){toast('Не хватает монет на страховку');return}
+  const ch=chanceOf(s,pr),pity=S.upl>=UPLOSS,won=pity||Math.random()<ch,ins=up.ins;
   if(s.its.length>=UPMAX)S.five=1;
-  up.busy=true;xbusy=1;up.res=null;up.msg='';
+  S.coins-=fee;up.busy=true;xbusy=1;up.res=null;up.msg='';renderRes();
   document.querySelectorAll('#tab-up button,#tab-up input').forEach(e=>e.disabled=true);
-  const rl=$('#rl'),trk=$('#rlt'),W=rl.clientWidth,pitch=RL.w+RL.gap,off=(Math.random()-.5)*RL.w*.7,dur=reduce?50:4800;
-  trk.style.transition='none';trk.style.transform='translateX(0)';trk.innerHTML=rlCells(ch,won);void trk.offsetWidth;
-  trk.style.transition=`transform ${dur}ms cubic-bezier(.08,.6,.12,1)`;
-  trk.style.transform=`translateX(${W/2-(RL.idx*pitch+RL.w/2+off)}px)`;
+  const ring=$('#dring'),a360=ch*360,pad=Math.min(3,a360*.15,(360-a360)*.15),dur=reduce?60:5200;
+  const a=won?pad+Math.random()*(a360-2*pad):a360+pad+Math.random()*(360-a360-2*pad);
+  const base=up.rot,tot=base+360*(reduce?1:6)+(((-a-base)%360)+360)%360;
+  ring.style.transition=`transform ${dur}ms cubic-bezier(.1,.62,.08,1)`;void ring.getBoundingClientRect();ring.style.transform=`rotate(${tot}deg)`;
   if(!reduce){let last=-1,lt=0;const t0=performance.now();
-    (function tk(){const x=new DOMMatrix(getComputedStyle(trk).transform).m41,i=Math.floor((W/2-x)/pitch),now=performance.now();
-      if(i!==last&&now-lt>70){last=i;lt=now;hap('i','light');sfx('tick',i)}
+    (function tk(){const m=new DOMMatrix(getComputedStyle(ring).transform),ang=((Math.atan2(m.b,m.a)*180/Math.PI)%360+360)%360,i=Math.floor(ang/6),now=performance.now();
+      if(i!==last&&now-lt>60){last=i;lt=now;hap('i','light');sfx('tick',i)}
       if(now-t0<dur)requestAnimationFrame(tk)})()}
   await new Promise(r=>setTimeout(r,dur+250));
-  trk.children[RL.idx].classList.add('on');
-  await new Promise(r=>setTimeout(r,reduce?0:700));
-  S.items=S.items.filter(i=>!up.sel.has(i.id));S.ups++;addQuest('ups',1);addXp(won?85:25);
+  const dial=$('#dial');dial.classList.add(won?'won':'lost');
+  await new Promise(r=>setTimeout(r,reduce?0:800));
+  dial.classList.remove('won','lost');
+  S.ups++;addQuest('ups',1);addXp(won?85:25);
+  const names=s.its.map(x=>'@'+x.n).join(' ');
+  let keep=false;
   if(won){
-    S.upw++;if(ch<=.1)S.luck=1;S.cnt[pr.t]++;noteBest(pr.price,pr.name);addItem(pr.name,pr.t,pr.p);
+    S.upl=0;S.items=S.items.filter(i=>!up.sel.has(i.id));
+    S.upw++;if(ch<=.1&&!pity)S.luck=1;S.cnt[pr.t]++;noteBest(pr.price,pr.name);addItem(pr.name,pr.t,pr.p);
     up.res={name:pr.name,t:pr.t,p:pr.p};up.fresh=true;
-    up.msg=`<div class="win" style="--tc:${T[pr.t].c}"><b>Успех!</b> Шанс был ${Math.round(ch*100)}%, ник уже в коллекции.</div>`;
-  }else{up.msg=`<div class="lose"><b>Не вышло.</b> Ставка сгорела, шанс был ${Math.round(ch*100)}%.</div>`;hap('n','error');sfx('lose')}
-  up.sel.clear();up.prize=null;up.busy=false;xbusy=0;save();render();
+    up.msg=`<div class="win" style="--tc:${T[pr.t].c}"><b>Успех!</b> ${pity?'Сработала защита от серий.':`Шанс был ${Math.round(ch*100)}%.`} Ник уже в коллекции.</div>`;
+  }else{
+    S.upl=(S.upl||0)+1;
+    if(ins){keep=true;up.msg=`<div class="lose"><b>Не вышло, но ставка осталась.</b> Страховка сработала, шанс был ${Math.round(ch*100)}%.</div>`}
+    else{S.items=S.items.filter(i=>!up.sel.has(i.id));up.msg=`<div class="lose"><b>Не вышло.</b> Ставка сгорела, шанс был ${Math.round(ch*100)}%.</div>`}
+    hap('n','error');sfx('lose');
+  }
+  S.uph.unshift({w:won?1:0,ch:Math.round(ch*100),s:names,p:won?pr.name:'',i:keep?1:0,g:pity?1:0,x:s.v});S.uph=S.uph.slice(0,30);
+  up.rot=((tot%360)+360)%360;ring.style.transition='none';
+  if(!keep){up.sel.clear();up.prize=null}
+  up.busy=false;xbusy=0;
+  document.querySelectorAll('#tab-up button,#tab-up input').forEach(e=>e.disabled=false);
+  save();render();
 }
 $('#tab-up').onclick=e=>{
   const g=e.target.closest('[data-go]');if(g)return tab(g.dataset.go);
   if(up.busy)return;
-  if(e.target.id==='do-up')doUp();
+  if(e.target.closest('[data-close]')){up.sheet='';return renderSheet()}
+  const m=e.target.closest('[data-m]');
+  if(m){const v=m.dataset.m==='c'?'c':+m.dataset.m;if(v==='c'&&up.mode!=='c'&&up.prize)up.c=Math.min(85,Math.max(1,Math.round(chanceOf(stake(),up.prize)*100)));
+    up.mode=v;up.msg='';up.res=null;const sl=$('#upcs');if(sl)sl.value=up.c;pickPrize(stake());fillUp();renderRes();return}
+  if(e.target.closest('#up-stake')){if(!S.items.length)return;up.sheet='pick';return renderSheet()}
+  if(e.target.closest('#up-hist')){up.sheet='hist';return renderSheet()}
+  if(e.target.closest('#up-ins')){up.ins=!up.ins;return fillUp()}
+  const mb=e.target.closest('#up-main');
+  if(mb){const act=mb.dataset.act;if(act==='go')tab('game');else if(act==='pick'){up.sheet='pick';renderSheet()}else if(act==='spin')doUp()}
 };
 $('#tab-up').onchange=e=>{
-  if(e.target.id==='chs'&&!up.busy){const s=stake();if(s.its.length&&up.prize)fillUp(true);return}   // отпустили ползунок: он плавно встаёт на подобранный процент
   const i=e.target.closest('[data-sel]');if(!i||up.busy)return;
   if(i.checked){if(up.sel.size>=UPMAX){i.checked=false;toast(`Максимум ${UPMAX} ников в ставке`);return}up.sel.add(i.dataset.sel)}else up.sel.delete(i.dataset.sel);
-  up.msg='';up.res=null;up.prize=null;renderUp();
+  const full=up.sel.size>=UPMAX;document.querySelectorAll('#usheet [data-sel]').forEach(c=>{c.disabled=full&&!c.checked});
+  $('#scnt').textContent=`${up.sel.size} / ${UPMAX}`;
+  up.msg='';up.res=null;pickPrize(stake());fillUp();renderRes();
 };
-$('#tab-up').oninput=e=>{if(e.target.id!=='chs'||up.busy)return;up.c=+e.target.value;const s=stake();if(s.its.length){pickPrize(s);fillUp(false)}};
+$('#tab-up').oninput=e=>{if(e.target.id!=='upcs'||up.busy)return;up.c=+e.target.value;const s=stake();if(s.its.length){pickPrize(s);fillUp()}else $('#upcv').textContent=up.c+'%'};
 
 // ---------- Профиль ----------
 const TN=['Обычных','Необычных','Редких','Эпических','Легендарных','Мифических','Секретных'];
