@@ -514,7 +514,7 @@ button,.btn,.item,.pcard,.pk,.seg button,.src button,nav button,.sw,.sw i,.crow,
 .slot{min-height:132px;border:2px dashed var(--line);border-radius:20px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;background:rgba(23,20,48,.5);color:var(--fg);font:inherit;transition:border-color .3s,background .3s,transform .18s;min-width:0}
 .slot.full{border-style:solid;border-color:var(--tc,var(--line));background:linear-gradient(180deg,rgba(255,255,255,.04),transparent),var(--paper)}
 button.slot:active{transform:scale(.97)}
-.slot .cap{font:800 10px var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);align-self:flex-start}
+.slot .cap{font:800 10px var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);align-self:center;text-align:center;width:100%}
 .slot .plus{width:46px;height:46px;border-radius:50%;background:var(--tile);display:grid;place-items:center;font-size:26px;color:#9B8CFF;line-height:1}
 .slot .slnk{font-style:normal;font-weight:700;font-size:12px;color:#9B8CFF}
 .slot .sn{font:800 14px var(--head);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;word-break:break-all}
@@ -564,3 +564,6 @@ button.slot:active{transform:scale(.97)}
 .hrow small{color:var(--mute);font-size:11px}
 .hrow>span{font-weight:700;font-size:12px;white-space:nowrap}
 @keyframes sheetup{from{transform:translateY(40px);opacity:0}}
+.dnl{stroke:#fff;stroke-width:2.4;stroke-linecap:round;opacity:.9}
+.dneedle,#dneedle{filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+.dptr{filter:none}
