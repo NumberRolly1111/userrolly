@@ -18,7 +18,10 @@ const L='abcdefghijklmnopqrstuvwxyz',V='aeiouy',K='bcdfghjklmnprstvwxz',POOL=L+'
 const R=n=>Math.floor(Math.random()*n),P=a=>a[R(a.length)];
 const rnd=n=>Array.from({length:n},()=>P(L)).join(''),syl=n=>Array.from({length:n},(_,i)=>P(i%2?V:K)).join('');
 const rev=s=>[...s].reverse().join('');
-const MAX=10;                 // размер коллекции
+const MAX0=10,MAXSLOTS=30;   // стартовый и предельный размер коллекции
+let MAX=MAX0;                // текущий размер коллекции (растёт за монеты, хранится в S.slots)
+const slotPrice=n=>Math.round(2500*Math.pow(1.35,n-MAX0)/100)*100;   // цена следующего места при n местах
+const AUTO=['выключена','ниже необычного','ниже редкого','ниже эпического','ниже легендарного','ниже мифического'];
 const APP_LINK='';            // ссылка на Mini App для кнопки «Позвать друзей», например https://t.me/твой_бот/app
 const fmt=n=>Math.round(n).toLocaleString('ru-RU');
 // цена ника плавно растёт с его баллами (без «пустот» между редкостями); секретные цены фиксированы
@@ -108,8 +111,9 @@ function score(s){
   return{t:tierOf(p),tags:t,p};
 }
 
-const def={coins:3000,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:3,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,inv:0,tri:0,luck:0,five:0,ach:null};
+const def={coins:3000,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:3,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,inv:0,tri:0,luck:0,five:0,ach:null};
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
+S.slots=Math.min(MAXSLOTS,Math.max(MAX0,+S.slots||MAX0));MAX=S.slots;if(!(S.auto>=0&&S.auto<=5))S.auto=0;
 if(S.econ!==3){S.coins=3000;S.items=S.items.slice(0,MAX);S.econ=3}
 if(!Array.isArray(S.cnt)||S.cnt.length<7)S.cnt=[0,0,0,0,0,0,0];
 if(!S.tday||typeof S.tday!=='object')S.tday={d:'',s:0};
@@ -128,6 +132,7 @@ function fixState(){
   if(!S.tday||typeof S.tday!=='object')S.tday={d:'',s:0};
   if(!S.login||typeof S.login!=='object')S.login={n:0,last:''};
   if(!S.q||!Array.isArray(S.q.list))S.q={wk:'',list:[]};
+  S.slots=Math.min(MAXSLOTS,Math.max(MAX0,+S.slots||MAX0));MAX=S.slots;if(!(S.auto>=0&&S.auto<=5))S.auto=0;
   if(!Array.isArray(S.items))S.items=[];S.items=S.items.slice(0,MAX);
 }
 function cloudLoad(){
@@ -215,7 +220,7 @@ const ACH=[
   A('✅','10 заданий','Выполни 10 заданий недели',()=>S.qn,10),
   A('🪙','Миллионер','Накопи 1 000 000 🪙',()=>S.maxCoins,1000000),
   A('🌙','Сутки в игре','Проведи в игре 24 часа',()=>Math.floor(S.time/3600),24),
-  A('🗄️','Полная коллекция',`Собери ${MAX} из ${MAX} ников`,()=>S.items.length,MAX),
+  A('🗄️','Полная коллекция',`Собери ${MAX0} из ${MAX0} ников`,()=>S.items.length,MAX0),
 ];
 const achOk=(a,i)=>S.ach.includes(i)||a.cur()>=a.goal;
 let achLock=0;
@@ -333,8 +338,11 @@ const ask=(msg,ok)=>{try{if(tg&&tg.showConfirm&&tg.isVersionAtLeast&&tg.isVersio
 function addItem(n,t,p){S.items.unshift({id:Date.now()+''+R(1000),n,t,p});S.saved++}
 // забрать ники в коллекцию; если места нет, продать
 function stashAll(list){
-  let k=0,s=0;list.forEach(c=>{if(S.items.length<MAX){addItem(c.name,c.t,c.p);k++}else{S.coins+=val(c.t,c.p,c.name);S.sold++;s++}});
-  return [k?`сохранено: ${k}`:'',s?`продано из-за полной коллекции: ${s}`:''].filter(Boolean).join(', ');
+  let k=0,s=0,au=0;list.forEach(c=>{
+    if(S.auto&&c.t<S.auto){S.coins+=val(c.t,c.p,c.name);S.sold++;au++}
+    else if(S.items.length<MAX){addItem(c.name,c.t,c.p);k++}
+    else{S.coins+=val(c.t,c.p,c.name);S.sold++;s++}});
+  return [k?`сохранено: ${k}`:'',au?`автопродано: ${au}`:'',s?`продано из-за полной коллекции: ${s}`:''].filter(Boolean).join(', ');
 }
 const pl=n=>n%10===1&&n%100!==11?'ник':[2,3,4].includes(n%10)&&![12,13,14].includes(n%100)?'ника':'ников';
 function collapse(els,done){els.forEach(e=>{e.style.maxHeight=e.offsetHeight+'px';e.style.overflow='hidden';void e.offsetWidth;e.classList.add('out')});setTimeout(done,reduce?0:320)}
@@ -354,12 +362,21 @@ function updSelbar(){
   if(on){const its=S.items.filter(i=>colSel.has(i.id));$('#selinfo').textContent=`Выбрано: ${its.length} · ${fmt(its.reduce((a,x)=>a+val(x.t,x.p,x.n),0))} 🪙`}
   $('#selbar').classList.toggle('on',!!on);
 }
+const totalV=its=>its.reduce((x,y)=>x+val(y.t,y.p,y.n),0);
+function colPanel(){
+  const n=S.items.length,full=S.slots>=MAXSLOTS,pr=slotPrice(S.slots);
+  return `<div class="cpanel"><div class="ctop"><div><b>${n}</b> <span>из ${S.slots}</span><small>мест занято</small></div><div class="r"><b>${fmt(totalV(S.items))} 🪙</b><small>стоимость ников</small></div></div>
+  <div class="cbar"><i style="width:${n/S.slots*100}%"></i></div>
+  <button class="btn cwide" data-a="buy"${full?' disabled':''}>${full?'Максимум мест':`+ Купить место · ${fmt(pr)} 🪙`}</button>
+  <button class="btn cwide" data-a="cheap">Продать дешёвые</button>
+  <button class="crow" data-a="auto"><span>Автопродажа</span><b>${AUTO[S.auto]} ›</b></button></div>`;
+}
 function renderCol(){
   const col=$('#tab-col'),its=[...S.items].sort((a,b)=>b.t-a.t);
   if(colSel)colSel=new Set([...colSel].filter(id=>S.items.some(i=>i.id===id)));
-  let h;
-  if(!its.length){colSel=null;h=`<div class="empty">Коллекция пуста.<br>Крути рулетку и забирай понравившиеся ники.<br><button class="btn" data-go="game">К рулетке</button></div>`}
-  else h=`<div class="chead"><div><h2>Моя коллекция</h2><p class="sum">Ников: ${its.length} / ${MAX} · Если продать всё: ${fmt(its.reduce((a,x)=>a+val(x.t,x.p,x.n),0))} 🪙</p></div>`+
+  let h=colPanel();
+  if(!its.length){colSel=null;h+=`<div class="empty">Коллекция пуста.<br>Крути рулетку и забирай понравившиеся ники.<br><button class="btn" data-go="game">К рулетке</button></div>`}
+  else h+=`<div class="chead"><div><h2>Мои ники</h2></div>`+
     (colSel?`<div class="cbtns"><button class="btn sm" data-a="all">Все</button><button class="btn sm" data-a="cancel">Отмена</button></div>`:`<button class="btn sm" data-a="selmode">Выбрать</button>`)+`</div>`+
     its.map(x=>{const sub=`<small>${T[x.t].n}</small>`,pr=fmt(val(x.t,x.p,x.n));
       return colSel?`<label class="item pick" style="--tc:${T[x.t].c}"><input type="checkbox" data-cs="${x.id}"${colSel.has(x.id)?' checked':''}><div><b>@${x.n}</b>${sub}</div><span>${pr} 🪙</span></label>`
@@ -401,7 +418,17 @@ $('#reels').onclick=e=>{
 $('#tab-col').onclick=e=>{
   const g=e.target.closest('[data-go]');if(g)return tab(g.dataset.go);
   const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
-  if(a==='selmode'){colSel=new Set();renderCol();return}
+  if(a==='buy'){
+    if(S.slots>=MAXSLOTS)return;const pr=slotPrice(S.slots);
+    if(S.coins<pr){toast(`Не хватает монет: нужно ${fmt(pr)} 🪙`);return}
+    ask(`Купить место №${S.slots+1} за ${fmt(pr)} 🪙?`,()=>{if(S.coins<pr||S.slots>=MAXSLOTS)return;S.coins-=pr;S.slots++;MAX=S.slots;save();hap('n','success');toast(`Новое место! Теперь мест: ${S.slots}`);render()});return}
+  if(a==='auto'){S.auto=(S.auto+1)%AUTO.length;save();toast(S.auto?`Автопродажа: ники ${AUTO[S.auto]} будут продаваться сами, когда ты не сохранил их после крутки`:'Автопродажа выключена');renderCol();return}
+  if(a==='cheap'){
+    const lim=S.auto||2,its=S.items.filter(i=>i.t<lim);
+    if(!its.length){toast(`Нет ников ${AUTO[lim]}`);return}
+    const sum=totalV(its);
+    ask(`Продать ${its.length} ${pl(its.length)} (${AUTO[lim]}) за ${fmt(sum)} 🪙?`,()=>{const ids=new Set(its.map(i=>i.id));S.items=S.items.filter(i=>!ids.has(i.id));S.coins+=sum;S.sold+=its.length;addQuest('sell',its.length);colSel=null;save();toast(`Продано: ${its.length} ${pl(its.length)} за ${fmt(sum)} 🪙`);render()});return}
+  if(a==='selmode'){if(!S.items.length)return;colSel=new Set();renderCol();return}
   if(a==='cancel'){colSel=null;renderCol();return}
   if(a==='all'){colSel=colSel.size===S.items.length?new Set():new Set(S.items.map(i=>i.id));renderCol();return}
   const x=S.items.find(i=>i.id===b.dataset.id);if(!x)return;
