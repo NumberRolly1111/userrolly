@@ -804,3 +804,5 @@ html[data-theme=royal]{--bg:#120A1F;--paper:#201336;--tile:#32204F;--fg:#FBF0FF;
 .lrw{display:grid;grid-template-columns:90px 1fr auto;gap:8px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--line);font-size:13px}
 .lrw small{color:var(--mute)}
 .lotbox{gap:12px}
+#cases{margin-top:22px}
+.bcases{margin-top:4px}
