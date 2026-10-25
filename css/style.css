@@ -768,3 +768,39 @@ html[data-theme=royal]{--bg:#120A1F;--paper:#201336;--tile:#32204F;--fg:#FBF0FF;
 .mebar em{font:800 13px var(--head);font-style:normal;color:#C9C2FF}
 .mnm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800}
 .you{flex:none;padding:2px 8px;border-radius:999px;background:#7A6BFF;color:#fff;font:800 11px var(--head)}
+
+/* Ники на работе */
+.wslot{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:14px;background:var(--tile);border:2px solid var(--tc,var(--line));width:100%;text-align:left}
+.wslot.empty{border-style:dashed;border-color:var(--line);align-items:center;padding:18px;color:var(--mute)}
+.wslot.empty b{color:var(--fg)}
+.wtop{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.wtop b{display:block;font-size:15px}.wtop small,.wacc{color:var(--mute);font-size:12px}
+.wacc b{color:var(--fg)}
+.wbar{height:8px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.wbar i{display:block;height:100%;background:linear-gradient(90deg,#27D96B,#FFC933);border-radius:99px;transition:width 1s linear}
+.wpk{width:100%;text-align:left}
+/* Лотерея */
+.lotcard{display:flex;align-items:center;gap:12px;width:100%;margin-top:10px;padding:14px;border-radius:16px;background:linear-gradient(135deg,#3b2a0c,#241a40);border:2px solid #FFC933;text-align:left}
+.lotcard.poor{opacity:.75}
+.lotcard b{display:block;font:800 14px var(--head)}.lotcard small{color:#E6D5A5;font-size:12px}
+.lci{font-size:28px}.lcp{margin-left:auto;font-size:22px;color:#FFC933}
+.ticket{background:#FFF6E2;color:#3a2b0a;border-radius:16px;padding:10px 10px 12px;position:relative}
+.ticket::before,.ticket::after{content:"";position:absolute;top:44px;width:14px;height:14px;border-radius:50%;background:var(--paper)}
+.ticket::before{left:-7px}.ticket::after{right:-7px}
+.thd{display:flex;justify-content:space-between;font:800 11px var(--head);padding:4px 6px 10px;border-bottom:2px dashed #D9C79B;margin-bottom:10px}
+.thd span{font-weight:700;opacity:.65}
+.lscr{position:relative;height:130px;border-radius:12px;overflow:hidden;background:#fff}
+.lscr.win{box-shadow:0 0 0 3px #27D96B,0 0 22px rgba(39,217,107,.55)}
+.lsyms{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);align-items:center;justify-items:center;background:linear-gradient(#FFF,#F1EAD6)}
+.lsy{font-size:50px;line-height:1}
+.lscr canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:pointer}
+.lph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#B7BFCC,#E9EDF4,#9AA3B2);color:#3c465a;font-weight:800}
+.lph span{font-size:30px}
+.lotres{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px;border-radius:14px;text-align:center}
+.lotres.win{background:rgba(39,217,107,.16);border:2px solid #27D96B}.lotres.win b{color:#27D96B}
+.lotres.lose{background:var(--tile);border:2px solid var(--line)}
+.lotres span{font-size:13px;color:var(--mute)}
+.lodds summary{cursor:pointer;color:#9B8CFF;font:700 13px var(--head);text-align:center;padding:6px}
+.lrw{display:grid;grid-template-columns:90px 1fr auto;gap:8px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--line);font-size:13px}
+.lrw small{color:var(--mute)}
+.lotbox{gap:12px}
