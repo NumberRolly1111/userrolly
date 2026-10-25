@@ -1403,7 +1403,7 @@ const poolOf=t=>{if(!tierPool){tierPool=[[],[],[],[],[],[],[]];prizePool().forEa
 const pctw=w=>w%1?w.toFixed(1).replace('.',','):String(w);
 function rollTier(c){let r=Math.random()*c.w.reduce((s,x)=>s+x[1],0);for(const [t,w] of c.w){r-=w;if(r<0)return t}return c.w[c.w.length-1][0]}
 const dClaimed=()=>S.dcase===todayK();
-function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${S.coins<c.price?' poor':''}${c.daily&&dClaimed()?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.daily?(dClaimed()?'Через '+leftT(msToDay()):'Бесплатно · раз в сутки'):fmt(c.price)+' 🪙'}</span></button>`).join('')+'</div>'+lotCard()}
+function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${S.coins<c.price?' poor':''}${c.daily&&dClaimed()?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.daily?(dClaimed()?'Через '+leftT(msToDay()):'Бесплатно · раз в сутки'):fmt(c.price)+' 🪙'}</span></button>`).join('')+'</div>'}
 function renderCases(){
   let el=$('#cases');if(!el){const st=document.querySelector('#tab-game .stats');if(!st)return;el=document.createElement('div');el.id='cases';st.after(el)}
   setHtml(el,workPlate());
@@ -1494,13 +1494,16 @@ function workSheet(close){
 }
 // ---------- Моментальная лотерея: три одинаковых символа — приз ----------
 var LOTP=100000,LOT=[{s:'🍒',v:200000,p:.07},{s:'🍋',v:300000,p:.035},{s:'🔔',v:600000,p:.018},{s:'⭐',v:1500000,p:.006},{s:'💎',v:5000000,p:.0012},{s:'👑',v:25000000,p:.0001},{s:'🔮',nick:1,p:.0002}],lt={t:null,done:false};
-function lotCard(){return `<button class="lotcard${S.coins<LOTP?' poor':''}" id="lot-open"><span class="lci">🎟️</span><div><b>Моментальная лотерея</b><small>Билет ${fmt(LOTP)} 🪙 · три одинаковых — приз</small></div><span class="lcp">›</span></button>`}
+function lotCard(){return `<button class="lotcard${S.coins<LOTP?' poor':''}" id="lot-open"><span class="lci">🎟️</span><div><b>Моментальная лотерея</b><small>Билет ${fmt(LOTP)} 🪙 · найди три одинаковых из девяти</small></div><span class="lcp">›</span></button>`}
+var LOTX=['🍀','🎲','🍉','🍇'];   // «пустые» символы для заполнения билета
 function lotRoll(){
   let r=Math.random(),w=null;for(const x of LOT){if(r<x.p){w=x;break}r-=x.p}
-  const coin=LOT.filter(x=>!x.nick).map(x=>x.s);
-  if(w)return{syms:[w.s,w.s,w.s],w};
-  let a;do{a=[P(coin),P(coin),P(coin)]}while(a[0]===a[1]&&a[1]===a[2]);
-  return{syms:a,w:null};
+  const all=LOT.map(x=>x.s).concat(LOTX),cnt={},cells=[];
+  const put=sym=>{cnt[sym]=(cnt[sym]||0)+1;cells.push(sym)};
+  if(w)for(let i=0;i<3;i++)put(w.s);
+  while(cells.length<9){const c=P(all);if((cnt[c]||0)<2&&!(w&&c===w.s))put(c)}   // кроме выигрышного символа ни один не встречается больше двух раз
+  for(let i=cells.length-1;i>0;i--){const j=R(i+1);[cells[i],cells[j]]=[cells[j],cells[i]]}
+  return{cells,hit:w?cells.map((c,i)=>c===w.s?i:-1).filter(i=>i>=0):[],w};
 }
 function claimLot(){
   const p=S.lotp;if(!p)return '';
@@ -1539,15 +1542,15 @@ function lotSheet(close){
         save();render();lt.t=r;lt.done=false;sfx('upstart');lotSheet();
       }}}
   const t=lt.t,poor=S.coins<LOTP;
-  const symsHtml=t?t.syms.map(x=>`<span class="lsy">${x}</span>`).join(''):'';
-  const res=t&&lt.done?(t.w?`<div class="lotres win"><b>Выигрыш!</b><span>${t.w.nick?'Секретный ник: @'+escH(t.nm||''):'+'+fmt(t.w.v)+' 🪙'}</span></div>`:'<div class="lotres lose"><b>Не повезло</b><span>Символы не совпали</span></div>'):'';
+  const symsHtml=t?t.cells.map((x,i)=>`<span class="lsy${lt.done&&t.hit.includes(i)?' hit':''}">${x}</span>`).join(''):'';
+  const res=t&&lt.done?(t.w?`<div class="lotres win"><b>Выигрыш!</b><span>${t.w.nick?'Секретный ник: @'+escH(t.nm||''):'+'+fmt(t.w.v)+' 🪙'}</span></div>`:'<div class="lotres lose"><b>Не повезло</b><span>Трёх одинаковых нет</span></div>'):'';
   o.innerHTML=`<div class="sbg" data-lx="1"></div><div class="sbox casebox lotbox"><div class="shead"><b>🎟️ Моментальная лотерея</b><button class="btn sm" data-lx="1">✕</button></div>
-    <p class="cdesc3">Сотри защитный слой. Три одинаковых символа — приз твой сразу.</p>
+    <p class="cdesc3">Сотри защитный слой. Найдёшь три одинаковых символа среди девяти — приз твой сразу.</p>
     <div class="ticket"><div class="thd"><b>МОМЕНТАЛЬНАЯ ЛОТЕРЕЯ</b><span>№ ${S.lotn?String(S.lotn).padStart(6,'0'):'—'}</span></div>
       <div class="lscr${t&&lt.done&&t.w?' win':''}">${t?`<div class="lsyms">${symsHtml}</div>${lt.done?'':'<canvas id="lot-cv"></canvas>'}`:'<div class="lph"><span>🎟️</span><b>Купи билет ниже</b></div>'}</div></div>
     ${res}
     ${t&&!lt.done?'<button class="btn cwide" id="lot-wipe">Стереть всё</button>':`<button class="btn main cwide" id="lot-buy"${poor?' disabled':''}>${poor?'Не хватает монет':(t?'Купить ещё · ':'Купить билет · ')+fmt(LOTP)+' 🪙'}</button>`}
-    <details class="lodds"><summary>Шансы и призы</summary>${LOT.map(x=>`<div class="lrw"><span>${x.s}${x.s} ${x.s}</span><b>${x.nick?'случайный секретный ник':fmt(x.v)+' 🪙'}</b><small>${(x.p*100).toFixed(x.p<.001?2:1).replace('.',',')}%</small></div>`).join('')}<small class="sum">Общий шанс выигрыша около ${(LOT.reduce((a,x)=>a+x.p,0)*100).toFixed(1).replace('.',',')}%. Без совпадения приза нет.</small></details></div>`;
+    <details class="lodds"><summary>Шансы и призы</summary>${LOT.map(x=>`<div class="lrw"><span>${x.s}${x.s} ${x.s}</span><b>${x.nick?'случайный секретный ник':fmt(x.v)+' 🪙'}</b><small>${(x.p*100).toFixed(x.p<.001?2:1).replace('.',',')}%</small></div>`).join('')}<small class="sum">Общий шанс выигрыша около ${(LOT.reduce((a,x)=>a+x.p,0)*100).toFixed(1).replace('.',',')}%. Если трёх одинаковых нет, приза нет.</small></details></div>`;
   const cv=$('#lot-cv');
   if(cv&&t&&!lt.done)lotScratch(cv,()=>{
     lt.done=true;cv.style.transition='opacity .45s';cv.style.opacity='0';
@@ -1783,6 +1786,7 @@ function renderBon(){
     ${wheelHtml()}<p class="sum" hidden>${fmt(Math.min(...WHEEL.filter(p=>p.k==='c').map(p=>p.v)))} до ${fmt(Math.max(...WHEEL.filter(p=>p.k==='c').map(p=>p.v)))} 🪙 и ники от «${T[Math.min(...WHEEL.filter(p=>p.k==='n').map(p=>p.t))].n}» до «${T[Math.max(...WHEEL.filter(p=>p.k==='n').map(p=>p.t))].n}».</p>`+
     (can?`<button class="spin" data-b="wheel">Крутить рулетку</button>`:`<button class="spin" disabled>Уже крутили · ещё <span data-t="day"></span></button>`)+
     `<div class="upres">${wresHtml()}</div></div>`;
+  try{h+=lotCard()}catch(e){}
   h+=`<div class="pcard"><div class="bhead"><h3>Задания недели</h3><span class="bsub">обновятся через <span data-t="week"></span></span></div>`+
     S.q.list.map((q,i)=>{const d=QDEF[q.id],ok=q.p>=q.n;
       return `<div class="quest${q.got?' got':''}"><div class="qtop"><b>${d.t(q.n)}</b><span>${fmt(d.r)} 🪙</span></div>${d.h?`<small class="qh">${d.h}</small>`:''}<div class="qbar"><i style="width:${q.p/q.n*100}%"></i></div>`+
