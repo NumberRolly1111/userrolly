@@ -2,6 +2,8 @@
 addEventListener('error',e=>{try{let b=document.getElementById('errbar');if(!b){b=document.createElement('div');b.id='errbar';b.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:99;background:#B3261E;color:#fff;font:12px/1.35 monospace;padding:8px 10px;border-radius:10px;word-break:break-all';b.onclick=()=>b.remove();document.body.append(b)}b.textContent='Ошибка: '+e.message+' ('+String(e.filename||'').split('/').pop()+':'+e.lineno+') · нажми, чтобы скрыть'}catch(x){}});
 addEventListener('unhandledrejection',e=>{try{console.error(e.reason)}catch(x){}});
 const $=s=>document.querySelector(s),tg=window.Telegram&&Telegram.WebApp;
+// если на хостинге лежит старый html без новых разделов (файлы загрузили не все) — создаём недостающие, чтобы игра не падала
+['ach','show','top','clan'].forEach(k=>{if(!$('#tab-'+k)){const s=document.createElement('section');s.id='tab-'+k;s.className='list';s.hidden=true;($('#tab-bon')||document.body).after(s)}});
 // отступ сверху под системную панель Telegram («Закрыть», «…»): берём из SDK, иначе запасной
 function safeTop(){
   let t=0;try{t=((tg.safeAreaInset||{}).top||0)+((tg.contentSafeAreaInset||{}).top||0)}catch(e){}
@@ -173,7 +175,7 @@ function score(s){
   return{t:tierOf(p),tags:t,p};
 }
 
-const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,upl:0,uph:[],refd:0,refc:0,inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
+const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,upl:0,uph:[],refd:0,refc:0,casen:0,inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 fixState();
 if(!S.uid){const id=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.id;S.uid=id?(id%999999)+1:R(999999)+1}
@@ -199,6 +201,7 @@ function fixState(){
   else if(S.econ!==4){S.coins=START;S.econ=4}
   if(typeof S.bestn!=='string')S.bestn='';S.hide=S.hide?1:0;
   num('refc',0);S.refc=Math.max(0,Math.floor(S.refc));S.refd=S.refd?1:0;
+  num('casen',0);S.casen=Math.max(0,Math.floor(S.casen));
   num('upl',0);S.upl=Math.max(0,Math.floor(S.upl));S.uph=Array.isArray(S.uph)?S.uph.filter(x=>x&&typeof x==='object'&&typeof x.s==='string').slice(0,30):[];
   num('uid',0);num('en',EN_CAP);S.en=Math.max(0,Math.min(999,Math.floor(S.en)));num('enT',0);if(S.src!=='free'&&S.src!=='coin')S.src='free';S.snd=S.snd!==false;num('lvl',1);S.lvl=Math.max(1,Math.floor(S.lvl));num('xp',0);S.xp=Math.max(0,Math.floor(S.xp));
   S.show=Array.isArray(S.show)?[...new Set(S.show.filter(n=>n===0||n===1||n===2))]:[];
@@ -681,7 +684,7 @@ function renderCol(){
 }
 function render(){
   setCoins();
-  ensureQuests();updBonDot();checkAch();
+  ensureQuests();updBonDot();checkAch();try{renderCases()}catch(e){}   // кейсы объявлены ниже: на первом проходе их ещё нет
   tickEn();const free=S.src==='free',m=free?MODES[0]:MODES[mode],seg=$('#seg'),cn=$('#cnt'),sr=$('#src');
   if(!sr.firstChild)sr.innerHTML='<button aria-pressed="false" data-s="free">⚡ Бесплатно</button><button aria-pressed="false" data-s="coin">🪙 За монеты</button>';
   [...sr.children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===S.src));seg.hidden=free;$('#en').hidden=!free;updEn();
@@ -1024,7 +1027,7 @@ function tab(n){
 }
 function tabIn(n){
   document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===(n==='show'?'col':n)));
-  ['game','col','up','prof','bon','ach','show','top','clan'].forEach(k=>{const e=$('#tab-'+k);
+  ['game','col','up','prof','bon','ach','show','top','clan'].forEach(k=>{const e=$('#tab-'+k);if(!e)return;
     if(k===n){if(e.hidden){e.hidden=false;e.classList.remove('tabin');void e.offsetWidth;e.classList.add('tabin');clearTimeout(e._ti);e._ti=setTimeout(()=>e.classList.remove('tabin'),900)}}else e.hidden=true});
   $('#prof-btn').setAttribute('aria-pressed',n==='prof');
   $('#bon-btn').setAttribute('aria-pressed',n==='bon');
@@ -1206,6 +1209,68 @@ $('#tab-clan').onclick=async e=>{
     if(k[0]==='k'){await clanAct('/clan/kick',{uid:k.slice(1)},'Игрок исключён');return renderClan()}
   }
 };
+
+// ---------- Кейсы (под рулеткой) ----------
+// w: [редкость, шанс %]. Цены подобраны так, чтобы в среднем игрок получал около 90% цены кейса ником (средняя цена ников редкости берётся из пула).
+const CASES=[
+  {id:'start',n:'Стартовый',ic:'📦',c:'#27D9BD',price:5200,d:'Необычные и редкие, с шансом на легендарный',w:[[1,55],[2,35],[3,9],[4,1]]},
+  {id:'rare',n:'Редкая находка',ic:'💠',c:'#9B7BFF',price:25000,d:'Редкие и эпические, иногда мифический',w:[[2,40],[3,45],[4,14],[5,1]]},
+  {id:'all',n:'Всё или ничего',ic:'🎲',c:'#FF5FA2',price:52000,d:'98% редкий ник, 2% — секретный',w:[[2,98],[6,2]]},
+  {id:'gold',n:'Золотой',ic:'👑',c:'#FFC933',price:125000,d:'Эпические и легендарные ники',w:[[3,35],[4,50],[5,14.5],[6,.5]]},
+  {id:'star',n:'Звёздный',ic:'⭐',c:'#FFB62E',price:185000,d:'Много мифических и шанс на секретный',w:[[3,50],[4,30],[5,17],[6,3]]},
+  {id:'abyss',n:'Бездна',ic:'🌌',c:'#FF4B3E',price:650000,d:'Только легендарные, мифические и секретные',w:[[4,30],[5,55],[6,15]]},
+];
+let cs={id:'',busy:false,res:null,tiles:[]},tierPool=null;
+const poolOf=t=>{if(!tierPool){tierPool=[[],[],[],[],[],[],[]];prizePool().forEach(x=>tierPool[x.t].push(x))}return tierPool[t]};
+const pctw=w=>w%1?w.toFixed(1).replace('.',','):String(w);
+function rollTier(c){let r=Math.random()*c.w.reduce((s,x)=>s+x[1],0);for(const [t,w] of c.w){r-=w;if(r<0)return t}return c.w[c.w.length-1][0]}
+function renderCases(){
+  let el=$('#cases');if(!el){const st=document.querySelector('#tab-game .stats');if(!st)return;el=document.createElement('div');el.id='cases';st.after(el)}
+  setHtml(el,`<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${S.coins<c.price?' poor':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${fmt(c.price)} 🪙</span></button>`).join('')+'</div>');
+}
+function caseSheet(){
+  let sh=$('#casesh');if(!sh){sh=document.createElement('div');sh.id='casesh';sh.className='usheet';sh.hidden=true;document.body.appendChild(sh);
+    sh.onclick=e=>{if(e.target.closest('[data-cclose]')&&!cs.busy){cs.id='';cs.res=null;caseSheet()}if(e.target.closest('#cs-open'))openCase()}}
+  const c=CASES.find(x=>x.id===cs.id);if(!c){sh.hidden=true;sh.innerHTML='';return}
+  sh.hidden=false;
+  const rs=cs.res,need=c.price-S.coins;
+  sh.innerHTML=`<div class="sbg" data-cclose="1"></div><div class="sbox casebox" style="--cc:${c.c}"><div class="shead"><b>${c.ic} ${c.n}</b><button class="btn sm" data-cclose="1"${cs.busy?' disabled':''}>✕</button></div>
+  <p class="cdesc3">${c.d}</p>
+  <div class="codds">${c.w.map(([t,w])=>`<span style="--tc:${T[t].c}"><i></i>${T[t].n} <b>${pctw(w)}%</b></span>`).join('')}</div>
+  <div class="crl" id="crl"><i class="cptr"></i><div class="crt" id="crt"></div></div>
+  <div id="cres">${rs?`<div class="cresc" style="--tc:${T[rs.t].c}"><small>${T[rs.t].n}</small><b>@${escH(rs.name)}</b><span>${fmt(rs.price)} 🪙</span><em>${escH(rs.msg)}</em></div>`:''}</div>
+  <button class="btn main" id="cs-open"${cs.busy||need>0?' disabled':''}>${cs.busy?'Открываем…':need>0?`Не хватает ${fmt(need)} 🪙`:(rs?'Открыть ещё · ':'Открыть за ')+fmt(c.price)+' 🪙'}</button></div>`;
+}
+function caseTile(t,name){return `<b class="ct" style="--tc:${T[t].c}"><i>${escH(name)}</i><small>${T[t].s}</small></b>`}
+async function openCase(){
+  const c=CASES.find(x=>x.id===cs.id);if(!c||cs.busy||S.coins<c.price)return;
+  cs.busy=true;xbusy=1;cs.res=null;
+  const tier=rollTier(c),pr=P(poolOf(tier));
+  S.coins-=c.price;S.casen++;S.cnt[pr.t]++;S.best=Math.max(S.best,pr.t);noteBest(pr.price,pr.name);addXp(8+pr.t*6);
+  const msg=stashAll([{name:pr.name,t:pr.t,p:pr.p}]);save();render();   // приз выдан сразу: закрытие приложения его не отменит
+  caseSheet();
+  const trk=$('#crt'),rl=$('#crl'),N=46,WIN=36,tw=96,gap=8,pitch=tw+gap;
+  const tiles=Array.from({length:N},(_,i)=>{if(i===WIN)return caseTile(pr.t,pr.name);const t=rollTier(c),x=P(poolOf(t));return caseTile(t,x.name)});
+  trk.innerHTML=tiles.join('');rl.classList.add('on');
+  const W=rl.clientWidth,off=(Math.random()-.5)*tw*.7,dur=reduce?60:5000;
+  trk.style.transition='none';trk.style.transform='translateX(0)';void trk.offsetWidth;
+  trk.style.transition=`transform ${dur}ms cubic-bezier(.08,.6,.12,1)`;trk.style.transform=`translateX(${W/2-(WIN*pitch+tw/2+off)}px)`;
+  sfx('upstart');
+  if(!reduce){let last=-1,lt=0;const t0=performance.now();
+    (function tk(){const x=new DOMMatrix(getComputedStyle(trk).transform).m41,i=Math.floor((W/2-x)/pitch),now=performance.now();
+      if(i!==last&&now-lt>60){last=i;lt=now;hap('i','light');sfx('uptick',Math.min(100,Math.round((now-t0)/dur*100)))}
+      if(now-t0<dur)requestAnimationFrame(tk)})()}
+  await sleep(dur+250);
+  const w=trk.children[WIN];if(w)w.classList.add('win');
+  await sleep(reduce?0:650);
+  if(pr.t>=5&&!reduce)await epic({name:pr.name,t:pr.t,p:pr.p});else sfx('tier',pr.t);
+  hap('n','success');
+  cs.res={name:pr.name,t:pr.t,price:pr.price,msg};cs.busy=false;xbusy=0;
+  save();render();caseSheet();
+  const t2=$('#crt'),r2=$('#crl');if(t2&&r2){r2.classList.add('on');t2.innerHTML=tiles.join('');t2.style.transition='none';t2.style.transform=`translateX(${r2.clientWidth/2-(WIN*pitch+tw/2+off)}px)`;const ww=t2.children[WIN];if(ww)ww.classList.add('win')}
+}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-case]');if(!b||cs.busy)return;cs.id=b.dataset.case;cs.res=null;caseSheet()});
+renderCases();
 
 // ---------- Друзья: награды за приглашённых ----------
 // Друг открывает игру по ссылке с ?startapp=r<id>. Сервер записывает пару «кто пригласил — кто пришёл»
