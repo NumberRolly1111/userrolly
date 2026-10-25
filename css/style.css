@@ -193,3 +193,61 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .selbar{position:fixed;left:0;right:0;bottom:calc(76px + env(safe-area-inset-bottom));margin:0 auto;width:min(448px,calc(100% - 32px));display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px 10px 16px;background:var(--paper);border:var(--bw) solid var(--line);border-radius:16px;box-shadow:4px 4px 0 var(--sh);font-weight:700;font-size:14px;opacity:0;transform:translateY(16px);pointer-events:none;transition:opacity .25s,transform .25s;z-index:5}
 .selbar.on{opacity:1;transform:none;pointer-events:auto}
 button,.pick,.tg{transition-property:transform,box-shadow,background,color,opacity;transition-duration:.15s}
+
+/* Секретный: медленное появление символов и виньетка */
+#vig{position:fixed;inset:0;z-index:8;pointer-events:none;opacity:0;transition:opacity 1s ease;background:radial-gradient(circle at var(--vx,50%) var(--vy,40%),transparent 0,rgba(2,1,10,.15) 16%,rgba(2,1,10,.78) 50%,rgba(2,1,10,.97) 100%)}
+#vig.on{opacity:1}
+.cell.sec,.at.sec{opacity:0;transform:scale(.4);filter:blur(10px)}
+.cell.sec.in{animation:secIn 1s cubic-bezier(.2,.8,.2,1) forwards}
+.at.sec.in{animation:secAt .9s ease forwards}
+@keyframes secIn{0%{opacity:0;transform:scale(2);filter:blur(16px)}40%{opacity:1;filter:blur(3px);box-shadow:0 0 70px 12px rgba(255,255,255,.85)}100%{opacity:1;transform:none;filter:none;box-shadow:0 .08em 0 #05040D,0 0 26px rgba(255,255,255,.4)}}
+@keyframes secAt{from{opacity:0;filter:blur(8px)}to{opacity:1;filter:none}}
+.toast{z-index:10}
+
+/* Кнопка бонусов в шапке */
+.bon-btn{position:relative;flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--paper);border:var(--bw) solid var(--line);box-shadow:3px 3px 0 var(--sh);transition:transform .08s,box-shadow .08s,background .2s}
+.bon-btn:active{transform:translate(3px,3px);box-shadow:none}
+.bon-btn[aria-pressed=true]{background:var(--fg);color:var(--dark);border-color:var(--fg)}
+.dot{position:absolute;top:-5px;right:-5px;width:13px;height:13px;border-radius:50%;background:#FF3B5C;border:2px solid var(--bg);animation:dotp 1.6s ease-in-out infinite}
+@keyframes dotp{50%{transform:scale(1.28)}}
+
+/* Вкладка бонусов */
+.bon h2{margin-bottom:14px}
+.bhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:12px}
+.bhead h3{margin:0}
+.bsub{color:var(--mute);font-size:12px;text-align:right}
+.bon .pcard>.btn{width:100%;margin-top:12px}
+.lgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.lcell{position:relative;background:var(--tile);border:2px solid var(--line);border-radius:10px;padding:6px 0 5px;text-align:center;transition:background .2s,transform .2s}
+.lcell small{display:block;font-size:9px;color:var(--mute)}
+.lcell b{display:block;font:800 13px var(--head);margin-top:2px}
+.lcell.big{border-color:#FFC933}
+.lcell.big b{color:#FFC933}
+.lcell.done{opacity:.5}
+.lcell.done i{position:absolute;top:-6px;right:-4px;font-style:normal;font-size:11px;font-weight:800;background:#27D9BD;color:var(--dark);border-radius:50%;width:17px;height:17px;display:grid;place-items:center}
+.lcell.now{background:var(--blue);border-color:#fff;transform:translateY(-2px);animation:glow 2s ease-in-out infinite}
+.lcell.now small{color:#fff}
+.wl .rl-track{padding:10px 0}
+.wt{flex:none;width:78px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;border:2px solid var(--line);border-top:6px solid var(--tc,#FFC933);background:var(--tile)}
+.wt.co{--tc:#FFC933}
+.wt em{font:800 17px var(--head);font-style:normal}
+.wt small{font-size:10px;color:var(--mute)}
+.wt.on{outline:3px solid #fff;outline-offset:2px;animation:land .5s}
+.wodds{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:12px 0 12px}
+.bon .upres{margin-top:14px}
+.bon .upres .stage{margin-bottom:12px}
+.quest{padding:12px 0;border-top:2px solid var(--line)}
+.quest:first-of-type{border-top:0;padding-top:0}
+.qtop{display:flex;justify-content:space-between;gap:10px;font-weight:700;font-size:14px}
+.qtop span{flex:none;color:#FFC933}
+.qh{display:block;color:var(--mute);font-size:11px;margin-top:2px}
+.qbar{height:10px;border-radius:999px;background:var(--tile);border:2px solid var(--line);overflow:hidden;margin:8px 0}
+.qbar i{display:block;height:100%;background:var(--blue);transition:width .5s}
+.quest.got{opacity:.5}
+.qbot{display:flex;justify-content:space-between;align-items:center;color:var(--mute);font-size:12px;min-height:34px}
+.qbot em{font-style:normal;color:#27D9BD;font-weight:700}
+
+/* Ставка апгрейда */
+.cap{margin:0 0 8px}
+.cap b{color:var(--fg)}
+.pick:has(input:disabled){opacity:.4;cursor:default}
