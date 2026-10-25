@@ -531,17 +531,9 @@ button.slot:active{transform:scale(.97)}
 .cust input{width:100%;accent-color:#7C6CFF}
 .dial{position:relative;width:min(100%,248px);aspect-ratio:1;--wc:#6A63B0}
 .dial svg{width:100%;height:100%;overflow:visible;display:block}
-.dtr{fill:none;stroke:#1d1a3a;stroke-width:14}
-.dwin{fill:none;stroke-width:14;transition:stroke-dasharray .7s cubic-bezier(.3,.9,.3,1),stroke .4s}
-.dtk line{stroke:#57509a;stroke-width:1.6;stroke-linecap:round}
-.dptr{fill:#fff;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
 .dctr{position:absolute;inset:0;display:grid;place-content:center;text-align:center;pointer-events:none}
-.dctr b{font:800 34px var(--head)}
 .dctr small{color:var(--mute);font-size:13px;margin-top:2px}
-.dial.won .dwin{filter:drop-shadow(0 0 10px var(--wc));animation:dpulse .5s ease 2}
-.dial.won .dctr b{color:#7CF29B}
-.dial.lost .dctr b{color:#FF7A7A}
-@keyframes dpulse{50%{stroke-width:18}}
+.dial.won .dial.won .dial.lost @keyframes dpulse{50%{stroke-width:18}}
 .hist{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:var(--tile);border-radius:14px;padding:8px 10px}
 .hstrip{display:flex;gap:5px;flex-wrap:wrap;min-width:0}
 .hs{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font:800 12px var(--body);font-style:normal;flex:none}
@@ -564,6 +556,17 @@ button.slot:active{transform:scale(.97)}
 .hrow small{color:var(--mute);font-size:11px}
 .hrow>span{font-weight:700;font-size:12px;white-space:nowrap}
 @keyframes sheetup{from{transform:translateY(40px);opacity:0}}
-.dnl{stroke:#fff;stroke-width:2.4;stroke-linecap:round;opacity:.9}
-.dneedle,#dneedle{filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
-.dptr{filter:none}
+
+/* циферблат: оформление */
+.dial{filter:drop-shadow(0 10px 24px rgba(8,6,24,.55))}
+.dbez{fill:none;stroke:#3a3480;stroke-width:1.5;opacity:.8}
+.ddisk{stroke:#2f2a66;stroke-width:1}
+.dtr{fill:none;stroke:#1f1b45;stroke-width:16}
+.dwin{fill:none;stroke-width:16;transition:stroke-dasharray .7s cubic-bezier(.3,.9,.3,1),stroke .4s;filter:drop-shadow(0 0 7px var(--wc))}
+.dtk line{stroke:#4c4592;stroke-width:1.4;stroke-linecap:round}
+.dtk line.tm{stroke:#8a7fe0;stroke-width:2}
+#dneedle{filter:drop-shadow(0 0 6px var(--wc))}
+.dnb{fill:#fff;stroke:var(--wc);stroke-width:3}
+.dnc{fill:var(--wc)}
+.dctr b{font:800 38px var(--head);letter-spacing:-.02em;text-shadow:0 0 22px var(--wc)}
+.dctr small{letter-spacing:.14em;text-transform:uppercase;font-size:11px;font-weight:700}
