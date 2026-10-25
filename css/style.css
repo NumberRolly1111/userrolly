@@ -492,3 +492,18 @@ button,.btn,.item,.pcard,.pk,.seg button,.src button,nav button,.sw,.sw i,.crow,
 .selbar{transition:opacity .3s,transform .3s cubic-bezier(.2,.9,.3,1.2)}
 .cbar i,.vbar i,.xbar i,.qbar i{transition:width .7s cubic-bezier(.2,.8,.2,1)}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+/* рейтинг */
+.trophy{font-size:26px}
+.lbmsg{text-align:center;display:grid;gap:8px;justify-items:center}
+.lbmsg small,.lbme small{color:var(--mute);font-size:12px}
+.lbme{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 12px}
+.lbme b{grid-row:1/3;grid-column:2;font:800 28px var(--head)}
+.lbme span{font-weight:700;font-size:14px}
+.lbl{display:grid;gap:8px;margin:12px 0}
+.lbr{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:10px;background:var(--paper);border:var(--bw) solid var(--line);border-radius:16px;padding:10px 12px}
+.lbr.me{border-color:#FFC933;background:var(--tile)}
+.lbr em{font:800 15px var(--head);font-style:normal;text-align:center;color:var(--mute)}
+.lbn{min-width:0}.lbn b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lbn small{color:var(--mute);font-size:12px}
+.lbr>span{font:700 13px var(--body);white-space:nowrap}
