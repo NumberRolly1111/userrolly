@@ -76,6 +76,180 @@ async function handle(req, env) {
       }
       return json({ top: rows.map((r) => ({ name: r.name, v: r.v, bestn: r.bestn, lvl: r.lvl, me: r.uid === uid })), me });
     }
+    // ---- друзья ----
+    const REF_MAX = 20;
+    if (url.pathname === '/ref' && req.method === 'POST') {
+      let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
+      const inviter = String(b.inviter || '');
+      if (!/^\d{1,15}$/.test(inviter) || inviter === uid) return json({ ok: false });
+      // награда только новичку: его ещё не должно быть в таблице игроков и среди приглашённых
+      const seen = await env.DB.prepare('SELECT 1 AS x FROM players WHERE uid=? UNION SELECT 1 FROM refs WHERE invitee=?').bind(uid, uid).first();
+      if (seen) return json({ ok: false });
+      const cnt = await env.DB.prepare('SELECT COUNT(*) AS n FROM refs WHERE inviter=?').bind(inviter).first();
+      if (cnt.n >= REF_MAX) return json({ ok: false });
+      await env.DB.prepare('INSERT OR IGNORE INTO refs(invitee,inviter,claimed,ts) VALUES(?,?,0,?)').bind(uid, inviter, Date.now()).run();
+      return json({ ok: true });
+    }
+    if (url.pathname === '/refs' && req.method === 'GET') {
+      const r = await env.DB.prepare('SELECT COUNT(*) AS n FROM refs WHERE inviter=? AND claimed=0').bind(uid).first();
+      return json({ n: r.n });
+    }
+    if (url.pathname === '/ref/claim' && req.method === 'POST') {
+      const done = await env.DB.prepare('SELECT COUNT(*) AS n FROM refs WHERE inviter=? AND claimed=1').bind(uid).first();
+      const left = Math.max(0, REF_MAX - done.n);
+      const open = await env.DB.prepare('SELECT COUNT(*) AS n FROM refs WHERE inviter=? AND claimed=0').bind(uid).first();
+      const n = Math.min(left, open.n);
+      if (n > 0) await env.DB.prepare('UPDATE refs SET claimed=1 WHERE invitee IN (SELECT invitee FROM refs WHERE inviter=? AND claimed=0 LIMIT ?)').bind(uid, n).run();
+      return json({ n });
+    }
+    const cr = await clanRoutes(url, req, env, uid, json);
+    if (cr) return cr;
     return json({ error: 'not found' }, 404);
   }
+}
+
+// ======================= КЛАНЫ =======================
+const CLAN_COST = 3_000_000;      // нужный капитал для создания (клиент списывает столько же монет)
+const LVL_STEP = 3_000_000;       // очков клана на один уровень клана
+const clanLvl = (pts) => Math.min(20, 1 + Math.floor(pts / LVL_STEP));
+const clanCap = (lvl) => Math.min(48, 10 + 2 * (lvl - 1));
+const TAG_RE = /^[A-Za-z0-9_]{2,5}$/;
+const LINK_RE = /^https:\/\/t\.me\/[A-Za-z0-9_\/+\-]{2,64}$/;
+const like = (q) => '%' + q.replace(/[\\%_]/g, (c) => '\\' + c) + '%';
+
+const CLAN_SQL = `SELECT c.id,c.tag,c.name,c.descr,c.link,c.joinmode,c.minlvl,c.owner,
+  (SELECT COUNT(*) FROM members m WHERE m.clan=c.id) AS n,
+  (SELECT COALESCE(SUM(p.net),0) FROM members m JOIN players p ON p.uid=m.uid WHERE m.clan=c.id) AS pts FROM clans c`;
+function shape(r) {
+  const lvl = clanLvl(r.pts);
+  return { id: r.id, tag: r.tag, name: r.name, descr: r.descr, link: r.link, join: r.joinmode, minlvl: r.minlvl, n: r.n, cap: clanCap(lvl), lvl, pts: r.pts };
+}
+function readClanForm(b) {
+  const tag = String(b.tag || '').trim().toUpperCase();
+  const name = clean(b.name, 20), descr = clean(b.descr, 90), link = String(b.link || '').trim();
+  const joinmode = b.join ? 1 : 0, minlvl = Math.max(1, Math.min(100, Math.round(Number(b.minlvl)) || 1));
+  return { tag, name, descr, link: LINK_RE.test(link) ? link : '', joinmode, minlvl };
+}
+
+async function clanRoutes(url, req, env, uid, json) {
+  const p = url.pathname;
+  if (!p.startsWith('/clan')) return null;
+  const db = env.DB;
+  const body = async () => { try { return await req.json(); } catch { return {}; } };
+  const mine = () => db.prepare('SELECT clan FROM members WHERE uid=?').bind(uid).first();
+  const player = () => db.prepare('SELECT net,lvl FROM players WHERE uid=?').bind(uid).first();
+
+  if (p === '/clans' && req.method === 'GET') {
+    const q = clean(url.searchParams.get('q') || '', 30);
+    const rows = (q
+      ? await db.prepare(CLAN_SQL + " WHERE c.tag LIKE ?1 ESCAPE '\\' OR c.name LIKE ?1 ESCAPE '\\' ORDER BY pts DESC, c.id ASC LIMIT 30").bind(like(q)).all()
+      : await db.prepare(CLAN_SQL + ' ORDER BY pts DESC, c.id ASC LIMIT 30').all()).results;
+    const reqs = (await db.prepare('SELECT clan FROM requests WHERE uid=?').bind(uid).all()).results.map((r) => r.clan);
+    const my = await mine();
+    return json({ clans: rows.map((r) => ({ ...shape(r), req: reqs.includes(r.id) ? 1 : 0 })), my: my ? my.clan : 0 });
+  }
+
+  if (p === '/clan/me' && req.method === 'GET') {
+    const m = await mine();
+    if (!m) return json({ clan: null });
+    const c = await db.prepare(CLAN_SQL + ' WHERE c.id=?').bind(m.clan).first();
+    if (!c) return json({ clan: null });
+    const mem = (await db.prepare(`SELECT m.uid,m.joined,p.name,p.net,p.lvl,p.hide FROM members m LEFT JOIN players p ON p.uid=m.uid WHERE m.clan=? ORDER BY p.net DESC`).bind(m.clan).all()).results;
+    const leader = c.owner === uid;
+    const reqs = leader ? (await db.prepare(`SELECT r.uid,p.name,p.lvl,p.net FROM requests r LEFT JOIN players p ON p.uid=r.uid WHERE r.clan=? ORDER BY r.ts ASC LIMIT 30`).bind(m.clan).all()).results : [];
+    return json({
+      clan: shape(c), leader,
+      members: mem.map((x) => ({ uid: x.uid, name: x.hide ? 'Скрытый игрок' : (x.name || 'Игрок'), lvl: x.lvl || 1, pts: x.net || 0, owner: x.uid === c.owner ? 1 : 0, me: x.uid === uid ? 1 : 0 })),
+      requests: reqs.map((x) => ({ uid: x.uid, name: x.name || 'Игрок', lvl: x.lvl || 1, pts: x.net || 0 })),
+    });
+  }
+
+  if (req.method !== 'POST') return json({ error: 'not found' }, 404);
+  const b = await body();
+
+  if (p === '/clan/create') {
+    const pl = await player();
+    if (!pl) return json({ error: 'sync' }, 400);
+    if (await mine()) return json({ error: 'inclan' }, 400);
+    if (pl.net < CLAN_COST) return json({ error: 'nofunds' }, 400);
+    const f = readClanForm(b);
+    if (!TAG_RE.test(f.tag)) return json({ error: 'tag' }, 400);
+    if (f.name.length < 3) return json({ error: 'name' }, 400);
+    try {
+      const r = await db.prepare('INSERT INTO clans(tag,name,descr,link,joinmode,minlvl,owner,created) VALUES(?,?,?,?,?,?,?,?)').bind(f.tag, f.name, f.descr, f.link, f.joinmode, f.minlvl, uid, Date.now()).run();
+      const id = r.meta.last_row_id;
+      await db.prepare('INSERT INTO members(uid,clan,joined) VALUES(?,?,?)').bind(uid, id, Date.now()).run();
+      await db.prepare('DELETE FROM requests WHERE uid=?').bind(uid).run();
+      return json({ ok: true, id });
+    } catch (e) { return json({ error: 'exists' }, 409); }
+  }
+
+  if (p === '/clan/join') {
+    const pl = await player();
+    if (!pl) return json({ error: 'sync' }, 400);
+    if (await mine()) return json({ error: 'inclan' }, 400);
+    const c = await db.prepare(CLAN_SQL + ' WHERE c.id=?').bind(Number(b.id) || 0).first();
+    if (!c) return json({ error: 'notfound' }, 404);
+    const s = shape(c);
+    if (pl.lvl < c.minlvl) return json({ error: 'lvl' }, 400);
+    if (c.joinmode === 0) {
+      if (s.n >= s.cap) return json({ error: 'full' }, 400);
+      await db.prepare('INSERT OR IGNORE INTO members(uid,clan,joined) VALUES(?,?,?)').bind(uid, c.id, Date.now()).run();
+      await db.prepare('DELETE FROM requests WHERE uid=?').bind(uid).run();
+      return json({ ok: true, joined: 1 });
+    }
+    const cnt = await db.prepare('SELECT COUNT(*) AS n FROM requests WHERE uid=?').bind(uid).first();
+    if (cnt.n >= 5) return json({ error: 'manyreq' }, 400);
+    await db.prepare('INSERT OR IGNORE INTO requests(uid,clan,ts) VALUES(?,?,?)').bind(uid, c.id, Date.now()).run();
+    return json({ ok: true, joined: 0 });
+  }
+
+  if (p === '/clan/cancel') {
+    await db.prepare('DELETE FROM requests WHERE uid=? AND clan=?').bind(uid, Number(b.id) || 0).run();
+    return json({ ok: true });
+  }
+
+  if (p === '/clan/leave') {
+    const m = await mine();
+    if (!m) return json({ ok: true });
+    const c = await db.prepare('SELECT owner FROM clans WHERE id=?').bind(m.clan).first();
+    await db.prepare('DELETE FROM members WHERE uid=?').bind(uid).run();
+    if (c && c.owner === uid) {   // лидер ушёл: клан переходит самому богатому участнику, а пустой клан удаляется
+      const next = await db.prepare('SELECT m.uid FROM members m LEFT JOIN players p ON p.uid=m.uid WHERE m.clan=? ORDER BY p.net DESC LIMIT 1').bind(m.clan).first();
+      if (next) await db.prepare('UPDATE clans SET owner=? WHERE id=?').bind(next.uid, m.clan).run();
+      else { await db.prepare('DELETE FROM clans WHERE id=?').bind(m.clan).run(); await db.prepare('DELETE FROM requests WHERE clan=?').bind(m.clan).run(); }
+    }
+    return json({ ok: true });
+  }
+
+  // дальше — только для лидера
+  const m = await mine();
+  const c = m ? await db.prepare(CLAN_SQL + ' WHERE c.id=?').bind(m.clan).first() : null;
+  if (!c || c.owner !== uid) return json({ error: 'leader' }, 403);
+
+  if (p === '/clan/edit') {
+    const f = readClanForm({ ...b, tag: c.tag, name: c.name });
+    await db.prepare('UPDATE clans SET descr=?,link=?,joinmode=?,minlvl=? WHERE id=?').bind(f.descr, f.link, f.joinmode, f.minlvl, c.id).run();
+    return json({ ok: true });
+  }
+  if (p === '/clan/accept') {
+    const target = String(b.uid || '');
+    const r = await db.prepare('SELECT 1 AS x FROM requests WHERE uid=? AND clan=?').bind(target, c.id).first();
+    if (!r) return json({ error: 'notfound' }, 404);
+    if (b.ok) {
+      const s = shape(c);
+      if (s.n >= s.cap) return json({ error: 'full' }, 400);
+      const other = await db.prepare('SELECT 1 AS x FROM members WHERE uid=?').bind(target).first();
+      if (!other) await db.prepare('INSERT INTO members(uid,clan,joined) VALUES(?,?,?)').bind(target, c.id, Date.now()).run();
+      await db.prepare('DELETE FROM requests WHERE uid=?').bind(target).run();
+    } else await db.prepare('DELETE FROM requests WHERE uid=? AND clan=?').bind(target, c.id).run();
+    return json({ ok: true });
+  }
+  if (p === '/clan/kick') {
+    const target = String(b.uid || '');
+    if (target === uid) return json({ error: 'self' }, 400);
+    await db.prepare('DELETE FROM members WHERE uid=? AND clan=?').bind(target, c.id).run();
+    return json({ ok: true });
+  }
+  return json({ error: 'not found' }, 404);
 }
