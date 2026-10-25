@@ -23,7 +23,7 @@ let MAX=MAX0;                // текущий размер коллекции (
 const slotPrice=n=>Math.round(75000*Math.pow(1.35,n-MAX0)/1000)*1000;   // цена следующего места при n местах
 const EN_CAP=15,EN_INT=15*60*1000;   // запас энергии и время накопления одной единицы (15 минут)
 const AUTO=['выключена','ниже необычного','ниже редкого','ниже эпического','ниже легендарного','ниже мифического'];
-const APP_LINK='';            // ссылка на Mini App для кнопки «Позвать друзей», например https://t.me/твой_бот/app
+const APP_LINK='';            // ссылка на Mini App для кнопки «Позвать друзей»: https://t.me/ИМЯ_БОТА/КОРОТКОЕ_ИМЯ_ПРИЛОЖЕНИЯ (из @BotFather → /newapp). С ней работают награды за друзей
 const fmt=n=>Math.round(n).toLocaleString('ru-RU');
 const short=n=>n>=1e6?(n/1e6).toFixed(n%1e6?2:0).replace(/\.?0+$/,'').replace('.',',')+'M':n>=1e3?(n/1e3).toFixed(n%1e3?1:0).replace(/\.0$/,'')+'K':String(n);   // 1 500 000 → 1,5M
 const fmtC=n=>n>=1e7?(n/1e6).toFixed(1).replace('.',',')+' млн':fmt(n);   // для узких мест: 27,7 млн
@@ -173,7 +173,7 @@ function score(s){
   return{t:tierOf(p),tags:t,p};
 }
 
-const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,upl:0,uph:[],inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
+const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,upl:0,uph:[],refd:0,refc:0,inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 fixState();
 if(!S.uid){const id=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.id;S.uid=id?(id%999999)+1:R(999999)+1}
@@ -198,6 +198,7 @@ function fixState(){
   if(S.econ===3){S.coins=Math.round(S.coins*30);S.bestv=Math.round((S.bestv||0)*30);S.maxCoins=Math.round((S.maxCoins||0)*30);S.econ=4}   // экономика ×30: переносим баланс игрока
   else if(S.econ!==4){S.coins=START;S.econ=4}
   if(typeof S.bestn!=='string')S.bestn='';S.hide=S.hide?1:0;
+  num('refc',0);S.refc=Math.max(0,Math.floor(S.refc));S.refd=S.refd?1:0;
   num('upl',0);S.upl=Math.max(0,Math.floor(S.upl));S.uph=Array.isArray(S.uph)?S.uph.filter(x=>x&&typeof x==='object'&&typeof x.s==='string').slice(0,30):[];
   num('uid',0);num('en',EN_CAP);S.en=Math.max(0,Math.min(999,Math.floor(S.en)));num('enT',0);if(S.src!=='free'&&S.src!=='coin')S.src='free';S.snd=S.snd!==false;num('lvl',1);S.lvl=Math.max(1,Math.floor(S.lvl));num('xp',0);S.xp=Math.max(0,Math.floor(S.xp));
   S.show=Array.isArray(S.show)?[...new Set(S.show.filter(n=>n===0||n===1||n===2))]:[];
@@ -343,18 +344,23 @@ function checkAch(){
 }
 
 // ---------- Звуки (синтез в браузере, файлы не нужны) ----------
-const SND={ctx:null,out:null,fx:null};
+const SND={ctx:null,out:null,fx:null,rv:null};
 const NOTE=m=>440*Math.pow(2,(m-69)/12);
 function ac(){
   if(!S.snd)return null;
   try{
     if(!SND.ctx){
       const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;
-      const c=SND.ctx=new C(),comp=c.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=4;comp.connect(c.destination);
+      const c=SND.ctx=new C(),comp=c.createDynamicsCompressor();comp.threshold.value=-14;comp.knee.value=12;comp.ratio.value=6;comp.attack.value=.003;comp.release.value=.2;comp.connect(c.destination);
       const out=SND.out=c.createGain();out.gain.value=.9;out.connect(comp);
       const dl=c.createDelay(1);dl.delayTime.value=.2;const fb=c.createGain();fb.gain.value=.33;const lp=c.createBiquadFilter();
       lp.type='lowpass';lp.frequency.value=2400;const send=SND.fx=c.createGain();
       send.connect(dl);dl.connect(lp);lp.connect(fb);fb.connect(dl);lp.connect(out);
+      // реверберация: синтезированный импульс (шум с затуханием) даёт «объём» вместо сухого писка
+      const len=Math.floor(c.sampleRate*1.9),ir=c.createBuffer(2,len,c.sampleRate);
+      for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6)}
+      const cv=c.createConvolver();cv.buffer=ir;const rv=SND.rv=c.createGain(),hp=c.createBiquadFilter();hp.type='highpass';hp.frequency.value=320;
+      rv.gain.value=.55;rv.connect(hp);hp.connect(cv);const rvo=c.createGain();rvo.gain.value=.8;cv.connect(rvo);rvo.connect(out);
     }
     if(SND.ctx.state==='suspended')SND.ctx.resume();
     return SND.ctx;
@@ -367,6 +373,7 @@ function tone(m,t,dur,o={}){
   if(o.det)osc.detune.value=o.det;
   const v=o.vol||.1;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+(o.att||.008));g.gain.exponentialRampToValueAtTime(.0001,t+dur);
   osc.connect(g);g.connect(SND.out);if(o.wet){const w=c.createGain();w.gain.value=o.wet;g.connect(w);w.connect(SND.fx)}
+  if(SND.rv&&o.rv!==0){const r=c.createGain();r.gain.value=o.rv??.16;g.connect(r);r.connect(SND.rv)}
   osc.start(t);osc.stop(t+dur+.05);
 }
 function whoosh(t,dur,f0,f1,vol){
@@ -377,22 +384,57 @@ function whoosh(t,dur,f0,f1,vol){
   const g=c.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+dur*.4);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
   s.connect(bp);bp.connect(g);g.connect(SND.out);s.start(t);s.stop(t+dur);
 }
+// колокольчик: частотная модуляция даёт «стеклянный» тембр, звон затухает мягко
+function bell(m,t,dur,o={}){
+  const c=SND.ctx;if(!c)return;const f=NOTE(m),car=c.createOscillator(),mod=c.createOscillator(),mg=c.createGain(),g=c.createGain(),v=o.vol||.08;
+  car.frequency.value=f;mod.frequency.value=f*(o.ratio||3.5);mg.gain.setValueAtTime(f*(o.idx||1.6),t);mg.gain.exponentialRampToValueAtTime(f*.02,t+dur*.8);
+  mod.connect(mg);mg.connect(car.frequency);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  car.connect(g);g.connect(SND.out);if(SND.rv){const r=c.createGain();r.gain.value=o.rv??.45;g.connect(r);r.connect(SND.rv)}
+  if(o.wet){const w=c.createGain();w.gain.value=o.wet;g.connect(w);w.connect(SND.fx)}
+  car.start(t);mod.start(t);car.stop(t+dur+.05);mod.stop(t+dur+.05);
+}
+// короткий щелчок (шум через полосовой фильтр) + низкий «стук» — механические деления циферблата
+function click(t,vol,f=2600,thump=true){
+  const c=SND.ctx;if(!c)return;const n=Math.floor(c.sampleRate*.03),buf=c.createBuffer(1,n,c.sampleRate),d=buf.getChannelData(0);
+  for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3);
+  const s=c.createBufferSource();s.buffer=buf;const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=f;bp.Q.value=1.6;
+  const g=c.createGain();g.gain.value=vol;s.connect(bp);bp.connect(g);g.connect(SND.out);s.start(t);
+  if(thump)tone(43+(f-2000)/160,t,.05,{vol:vol*.9,rv:0})
+}
+// нарастающий «заряд» перед результатом: шум и свист поднимаются по частоте
+function riser(t,dur,vol=.1){
+  const c=SND.ctx;if(!c)return;const n=Math.floor(c.sampleRate*dur),buf=c.createBuffer(1,n,c.sampleRate),d=buf.getChannelData(0);
+  for(let i=0;i<n;i++)d[i]=Math.random()*2-1;
+  const s=c.createBufferSource();s.buffer=buf;const bp=c.createBiquadFilter();bp.type='bandpass';bp.Q.value=3;
+  bp.frequency.setValueAtTime(180,t);bp.frequency.exponentialRampToValueAtTime(3800,t+dur*.92);
+  const g=c.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+dur*.85);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  s.connect(bp);bp.connect(g);g.connect(SND.out);s.start(t);s.stop(t+dur);
+  tone(36,t,dur*.9,{vol:.07,att:dur*.6,slide:2.2,rv:0});tone(55,t,dur*.9,{type:'triangle',vol:.03,att:dur*.7,slide:3,rv:.1})
+}
 const arp=(ms,t,step,dur,o)=>ms.forEach((m,i)=>tone(m,t+i*step,dur,o));
 function sfx(name,a=0){try{sfxPlay(name,a)}catch(e){}}   // звук никогда не должен ломать игру
 function sfxPlay(name,a){
   const c=ac();if(!c||!SND.out)return;const t=c.currentTime+.01;
   switch(name){
-    case 'tap':tone(88,t,.05,{vol:.04});break;
-    case 'tick':tone(84+(a%3)*2,t,.035,{type:'triangle',vol:.06});break;
+    case 'tap':click(t,.05,3400,false);tone(92,t,.04,{vol:.025,rv:0});break;
+    case 'tick':click(t,.08,2200+(a%4)*260);break;
+    case 'uptick':click(t,.085,1500+(100-a)*16);break;   // a = доля пройденного пути 0…100: чем медленнее стрелка, тем ниже щелчок
     case 'whoosh':whoosh(t,.55,300,1800,.12);break;
-    case 'land':tone(72+(a%8)*2,t,.2,{vol:.1,wet:.3});tone(84+(a%8)*2,t,.07,{type:'triangle',vol:.035});break;
+    case 'land':bell(72+(a%8)*2,t,.5,{vol:.07,idx:1.1,wet:.25});click(t,.07,1800);break;
     case 'sec':tone(84-(a%6)*2,t,.9,{vol:.09,wet:.8,att:.03});tone(60,t,.8,{vol:.05,att:.05});break;
     case 'myt':tone(67+a*2,t,.28,{type:'triangle',vol:.09,wet:.45,slide:1.06});whoosh(t,.22,500,2200,.05);break;
-    case 'coin':tone(83,t,.12,{type:'triangle',vol:.09,wet:.3});tone(88,t+.07,.4,{type:'triangle',vol:.09,wet:.45});break;
-    case 'coins':arp([83,88,91,95,100,107],t,.055,.35,{type:'triangle',vol:.07,wet:.4});break;
-    case 'level':arp([72,76,79,84],t,.1,.5,{type:'triangle',vol:.09,wet:.4});tone(88,t+.4,.9,{vol:.1,wet:.6});tone(60,t,.8,{vol:.08});break;
-    case 'ach':arp([79,84,88,91],t,.07,.4,{vol:.08,wet:.5});break;
-    case 'lose':tone(64,t,.35,{type:'triangle',vol:.1,slide:.8});tone(57,t+.2,.5,{type:'triangle',vol:.1,slide:.78});break;
+    case 'coin':bell(83,t,.25,{vol:.07,ratio:4.1});bell(88,t+.07,.7,{vol:.08,ratio:4.1,wet:.3});break;
+    case 'coins':[83,88,91,95,100,107,112].forEach((m,i)=>bell(m,t+i*.05,.55,{vol:.05,ratio:4.1,wet:.3}));break;
+    case 'level':[72,76,79,84].forEach((m,i)=>bell(m,t+i*.1,.8,{vol:.075,wet:.35}));bell(91,t+.42,1.4,{vol:.08,wet:.55});tone(48,t,.9,{vol:.09,att:.05,rv:.05});break;
+    case 'ach':[79,84,88,91,96].forEach((m,i)=>bell(m,t+i*.065,.8,{vol:.06,wet:.4}));break;
+    case 'lose':tone(64,t,.4,{type:'triangle',vol:.09,slide:.8,rv:.25});tone(57,t+.22,.6,{type:'triangle',vol:.09,slide:.78,rv:.3});click(t+.02,.05,500);break;
+    case 'upstart':riser(t,5.2,.1);tone(48,t,.3,{vol:.12,slide:.7,rv:.05});break;
+    case 'upwin':
+      tone(36,t,1.2,{vol:.2,slide:.65,rv:0});whoosh(t,.5,400,4200,.1);
+      [72,76,79,84].forEach((m,i)=>bell(m,t+.05+i*.06,1.6,{vol:.085,wet:.4}));
+      [91,96,100,103].forEach((m,i)=>bell(m,t+.32+i*.07,1.4,{vol:.05,ratio:4.1,wet:.5}));break;
+    case 'uplose':tone(50,t,.6,{vol:.16,slide:.55,rv:.1});tone(62,t+.04,.6,{type:'triangle',vol:.06,slide:.7,rv:.3});click(t,.06,700);break;
+    case 'near':tone(79,t,.6,{type:'triangle',vol:.1,slide:.62,rv:.3});tone(60,t+.1,.7,{vol:.12,slide:.6,rv:.2});click(t,.05,900);break;
     case 'tier':{
       const k=a;
       if(k<=0)tone(72,t,.3,{vol:.1,wet:.25});
@@ -847,16 +889,18 @@ async function doUp(){
   if(s.its.length>=UPMAX)S.five=1;
   S.coins-=fee;up.busy=true;xbusy=1;up.res=null;up.msg='';renderRes();
   document.querySelectorAll('#tab-up button,#tab-up input').forEach(e=>e.disabled=true);
+  sfx('upstart');
   const ring=$('#dneedle'),a360=ch*360,pad=Math.min(3,a360*.15,(360-a360)*.15),dur=reduce?60:5200;
   const a=won?pad+Math.random()*(a360-2*pad):a360+pad+Math.random()*(360-a360-2*pad);
   const base=up.rot,tot=base+360*(reduce?1:6)+(((a-base)%360)+360)%360;   // стрелка по часовой доходит до угла a
   ring.style.transition=`transform ${dur}ms cubic-bezier(.1,.62,.08,1)`;void ring.getBoundingClientRect();ring.style.transform=`rotate(${tot}deg)`;
   if(!reduce){let last=-1,lt=0;const t0=performance.now();
     (function tk(){const m=new DOMMatrix(getComputedStyle(ring).transform),ang=((Math.atan2(m.b,m.a)*180/Math.PI)%360+360)%360,i=Math.floor(ang/6),now=performance.now();
-      if(i!==last&&now-lt>60){last=i;lt=now;hap('i','light');sfx('tick',i)}
+      if(i!==last&&now-lt>45){last=i;lt=now;hap('i','light');sfx('uptick',Math.min(100,Math.round((now-t0)/dur*100)))}
       if(now-t0<dur)requestAnimationFrame(tk)})()}
   await new Promise(r=>setTimeout(r,dur+250));
-  const dial=$('#dial');dial.classList.add(won?'won':'lost');
+  const dial=$('#dial'),edge=Math.min(a,Math.abs(a-a360),360-a),near=!won&&edge<9;
+  dial.classList.add(won?'won':'lost');sfx(won?'upwin':near?'near':'uplose');
   await new Promise(r=>setTimeout(r,reduce?0:800));
   dial.classList.remove('won','lost');
   S.ups++;addQuest('ups',1);addXp(won?85:25);
@@ -871,7 +915,7 @@ async function doUp(){
     S.upl=(S.upl||0)+1;
     if(ins){keep=true;up.msg=`<div class="lose"><b>Не вышло, но ставка осталась.</b> Страховка сработала, шанс был ${Math.round(ch*100)}%.</div>`}
     else{S.items=S.items.filter(i=>!up.sel.has(i.id));up.msg=`<div class="lose"><b>Не вышло.</b> Ставка сгорела, шанс был ${Math.round(ch*100)}%.</div>`}
-    hap('n','error');sfx('lose');
+    hap('n','error');
   }
   S.uph.unshift({w:won?1:0,ch:Math.round(ch*100),s:names,p:won?pr.name:'',i:keep?1:0,g:pity?1:0,x:s.v});S.uph=S.uph.slice(0,30);
   up.rot=((tot%360)+360)%360;ring.style.transition='none';
@@ -909,6 +953,7 @@ const todaySec=()=>S.tday.d===new Date().toDateString()?S.tday.s:0;
 const idStr=()=>{const a=String(S.uid).padStart(6,'0');return a.slice(0,3)+' '+a.slice(3)};
 const tgUser=()=>(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user)||{};
 function renderProf(){
+  if(typeof refPoll==='function'&&!renderProf.t){renderProf.t=1;setTimeout(()=>{renderProf.t=0;refPoll()},0)}
   const u=tgUser(),name=u.first_name||'Игрок',need=xpNeed(S.lvl),pct=S.xp/need*100,rk=rankOf(S.lvl),nx=RANKS.find(x=>x[0]>S.lvl),nr=lvReward(S.lvl+1);
   const av=u.photo_url?`<img src="${u.photo_url}" alt="" onerror="this.remove()">`:'';
   const doneV=S.show.length;
@@ -921,7 +966,7 @@ function renderProf(){
   <div class="path"><span class="pi">🧭</span><b>Путь игрока</b><small>${S.lvl+1} ур.: +${fmt(nr.c)} 🪙 и +${nr.e} ⚡</small></div>
   <div class="tri"><div><small>Капитал</small><b>${fmtC(S.coins)} 🪙</b></div><div><small>Коллекция</small><b>${S.items.length} из ${S.slots}</b></div><div><small>Витрины</small><b>${doneV} из ${SHOW.length}</b></div></div></div>
   <div class="pcard sndrow"><div><b>Звуки</b><small>Эффекты рулетки, наград и колеса</small></div><button class="sw${S.snd?' on':''}" id="snd-tg" role="switch" aria-checked="${S.snd}" aria-label="Звуки"><i></i></button></div>
-  <div class="pcard inv"><div><b>Позвать друзей</b><small>Отправь друзьям ссылку на игру</small></div><button class="btn main" id="invite">Позвать</button></div>
+  <div class="pcard inv invx"><div><b>Позвать друзей</b><small>За каждого друга: +${fmt(REF_C)} 🪙 и +${REF_E} ⚡ · приглашено ${S.refc} из ${REF_MAX}</small></div><div class="invb">${lb.refn>0?`<button class="btn main" id="ref-claim">Забрать +${fmt(lb.refn*REF_C)} 🪙</button>`:''}<button class="btn${lb.refn>0?'':' main'}" id="invite">Позвать</button></div></div>
   <div class="pcard"><h3>Статистика</h3>
     <div class="pgrid"><div class="pt"><small>Круток</small><b>${fmt(S.spins)}</b></div><div class="pt"><small>Удачных апгрейдов</small><b>${fmt(S.upw)}</b></div>
     <div class="pt"><small>В игре за всё время</small><b id="tm-all">${fmtT(S.time)}</b></div><div class="pt"><small>В игре сегодня</small><b id="tm-day">${fmtT(todaySec())}</b></div></div>
@@ -945,9 +990,10 @@ $('#tab-prof').onclick=e=>{
   if(e.target.closest('#top-open'))return tab('top');
   if(e.target.closest('#snd-tg')){S.snd=!S.snd;save();renderProf();if(S.snd){sfx('ach')}return}
   if(e.target.closest('#idcopy')){(async()=>{try{await navigator.clipboard.writeText(String(S.uid).padStart(6,'0'));toast('ID скопирован')}catch(x){toast('Не удалось скопировать ID')}})();return}
+  if(e.target.closest('#ref-claim'))return claimRefs();
   if(e.target.id!=='invite')return;
   addQuest('invite',1);S.inv=1;save();
-  const base=APP_LINK||location.href.split('#')[0].split('?')[0];
+  const me=tgUser().id,base=APP_LINK?(me?APP_LINK+(APP_LINK.includes('?')?'&':'?')+'startapp=r'+me:APP_LINK):location.href.split('#')[0].split('?')[0];
   openTg(`https://t.me/share/url?url=${encodeURIComponent(base)}&text=${encodeURIComponent('Заходи в Нейм-рулетку: выбивай редкие юзернеймы и собирай коллекцию!')}`);
 };
 function renderAch(){
@@ -1044,6 +1090,30 @@ $('#tab-top').onclick=e=>{
   if(e.target.closest('#top-hide')){S.hide=S.hide?0:1;save();lb.sent='';lbPush(true).then(()=>{if(!$('#tab-top').hidden)openTop()});renderTop()}
 };
 setInterval(()=>{if(!document.hidden)lbPush()},60000);
+// ---------- Друзья: награды за приглашённых ----------
+// Друг открывает игру по ссылке с ?startapp=r<id>. Сервер записывает пару «кто пригласил — кто пришёл»
+// и только для нового игрока (которого ещё не было в таблице). Пригласивший забирает награду кнопкой в профиле.
+const REF_C=60000,REF_E=2,REF_NEW_C=30000,REF_NEW_E=2,REF_MAX=20;   // награды и предел приглашений
+lb.refn=0;
+async function refInit(){
+  if(!API||!tg||!tg.initData)return;
+  const sp=(tg.initDataUnsafe&&tg.initDataUnsafe.start_param)||'';
+  if(/^r\d{1,15}$/.test(sp)&&!S.refd){
+    try{const r=await lbReq('/ref',{inviter:sp.slice(1)});S.refd=1;
+      if(r.ok){S.coins+=REF_NEW_C;S.en+=REF_NEW_E;save();render();toast(`🎁 Бонус за приглашение: +${fmt(REF_NEW_C)} 🪙 и +${REF_NEW_E} ⚡`)}else save()}catch(e){}
+  }
+  refPoll();
+}
+async function refPoll(){
+  if(!API||!tg||!tg.initData)return;
+  try{const r=await lbReq('/refs');const n=Math.max(0,Math.min(r.n|0,REF_MAX-S.refc));if(n!==lb.refn){lb.refn=n;if(!$('#tab-prof').hidden)renderProf()}}catch(e){}
+}
+async function claimRefs(){
+  if(!lb.refn)return;
+  try{const r=await lbReq('/ref/claim',{});const n=Math.max(0,Math.min(r.n|0,REF_MAX-S.refc));lb.refn=0;
+    if(n){S.coins+=n*REF_C;S.en+=n*REF_E;S.refc+=n;save();render();sfx('coins');toast(`🎁 Друзья: +${fmt(n*REF_C)} 🪙 и +${n*REF_E} ⚡`)}}catch(e){toast('Не удалось забрать награду')}
+  renderProf();
+}
 
 // ---------- Бонусы: вкладка ----------
 const bon={busy:false,res:null,ang:0,win:-1,fresh:false};
@@ -1153,4 +1223,5 @@ renderUp();
 if(PAGE!=='main')tabIn(PAGE);
 else{const h=location.hash.slice(1);if(['col','up','prof','bon','show'].includes(h))tabIn(h)}
 try{if(PAGE!=='main'&&tg&&tg.BackButton){tg.BackButton.show();tg.BackButton.onClick(()=>{location.href='index.html'})}}catch(e){}
+refInit();
 cloudLoad();
