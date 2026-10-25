@@ -755,7 +755,7 @@ function colPanel(){
 function renderCol(){
   const col=$('#tab-col'),its=[...S.items].sort((a,b)=>b.t-a.t);
   if(colSel)colSel=new Set([...colSel].filter(id=>S.items.some(i=>i.id===id)));
-  let h=colPanel()+workPlate()+showPlate();
+  let h=colPanel()+showPlate();
   if(!its.length){colSel=null;h+=`<div class="empty">Коллекция пуста.<br>Крути рулетку и забирай понравившиеся ники.<br><button class="btn" data-go="game">К рулетке</button></div>`}
   else h+=`<div class="chead"><div><h2>Мои ники</h2></div>`+
     (colSel?`<div class="cbtns"><button class="btn sm" data-a="all">Все</button><button class="btn sm" data-a="cancel">Отмена</button></div>`:`<button class="btn sm" data-a="selmode">Выбрать</button>`)+`</div>`+
@@ -825,7 +825,6 @@ $('#reels').onclick=e=>{
 $('#tab-col').onclick=e=>{
   const g=e.target.closest('[data-go]');if(g)return tab(g.dataset.go);
   if(e.target.closest('#show-open'))return tab('show');
-  if(e.target.closest('#work-open'))return workSheet();
   if(e.target.closest('#market-open'))return tab('market');
   if(e.target.closest('#museum-open'))return tab('museum');
   const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
@@ -1125,6 +1124,7 @@ function renderProf(){
   <div class="path"><span class="pi">🧭</span><b>Путь игрока</b><small>${S.lvl+1} ур.: +${fmt(nr.c)} 🪙 и +${nr.e} ⚡</small></div>
   <div class="tri"><div><small>Капитал</small><b>${S.coins>=1e9?short(S.coins):fmtC(S.coins)} 🪙</b></div><div><small>Коллекция</small><b>${S.items.length} из ${S.slots}</b></div><div><small>Витрины</small><b>${doneV} из ${SHOW.length}</b></div></div></div>
   <div class="pcard sndrow"><div><b>Звуки</b><small>Эффекты рулетки, наград и колеса</small></div><button class="sw${S.snd?' on':''}" id="snd-tg" role="switch" aria-checked="${S.snd}" aria-label="Звуки"><i></i></button></div>
+  ${workPlate()}
   <div class="pcard"><h3>Тема оформления</h3><div class="themes">${THEMES.map(t=>`<button class="thm" data-theme="${t.id}" aria-pressed="${(S.theme||'')===t.id}" style="--tl:${t.a}"><i style="background:linear-gradient(135deg,${t.b} 55%,${t.a} 55%)"></i>${t.n}</button>`).join('')}</div></div>
   <div class="pcard inv invx"><div><b>Позвать друзей</b><small>За каждого друга: +${fmt(REF_C)} 🪙 и +${REF_E} ⚡ · приглашено ${S.refc} из ${REF_MAX}</small></div><div class="invb">${lb.refn>0?`<button class="btn main" id="ref-claim">Забрать +${fmt(lb.refn*REF_C)} 🪙</button>`:''}<button class="btn${lb.refn>0?'':' main'}" id="invite">Позвать</button></div></div>
   <div class="pcard"><h3>Статистика</h3>
@@ -1143,7 +1143,7 @@ setInterval(()=>{
   S.time++;S.tday.s++;if(S.time%10===0)save();
   if(!$('#tab-prof').hidden){const a=$('#tm-all'),b=$('#tm-day');if(a){a.textContent=fmtT(S.time);b.textContent=fmtT(todaySec())}}
   if(!$('#tab-bon').hidden)updTimers();
-  if(!$('#tab-game').hidden&&S.dcase===todayK()&&S.time%30===0)renderCases();
+  if(S.time%30===0&&(!$('#tab-game').hidden||!$('#tab-bon').hidden||!$('#tab-prof').hidden))renderCases();
   const kk=todayK()+weekK();if(kk!==lastK){lastK=kk;ensureQuests();render()}
 },1000);
 document.addEventListener('visibilitychange',()=>{if(document.hidden){save();lbPush();if(cloudDone)cloudPush()}});
@@ -1403,9 +1403,11 @@ const poolOf=t=>{if(!tierPool){tierPool=[[],[],[],[],[],[],[]];prizePool().forEa
 const pctw=w=>w%1?w.toFixed(1).replace('.',','):String(w);
 function rollTier(c){let r=Math.random()*c.w.reduce((s,x)=>s+x[1],0);for(const [t,w] of c.w){r-=w;if(r<0)return t}return c.w[c.w.length-1][0]}
 const dClaimed=()=>S.dcase===todayK();
+function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${S.coins<c.price?' poor':''}${c.daily&&dClaimed()?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.daily?(dClaimed()?'Через '+leftT(msToDay()):'Бесплатно · раз в сутки'):fmt(c.price)+' 🪙'}</span></button>`).join('')+'</div>'+lotCard()}
 function renderCases(){
   let el=$('#cases');if(!el){const st=document.querySelector('#tab-game .stats');if(!st)return;el=document.createElement('div');el.id='cases';st.after(el)}
-  setHtml(el,`<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${S.coins<c.price?' poor':''}${c.daily&&dClaimed()?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.daily?(dClaimed()?'Через '+leftT(msToDay()):'Бесплатно · раз в сутки'):fmt(c.price)+' 🪙'}</span></button>`).join('')+'</div>'+lotCard());
+  setHtml(el,workPlate());
+  if(!$('#tab-bon').hidden)try{renderBon()}catch(e){}
 }
 function caseSheet(){
   let sh=$('#casesh');if(!sh){sh=document.createElement('div');sh.id='casesh';sh.className='usheet';sh.hidden=true;document.body.appendChild(sh);
@@ -1455,7 +1457,7 @@ function workList(){S.work=S.work.filter(w=>S.items.some(i=>i.id===w.id));return
 function workRate(it){return Math.max(1,Math.round(val(it.t,it.p,it.n)*WORKRATE))}
 function workAcc(w,it){return Math.floor(workRate(it)*Math.min(WORKCAP,Math.max(0,Date.now()-w.t))/3600e3)}
 function workTotal(){return workList().reduce((s,w)=>{const it=S.items.find(i=>i.id===w.id);return s+(it?workAcc(w,it):0)},0)}
-function workPlate(){const n=workList().length,t=workTotal();return `<button class="pcard achbtn" id="work-open" style="margin-bottom:16px"><div><b>Ники на работе</b><small>${n} из ${WORKMAX}${t>0?' · накоплено '+fmtC(t)+' 🪙':' · приносят монеты, пока ты не играешь'}</small></div><span class="trophy">⛏️</span></button>`}
+function workPlate(){const n=workList().length,t=workTotal();return `<button class="pcard achbtn" data-work="1" style="margin-bottom:12px"><div><b>Ники на работе</b><small>${n} из ${WORKMAX}${t>0?' · накоплено '+fmtC(t)+' 🪙':' · приносят монеты, пока ты не играешь'}</small></div><span class="trophy">⛏️</span></button>`}
 function workSheet(close){
   let o=document.getElementById('worksh');
   if(close){if(o)o.remove();clearInterval(wkTm);wkPick=false;return}
@@ -1465,12 +1467,12 @@ function workSheet(close){
       if(e.target.closest('[data-wx]')){if(wkPick){wkPick=false;return workSheet()}return workSheet(true)}
       const add=e.target.closest('[data-wadd]');if(add){wkPick=true;return workSheet()}
       const pk=e.target.closest('[data-wpick]');
-      if(pk){if(S.work.length<WORKMAX&&S.items.some(i=>i.id===pk.dataset.wpick)&&!S.work.some(w=>w.id===pk.dataset.wpick)){S.work.push({id:pk.dataset.wpick,t:Date.now()});save();sfx('tap')}wkPick=false;if(!$('#tab-col').hidden)renderCol();return workSheet()}
+      if(pk){if(S.work.length<WORKMAX&&S.items.some(i=>i.id===pk.dataset.wpick)&&!S.work.some(w=>w.id===pk.dataset.wpick)){S.work.push({id:pk.dataset.wpick,t:Date.now()});save();sfx('tap')}wkPick=false;try{renderCases()}catch(x){}if(!$('#tab-prof').hidden)renderProf();return workSheet()}
       const rm=e.target.closest('[data-wrm]');
-      if(rm){const w=S.work.find(x=>x.id===rm.dataset.wrm),it=w&&S.items.find(i=>i.id===w.id);if(w&&it){const g=workAcc(w,it);if(g>0)S.coins+=g}S.work=S.work.filter(x=>x.id!==rm.dataset.wrm);save();render();if(!$('#tab-col').hidden)renderCol();return workSheet()}
+      if(rm){const w=S.work.find(x=>x.id===rm.dataset.wrm),it=w&&S.items.find(i=>i.id===w.id);if(w&&it){const g=workAcc(w,it);if(g>0)S.coins+=g}S.work=S.work.filter(x=>x.id!==rm.dataset.wrm);save();render();try{renderCases()}catch(x){}if(!$('#tab-prof').hidden)renderProf();return workSheet()}
       if(e.target.closest('[data-wclaim]')){
         let sum=0;workList().forEach(w=>{const it=S.items.find(i=>i.id===w.id);if(it){sum+=workAcc(w,it);w.t=Date.now()}});
-        if(sum>0){S.coins+=sum;save();render();sfx('coins');hap('n','success');toast(`Заработано: +${fmt(sum)} 🪙`);if(!$('#tab-col').hidden)renderCol()}
+        if(sum>0){S.coins+=sum;save();render();sfx('coins');hap('n','success');toast(`Заработано: +${fmt(sum)} 🪙`);try{renderCases()}catch(x){}if(!$('#tab-prof').hidden)renderProf()}
         return workSheet()}
     }}
   const list=workList();
@@ -1556,7 +1558,7 @@ function lotSheet(close){
     },reduce?0:420);
   });
 }
-document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#lot-open')){lt.t=null;lt.done=false;lotSheet()}});
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target;if(!t)return;if(t.closest('#lot-open')){lt.t=null;lt.done=false;lotSheet()}else if(t.closest('[data-work]'))workSheet()});
 try{const m=claimLot();if(m)setTimeout(()=>toast('Приз лотереи: '+m),1500)}catch(e){}
 
 renderCases();
@@ -1785,6 +1787,7 @@ function renderBon(){
     S.q.list.map((q,i)=>{const d=QDEF[q.id],ok=q.p>=q.n;
       return `<div class="quest${q.got?' got':''}"><div class="qtop"><b>${d.t(q.n)}</b><span>${fmt(d.r)} 🪙</span></div>${d.h?`<small class="qh">${d.h}</small>`:''}<div class="qbar"><i style="width:${q.p/q.n*100}%"></i></div>`+
       `<div class="qbot"><small>${q.p} / ${q.n}</small>${q.got?'<em>Получено ✓</em>':ok?`<button class="btn main sm" data-b="quest" data-i="${i}">Забрать</button>`:''}</div></div>`}).join('')+`</div>`;
+  try{h+=`<div class="bcases">${casesHtml()}</div>`}catch(e){}
   if(el._h!==h){
     el.innerHTML=h;el._h=h;
     const fr=bon.fresh;bon.fresh=false;
