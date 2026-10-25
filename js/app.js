@@ -32,8 +32,10 @@ const fmtC=n=>n>=1e7?(n/1e6).toFixed(1).replace('.',',')+' млн':fmt(n);   // 
 // цена ника плавно растёт с его баллами (без «пустот» между редкостями); секретные цены фиксированы
 const PRICE_BASE=360,PRICE_K=.056;   // цена обычных ников от баллов; общий масштаб экономики: ×30 к версии 3
 const START=90000;                   // стартовый баланс
+const nameHash=n=>{let h=2166136261;for(const c of String(n)){h^=c.codePointAt(0);h=Math.imul(h,16777619)}h^=h>>>15;h=Math.imul(h,2246822519);h^=h>>>13;return (h>>>0)/4294967296};   // одинаковое «случайное» число для одного ника
 const val=(t,p,n)=>{
-  if(t>=6){const l=n?[...n].length:3;return Math.round(T[6].v*(l<=1?5:l===2?3:l===3?2:1))}   // секретные: 1 символ 5 млн, 2: 3 млн, 3: 2 млн, 4+: 1 млн
+  if(t>=6){const l=n?[...n].length:3,[lo,hi]=l<=1?[3600000,5000000]:l===2?[2400000,3600000]:l===3?[1600000,2400000]:[1000000,1600000];
+    return Math.round(lo+(hi-lo)*nameHash(n||'abc'))}   // секретные: у каждого ника своя цена внутри вилки (1 символ 3,6–5 млн … 4+ символа 1–1,6 млн)
   if(!p)return T[t].v;
   return Math.max(1,Math.round(PRICE_BASE*Math.exp(PRICE_K*(p-30))));
 };
@@ -135,9 +137,42 @@ function plain(){
   }
   return s.length<5?s+R(10)+R(10):s;
 }
+// узоры мифических ников (возвращает название узора или '')
+function myPat(s){
+  if(!/^[a-z]{5,7}$/.test(s))return '';
+  const len=s.length,d=new Set(s).size,asc=x=>[...x].every((c,i)=>!i||c.charCodeAt(0)===x.charCodeAt(i-1)+1);
+  if(d===1)return 'одна буква';
+  if(len>=6&&d===2&&/^(.)(.)(\1\2)+\1?$/.test(s))return 'двойной узор';
+  if(len===5&&d===2&&s===rev(s)&&/^(.)(.)\1\2\1$/.test(s))return 'двойной узор';
+  if(len<=6&&d===3&&s===rev(s))return 'зеркальный ник';
+  if(len<=6&&asc(s))return 'алфавит по порядку';
+  if(len<=6&&asc(rev(s)))return 'алфавит наоборот';
+  if(len===6&&d===3&&/^(.)\1(.)\2(.)\3$/.test(s))return 'три пары';
+  if(len===6&&d===3&&s.slice(0,3)===s.slice(3))return 'тройка дважды';
+  return '';
+}
+// Мифические ники: разные «красивые» узоры, не только пять одинаковых букв
+function mythic(){
+  const d=(n)=>{const a=[...L].sort(()=>Math.random()-.5);return a.slice(0,n)};
+  switch(R(9)){
+    case 0:return P(L).repeat(5);                                     // aaaaa
+    case 1:{const[a,b]=d(2);return a+b+a+b+a}                          // ababa
+    case 2:return P(L).repeat(6+R(2));                                 // aaaaaa
+    case 3:{const[a,b]=d(2);return (a+b).repeat(3)}                    // ababab
+    case 4:{const[a,b,c]=d(3);return R(2)?a+b+c+b+a:a+b+c+c+b+a}       // abcba / abccba
+    case 5:{const a=R(L.length-5);return L.slice(a,a+5+R(2))}          // abcde / abcdef
+    case 6:{const a=R(L.length-5)+5;return [...L.slice(a-4-R(2),a+1)].reverse().join('')}   // edcba
+    case 7:{const[a,b,c]=d(3);return a+a+b+b+c+c}                      // aabbcc
+    default:{const[a,b,c]=d(3);return (a+b+c).repeat(2)}               // abcabc
+  }
+}
 function gen(){
+  if(Math.random()<.00065)return mythic();
+  for(let i=0;i<30;i++){const s=genBase();if(!myPat(s))return s}   // узоры мификов встречаются только как настоящий мифик
+  return plain();
+}
+function genBase(){
   const q=Math.random();
-  if(q<.00065){const a=P(L),b=P(L.replace(a,''));return R(2)?a.repeat(5):a+b+a+b+a}
   if(q<.1)return plain();
   if(q<.4)return genNew();
   const r=Math.random(),n=P([5,6,6,7,7,7,8,8,8,8]);let s;
@@ -145,9 +180,9 @@ function gen(){
   else if(r<.66)s=syl(n);
   else if(r<.78)s=P(WORDS);
   else if(r<.86){const h=syl(3+R(2));s=h+(R(2)?P(L):'')+rev(h)}
-  else if(r<.92)s=rnd(2+R(2)).repeat(4).slice(0,6+R(2));
-  else if(r<.95){const a=R(17);s=L.slice(a,a+5+R(3))}
-  else if(r<.97)s=P(L).repeat(6+R(2));
+  else if(r<.92)s=rnd(3+R(2)).repeat(3).slice(0,7+R(2));
+  else if(r<.95){const a=R(17);s=L.slice(a,a+7+R(2))}
+  else if(r<.97)s=P(WORDS)+String(R(1000));
   else s=P(WORDS)+P(['_x','_','7','77','1337','_'+R(10)]);
   if(r<.66&&R(5)===0){const k=1+R(3);s=s.slice(0,-k)+String(R(10**k)).padStart(k,'0')}
   return s;
@@ -172,6 +207,7 @@ function score(s){
   if(mx>=4){p+=40;t.push('буквы по порядку')}
   if(core===s&&/^([bcdfghjklmnprstvwxz][aeiouy])+[bcdfghjklmnprstvwxz]?$/.test(s)){p+=20;t.push('читается легко')}
   if(/(\d)\1{2}|1337|777|007|123/.test(s)){p+=15;t.push('красивые цифры')}
+  const mp=myPat(s);if(mp){p=Math.max(p,150);t.push(mp)}   // мифические узоры: редкость не зависит от случайных баллов
   return{t:tierOf(p),tags:t,p};
 }
 
@@ -1589,5 +1625,26 @@ if(PAGE!=='main')tabIn(PAGE);
 else{const h=location.hash.slice(1);if(['col','up','prof','bon','show'].includes(h))tabIn(h)}
 try{if(PAGE!=='main'&&tg&&tg.BackButton){tg.BackButton.show();tg.BackButton.onClick(()=>{location.href=PAGE==='clan'?'rating.html':(PAGE==='market'||PAGE==='museum')?'index.html#col':'index.html'})}}catch(e){}
 refInit();
+// ---------- Админ-выдача монет (только для владельца) ----------
+// Впиши свой Telegram ID (число, его покажет бот @userinfobot). Потом 7 раз быстро нажми на баланс сверху — откроется окно.
+const ADMIN_ID=0;
+(function(){
+  const el=$('#coins');if(!el)return;let n=0,tm=0;
+  el.addEventListener('click',()=>{
+    const id=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.id;
+    if(!ADMIN_ID||id!==ADMIN_ID)return;
+    n++;clearTimeout(tm);tm=setTimeout(()=>n=0,1500);if(n<7)return;n=0;
+    let o=$('#adm');if(o)o.remove();
+    o=document.createElement('div');o.id='adm';o.className='usheet';
+    o.innerHTML='<div class="sbg" data-x="1"></div><div class="sbox"><div class="shead"><b>Админ: монеты</b><button class="btn sm" data-x="1">✕</button></div><input id="adm-v" type="text" inputmode="numeric" placeholder="Сумма, например 50000000" style="width:100%;padding:13px;border-radius:12px;border:2px solid var(--line);background:var(--tile);color:var(--fg);font:600 16px var(--head);margin:6px 0 12px"><div class="seg two"><button class="btn main" data-m="set">Установить</button><button class="btn" data-m="add">Добавить</button></div></div>';
+    document.body.append(o);
+    o.onclick=e=>{
+      if(e.target.closest('[data-x]'))return o.remove();
+      const m=e.target.closest('[data-m]');if(!m)return;
+      const v=Math.floor(+String($('#adm-v').value).replace(/[\s_,]/g,''));if(!isFinite(v)||v<0)return toast('Введи число');
+      S.coins=Math.max(0,m.dataset.m==='set'?v:S.coins+v);save();render();o.remove();toast('Баланс: '+fmt(S.coins)+' 🪙');
+    };
+  });
+})();
 cloudLoad();
 try{window.bootDone&&bootDone()}catch(e){}   // игра готова: убираем загрузочный экран
