@@ -13,7 +13,7 @@ const hap=(k,v)=>{try{tg&&tg.HapticFeedback&&(k==='n'?tg.HapticFeedback.notifica
 const T=[{n:'Обычный',c:'#9AA5DB',v:390},{n:'Необычный',c:'#27D9BD',v:1470},{n:'Редкий',c:'#9B7BFF',v:4800},{n:'Эпический',c:'#FF5FA2',v:17700},{n:'Легендарный',c:'#FFC933',v:72000},{n:'Мифический',c:'#FF4B3E',v:378000},{n:'Секретный',c:'#EAF1FF',v:1000000}]
 T.forEach((t,i)=>t.s=['Обычн.','Необыч.','Редкий','Эпик','Легенд.','Миф.','Секрет'][i]);;
 const MODES=[{l:'Любой',min:0,cost:3000},{l:'Редкий+',min:2,cost:10500},{l:'Эпик+',min:3,cost:30000}];
-const WORDS=['storm','night','wolf9','cyber','pixel','ghost','nova7','lunar','ember','frost','raven','blaze','orbit','pulse','zenith','vortex','shadow','dragon','falcon','comet','atlas','magic','royal','alpha','omega','delta','sigma','ninja','panda','tiger','cobalt','cipher','quartz','rocket','silent','golden','crystal','phoenix','nexus','vector','matrix','legend','hunter','pirate','wizard','spirit','shiver','velvet','copper','jungle'].filter(w=>/^[a-z]{5,}$/.test(w));
+const WORDS=['storm','night','wolf9','cyber','pixel','ghost','nova7','lunar','ember','frost','raven','blaze','orbit','pulse','zenith','vortex','shadow','dragon','falcon','comet','atlas','magic','royal','alpha','omega','delta','sigma','ninja','panda','tiger','cobalt','cipher','quartz','rocket','silent','golden','crystal','phoenix','nexus','vector','matrix','legend','hunter','pirate','wizard','spirit','shiver','velvet','copper','jungle','abcdefghijklmnopqrstuvwxyz','aeiouy','bcdfghjklmnprstvwxz','0123456789_#$%@','sunset','thunder','galaxy','planet','meteor','aurora','eclipse','horizon','cosmos','stellar','nebula','quasar','photon','plasma','neutron','proton','carbon','silver','bronze','marble','granite','onyx','amber','jade','ruby','sapphire','opal','ivory','ebony','crimson','scarlet','violet','indigo','azure','emerald','cinder','smoke','steel','iron','titan','giant','knight','archer','viking','samurai','shogun','ronin','sensei','monk','sage','oracle','druid','shaman','rogue','bandit','outlaw','rebel','phantom','specter','wraith','demon','angel','mystic','arcane','cosmic','atomic','turbo','hyper','super','rapid','swift','stealth','blizzard','glacier','tundra','desert','canyon','island','ocean','river','forest','meadow','garden','harbor','castle','temple','tower','bridge','anchor','compass','lantern','candle','mirror','puzzle','riddle','secret','myth','fable','story','poem','melody','rhythm','echo','whisper','thunder','lightning','tornado','cyclone','volcano','crater','spark','flame','inferno','magma','cobra','viper','python','raptor','condor','eagle','hawk','owl','lynx','puma','jaguar','leopard','cheetah','panther','wolfpack','badger','otter','beaver','bison','moose','walrus','penguin','dolphin','octopus','kraken','hydra','griffin','pegasus','unicorn','goblin','ogre','troll','golem','zombie','vampire','captain','sailor','pilot','shuttle','module','sensor','signal','binary','kernel','socket','packet','buffer','cache','proxy','server','client','script','coder','hacker','gamer','streamer','player','winner','champion','master','expert','genius','sorcerer','alchemy','potion','gemstone','diamond','pearl','coral','reef','wave','tide','breeze','zephyr','mistral','monsoon'].filter(w=>/^[a-z]{5,}$/.test(w));
 const L='abcdefghijklmnopqrstuvwxyz',V='aeiouy',K='bcdfghjklmnprstvwxz',POOL=L+'0123456789_#$%@';
 const R=n=>Math.floor(Math.random()*n),P=a=>a[R(a.length)];
 const rnd=n=>Array.from({length:n},()=>P(L)).join(''),syl=n=>Array.from({length:n},(_,i)=>P(i%2?V:K)).join('');
@@ -36,17 +36,35 @@ const val=(t,p,n)=>{
   return Math.max(1,Math.round(PRICE_BASE*Math.exp(PRICE_K*(p-30))));
 };
 
-const SECRETS=[...new Set(['ww','xxx','lot','лох','god','333','666','777','888','999','000','dead','#','111','222','444','555','13','69','420','1337','lol','wow','kek','zzz','www','w','x','1','0','11','007','404','gg','xd','omg','wtf','rip','лол','кек','бог','вау','$','%','@','?','!','*','~','_'])];
-const ADJ=['dark','night','silent','red','blue','cold','wild','swift','lazy','crazy','happy','lucky','toxic','epic','mega','ultra','neo','pixel','cyber','royal'];
-const NOUN=['wolf','fox','cat','bear','tiger','panda','ghost','king','queen','ninja','pilot','mage','hero','dragon','falcon','raven','shark','cobra','rider','hunter'];
-const AFFIX=['pro','dev','real','official','the','its','mr','im'];
+const SECRETS=['ww','xxx','lot','лох','god','333','666','777','888','999','000','dead','#','111','222','444','555','13','69','420','1337','lol','wow','kek','zzz','www','w','x','1','0','11','007','404','gg','xd','omg','wtf','rip','лол','кек','бог','вау','$','%','@','?','!','*','~','_','aaa','bbb','ccc','ddd','eee','fff','ggg','hhh','iii','jjj','kkk','mmm','nnn','ooo','ppp','qqq','rrr','sss','ttt','uuu','vvv','yyy','123','321','100','101','202','303','505','700','800','900','1000','2024','2025','2026','abc','xyz','qwe','asd','zxc','88','99','77','66','55','44','33','22','00','ok','no','yes','hi','yo','ha','he','ho','ah','oh','uh','ye','ya','da','net','top','vip','pro','dev','boss','king','ace','one','two','six','ten','zero','null','void','nil','err','bug','fix','cat','dog','fox','owl','bee','ant','ape','bat','rat','cow','pig','hen','sun','sky','sea','ice','fog','ash'];
+const ADJ=['dark','night','silent','red','blue','cold','wild','swift','lazy','crazy','happy','lucky','toxic','epic','mega','ultra','neo','pixel','cyber','royal','angry','brave','calm','clever','cool','cosmic','crimson','deadly','deep','divine','dizzy','electric','fancy','fast','fierce','frozen','funny','fuzzy','giant','gentle','glitch','golden','grim','hidden','holy','hungry','icy','iron','jolly','keen','lone','lucid','magic','mighty','mystic','noble','odd','pale','proud','quick','quiet','rapid','rusty','sacred','salty','savage','shiny','shy','sleepy','sly','smooth','sneaky','solar','sonic','stormy','sunny','sweet','tiny','turbo','vivid','wicked','witty','wise','young','zen','zesty','atomic','bitter','bold','broken','bright','burning','chill','clumsy','cursed','dusty','eager','feral','fiery','gloomy','grumpy','haunted','hollow','humble','hyper','lunar','lost','noisy','neon','nimble','rogue','shadow','silver'];
+const NOUN=['wolf','fox','cat','bear','tiger','panda','ghost','king','queen','ninja','pilot','mage','hero','dragon','falcon','raven','shark','cobra','rider','hunter','eagle','hawk','owl','lynx','puma','jaguar','viper','python','badger','otter','wolfie','bunny','kitten','puppy','monkey','koala','lion','leopard','cheetah','rhino','hippo','zebra','giraffe','whale','dolphin','octopus','crab','turtle','frog','toad','snake','lizard','gecko','dino','rex','knight','archer','viking','samurai','ronin','monk','sage','oracle','druid','rogue','bandit','pirate','captain','sailor','wizard','witch','goblin','troll','zombie','vampire','robot','droid','cyborg','alien','comet','meteor','planet','star','moon','sun','cloud','storm','thunder','rain','snow','frost','flame','ember','spark','blade','sword','arrow','shield','hammer','axe','bow','dagger','spear','crown','throne','castle','tower','bridge','anchor','lantern','candle','mirror','phantom','wraith','demon','angel','boss','chief','lord','duke','baron','ranger','scout','sniper','tank','driver','racer','runner','jumper','dancer','singer','drummer','painter','writer','maker','builder','coder','gamer','streamer','player','winner','champ'];
+const AFFIX=['pro','dev','real','official','the','its','mr','im','not','just','only','ur','my','our','sir','dr','mrs','lil','big','old','new','top','best','true','pure','x','xx','neo'];
 const KEYS=['qwerty','asdfgh','zxcvbn','qazwsx','qweasd','asdfg','zxcvb','qwert','poiuy','wasd1'];
-const NAMES=['alex','max','ivan','dima','anna','maria','sasha','kate','oleg','nikita','artem','denis','sergey','andrey','olga','julia','katya','vlad','egor','roman','danil','lena','sonya','misha','kirill','pavel','igor','masha','tanya','ruslan','timur','amir','aidar','aigerim','dana','aruzhan','nurlan','askar','dauren','madina'];
-const SURN=['smith','ivanov','petrov','k','m','s','official','real','life','play','game','music','art','photo','travel'];
+const NAMES=['alex','max','ivan','dima','anna','maria','sasha','kate','oleg','nikita','artem','denis','sergey','andrey','olga','julia','katya','vlad','egor','roman','danil','lena','sonya','misha','kirill','pavel','igor','masha','tanya','ruslan','timur','amir','aidar','aigerim','dana','aruzhan','nurlan','askar','dauren','madina','john','mike','paul','peter','david','james','robert','daniel','tom','jack','harry','oliver','george','leo','adam','eric','jacob','luke','noah','liam','ethan','mason','emma','olivia','sophia','mia','lily','zoe','chloe','ella','emily','grace','ruby','alice','lucy','maya','nina','vera','vika','zhenya','galya','lyuda','inna','oksana','polina','alina','diana','karina','elina','milana','amina','aisha','zarina','asel','dinara','gulnara','aliya','sabina','bakhyt','yerlan','arman','bauyrzhan','dastan','nurzhan','rustam','samat','sanzhar','zhandos','kairat','marat','azamat','tair','bekzat','alibek','ayan','zhan','abay','ilyas','yelena','nastya','liza','varya','ksenia','arina','yana','kolya','vanya','petya','fedya','zhora','lyosha','seryozha','vitya','tolya','gleb','stas','maksim','boris','leonid','anton','ilya','mark','nick','sam','ben','joe','dan','tim','kim','eva','ann','amy'];
+const SURN=['smith','ivanov','petrov','k','m','s','official','real','life','play','game','music','art','photo','travel','kim','lee','ali','khan','sidorov','kuznetsov','popov','sokolov','volkov','smirnov','nurmukhanov','abenov','dev','pro','tv','fan','club','team','crew','blog','shop','studio','store','fit','food','cars','cats','dogs','love','luv','fire','ice','sun','moon','sky','gold','star','x_x','01','07','77','99','2k'];
+// ---- расширенные словари: больше вариантов ников ----
+const _w=s=>s.split(/\s+/).filter(Boolean);
+WORDS.push(..._w(`banana cherry mango lemon orange peach apple berry melon coconut pepper ginger cookie waffle donut muffin pretzel burger pizza pasta noodle sushi ramen taco nacho cocoa coffee espresso mocha latte vanilla caramel honey sugar maple cinnamon mint basil olive tomato potato carrot onion garlic radish pumpkin walnut almond hazel
+soccer hockey tennis boxing karate judo archery surfing skater racing cricket rugby chess poker domino bingo arcade joystick console gamepad cartridge level quest loot raid guild clan squad boss bonus combo streak critical mana health shield armor potion scroll relic artifact
+anime manga otaku kawaii sakura katana shuriken kitsune tanuki yokai oni sushi bento origami haiku zenith kaiju mecha
+python java ruby swift kotlin rustic golang linux ubuntu debian docker nginx redis mongo cloud server router modem laptop mouse keyboard monitor display camera tablet mobile gadget widget plugin module syntax logic loop array stack queue heap graph tree branch commit merge deploy debug compile render shader pixel sprite voxel
+tokyo paris london berlin madrid milan vienna prague dubai cairo sahara siberia alaska arctic tropic jungle savanna prairie tundra fjord lagoon atoll glacier summit valley ridge canyon cavern grotto
+monday friday sunday summer winter autumn spring dawn dusk midnight noon sunrise twilight equinox solstice
+rhythm melody harmony chorus tempo beat bassline vinyl cassette radio studio guitar piano violin cello drums trumpet banjo ukulele synth
+tulip orchid lotus daisy poppy jasmine lavender clover willow cedar birch aspen pine oak maple bamboo moss fern
+magnet laser sonic quantum fusion gravity vacuum plasma kinetic voltage circuit engine piston turbine rocket thruster booster capsule probe rover lander satellite telescope
+brave swift mighty clever gentle fierce loyal noble humble wicked sneaky lucky rusty dusty frosty smoky stormy sunny cloudy windy rainy foggy
+bajkal almaty astana kazakh steppe nomad yurt koumiss samruk tulpar altyn kumis`).filter(w=>/^[a-z]{5,}$/.test(w)));
+ADJ.push(..._w(`able acid agile airy alert alive amber ample ancient arctic ashen astral atomic awake azure baby bare bashful beefy better bionic bitter black blind bliss bloody bluish bony boxed brainy brisk bubbly burly busy candid casual chilly chubby classy clean clear cloudy clumsy cozy crafty crispy cuddly curly dapper daring dashing decent dense dim dirty dope dreamy dual dull dumb earthy easy edgy elder elite empty ethereal exotic faded fairy fake famous fearless fluffy flying foggy foxy frail frosty gamer gaudy ghostly giddy glassy glossy glowing gothic grand greedy groovy gruff hairy handy hardy hasty hazy heavy hip hot huge icy idle inky jazzy jumpy kind lanky late lavish lawful lean light lively loud loyal lush mad meek mellow merry messy mild minty misty mono moody mossy mute naive nasty neat nerdy nifty ninja nutty oily old open pastel peppy petite phony picky pink plain plush polar posh prime puny pure purple quirky rare real regal retro rich risky robust rosy rough round royal rude sassy scary sharp shaggy sick silky silly sleek slim slow small smart snappy snowy soft solid sour spicy spooky stable steel sticky stoic strong sturdy suave super tame tasty tidy tough tricky true ultra urban vague vast velvet vital warm weak weird wet windy witty woody zany zippy`));
+NOUN.push(..._w(`ace agent alpha ape ant ark atom axe baby badger bandit bat bean bee beetle bell bird biscuit bishop bit blob bolt bone book boom bot bowl brain brick bubble buck bug bull bullet bunny butter button cake camel candy cannon cape carrot cash castle cheese chip cinder clown coach cobra coin comet cookie cork cowboy crab cricket crow cube cupcake dart diamond dice disco doctor doll donut dove dozer dream drift drone drum duck dude dust eel egg elf emu engine fairy fang feather fiddle finch fish flash flea flint fly fort frost fruit fudge gamer gator gem genie ghoul glider glove gnome goat gopher grape gravy grizzly guard gum gun hamster hammer hare hat hawk hippo hog hornet horse hound hunter husky icon idol imp jack jelly jester jet joker judge kid kite kiwi knife lamb lamp lark laser leaf lemur lion llama lobster lock lotus lucky mammoth mango marble mask mouse mule mummy muffin nerd nest night ninja nugget nut ogre oyster panda parrot pearl pebble pepper pigeon pillow pixie pizza plum pocket pony popcorn potato prince pug pumpkin punk puppy quail quest rabbit rascal ranger rat raven reaper robin rocket rogue rook rose rover saint salmon sandwich scout seal shadow sheep sheriff shrimp skull sloth slug snail sniper spider spike spirit sponge spoon squid squirrel stag storm sultan sword tank taco tiger toast tomato tornado toucan trap trout tuna turkey turtle twin unicorn viper vortex waffle wasp weasel whale wizard wolf worm yak yeti zebra zombie`));
+NAMES.push(..._w(`adel adil akbar akmal alan albert aldiyar alex alexey alina alisa amanda amir anara anel angel anvar arailym aral arina arlan artur asem asylbek ayana aybek ayzhan azat bakir beibit bella bolat dalida damir darina darkhan dauren dias diyar dinmukhammed elena elnur emil eldar erlan evgeny farid fatima galiya gaukhar gulmira hanna ildar inara irina islam kamila karim kamal kenzhe kseniya laura lazzat leyla lina lyazzat madi malika marlen medet merey mira miras nargiz nazym nursultan olzhas orken rakhat raushan renat rinat sabit saltanat sanzhar saule sayan shyngys sultan symbat talgat tamerlan temirlan ulan umit yerzhan yerkebulan zhanna zhibek zhuldyz zhasulan zere zhanibek zhaxylyk`));
+SURN.push(..._w(`kz uz ru by ua us uk de fr 99 2000 2001 2002 2003 2004 2005 007 777 1337 official real original legit fresh daily nightly prime vibes mood swag drip flex king queen boss lord vip pro max ultra mini mega neo zero one two three`));
+SECRETS.push(...(_w(`aaaa 0000 1111 2222 3333 4444 5555 6666 7777 8888 9999 1234 4321 2024 2023 2022 2021 2020 2010 2000 1999 1990 1980 xoxo wasd gamer noob pwned owned epic bruh yeet sus nope meow woof moo oink quack hiss boo yay yum wow ahh ohh umm hmm yep nah ye ya yo hi hey ok ay`).filter(x=>x.length<5&&!SECRETS.includes(x))));
 const LEET={a:'4',e:'3',o:'0',i:'1',s:'5',t:'7'},UNLEET={4:'a',3:'e',0:'o',1:'i',5:'s',7:'t'};
 const leet=w=>[...w].map((c,i)=>i&&LEET[c]&&R(2)?LEET[c]:c).join('');
 function genNew(){
-  const k=R(11),w=P(WORDS),a=P(ADJ),nn=P(NOUN);
+  const k=R(40),w=P(WORDS),a=P(ADJ),nn=P(NOUN);
   switch(k){
     case 0:return a+nn;
     case 1:return a+'_'+nn;
@@ -58,13 +76,53 @@ function genNew(){
     case 7:return P(KEYS);
     case 8:return syl(2).repeat(3);
     case 9:return 'xx'+nn+'xx';
+    case 10:return w+'_'+nn;
+    case 11:return nn+P(NAMES);
+    case 12:return P(NAMES)+'_'+nn;
+    case 13:return a+P(NAMES)+(R(2)?R(100):'');
+    case 14:return w+P(['hq','tv','pro','xd','gg','ru','kz','x','xx','zz'])+(R(3)?'':R(10));
+    case 15:return 'the'+nn+(R(2)?'':R(1000));
+    case 16:return P(['mr','ms','dr','sir','lil','big','king','lord'])+w;
+    case 17:return nn+'_'+w+(R(3)?'':R(100));
+    case 18:return leet(w+nn);
+    case 19:return (R(2)?w:nn)+P(['_','__'])+R(1000);
+    case 20:return syl(2)+syl(2)+P(['_','x','z','ix','on','ex']);
+    case 21:return a+'_'+nn+'_'+P(AFFIX);
+    case 22:return w+'-'.replace('-','_')+a;
+    case 23:return P(['i','im','be','go','my','we'])+w;
+    case 24:return w+w.slice(-2)+P(['x','z','o','y']);
+    case 25:return P(['dark','lord','mr','ms','sir','the'])+P(NAMES)+(R(2)?R(100):'');
+    case 26:return nn+'_'+(1990+R(36));
+    case 27:return w+'_'+P(NAMES);
+    case 28:return P(NAMES)+P(['_gaming','_music','_art','_vlog','_tv','_ru','_kz','_official','_real','_xx']);
+    case 29:return a+nn+P(['_','x','xx','z','hd','tv','pro']);
+    case 30:return P(['x','z','q'])+w+P(['x','z','q']);
+    case 31:return w+P(['ing','er','ly','ish','ify','ora','ium','oid','ex','ix']);
+    case 32:return syl(3)+P(['_','']) +w.slice(0,3);
+    case 33:return nn+nn+(R(2)?R(10):'');
+    case 34:return a+a+nn;
+    case 35:return 'n'+R(10)+'_'+nn+R(10);
+    case 36:return w.slice(0,1).toUpperCase().toLowerCase()+w.slice(1)+P(['_',''])+P(['alpha','prime','omega','zero','nova','plus','neo','max']);
+    case 37:return P(['the','a','one'])+'_'+a+'_'+nn;
+    case 38:return leet(P(NAMES)+nn);
+    case 39:return syl(1+R(2))+'_'+syl(2)+(R(2)?R(100):'');
     default:return a+nn+R(100);
   }
 }
 // самые обычные имена: alex2003, ivan_petrov, anna_k, its_max
 function plain(){
   const n=P(NAMES);let s;
-  switch(R(7)){
+  switch(R(17)){
+    case 12:s=n+P(['_','',''])+P(['alex','max','dima','anna'])+R(100);break;
+    case 13:s=P(['sweet','cool','little','real','just'])+'_'+n;break;
+    case 14:s=n+'_'+P(['star','sun','fox','cat','kz','lov'])+R(10);break;
+    case 15:s=n+P(['.','_','-']).replace(/[.-]/,'_')+P(['09','98','97','96','95','94','00','01','02','03','04'])  ;break;
+    case 16:s=n+P(NAMES)+R(10);break;
+    case 7:s=n+'_'+n.slice(0,1)+R(100);break;
+    case 8:s=P(NAMES)+n+(R(2)?R(10):'');break;
+    case 9:s=n+'.'.replace('.','_')+(1980+R(40));break;
+    case 10:s=n+P(['official','real','life','tv','kz','ru','uz'])+(R(2)?R(10):'');break;
+    case 11:s=P(['the','real','its','im','mr','ms'])+'_'+n+(R(2)?R(100):'');break;
     case 0:s=n+(1985+R(30));break;
     case 1:s=n+R(100);break;
     case 2:s=n+'_'+P(SURN);break;
