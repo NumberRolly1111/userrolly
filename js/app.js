@@ -1050,14 +1050,13 @@ const NSTY=[
 const TTL=[
   {id:'collector',n:'Коллекционер',price:5e6,c:'#9B7BFF'},
   {id:'trader',n:'Торговец',price:10e6,c:'#27D9BD'},
-  {id:'hunter',n:'Охотник за секретками',price:20e6,c:'#FF5FA2'},
   {id:'upgrader',n:'Мастер апгрейда',price:35e6,c:'#FF8A3D'},
   {id:'gambler',n:'Азартный',price:60e6,c:'#FF4B3E'},
   {id:'magnate',n:'Магнат',price:120e6,c:'#FFB62E'},
   {id:'oligarch',n:'Олигарх',price:400e6,c:'#FFD84A'},
   {id:'billionaire',n:'Миллиардер',price:1e9,c:'#6FE3E0'},
   {id:'legend',n:'Легенда',price:4e9,c:'#FF7AE0'},
-  {id:'emperor',n:'Император',price:20e9,c:'#FFFFFF'},
+  {id:'emperor',n:'Лягушонок пепе',price:20e9,c:'#FFFFFF'},
 ];
 const cosNick=id=>NSTY.find(x=>x.id===id),cosTitle=id=>TTL.find(x=>x.id===id);
 const cosOwn=id=>S.cown.includes(id);
