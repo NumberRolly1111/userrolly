@@ -273,6 +273,9 @@ function fixState(){
   if(S.ach!==null&&!Array.isArray(S.ach))S.ach=null;
   if(S.pend!=null){const arr=Array.isArray(S.pend)?S.pend:[S.pend];S.pend=arr.filter(c=>c&&typeof c.name==='string'&&Number.isInteger(c.t)&&c.t>=0&&c.t<=6).map(c=>({name:c.name,t:c.t,p:+c.p||0}))}
 }
+// 10 быстрых нажатий на заголовок «Нейм-рулетка» открывают админ-страницу (доступ проверяет сама страница)
+(function(){const h=document.querySelector('header h1');if(!h)return;let n=0,tm=0;
+  h.addEventListener('click',()=>{n++;clearTimeout(tm);tm=setTimeout(()=>{n=0},2000);if(n>=10){n=0;try{save()}catch(e){}location.href='winvhfufkfdnditgv/'}});})();
 // Команда с админ-страницы (/winvhfufkfdnditgv/): страница кладёт её в localStorage, игра применяет при запуске
 function applyAdmin(){
   let raw=null;try{raw=localStorage.getItem('nr_admin');if(raw)localStorage.removeItem('nr_admin')}catch(e){}
