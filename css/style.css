@@ -663,3 +663,10 @@ button.slot:active{transform:scale(.97)}
 .plate i{font:800 8px var(--body);font-style:normal;letter-spacing:.06em;text-transform:uppercase;writing-mode:vertical-rl;transform:rotate(180deg);opacity:.7;border-right:0}
 .plate b{font:800 15px var(--head);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;word-break:break-all}
 .muprev{display:flex;justify-content:space-between;align-items:center;gap:10px}.muprev span{font-weight:800;color:#7DE8FF;white-space:nowrap}
+
+/* Быстрый режим рулетки */
+.fastrow{display:flex;justify-content:flex-end;margin:0 0 8px}
+.fastb{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:999px;background:var(--tile);border:2px solid var(--line);color:var(--mute);font:700 12px var(--head);transition:background .2s,color .2s,border-color .2s,transform .18s}
+.fastb svg{flex:none}
+.fastb[aria-pressed=true]{background:var(--blue);border-color:#8C9BFF;color:#fff;box-shadow:0 0 14px rgba(110,130,255,.45)}
+.fastb:active{transform:scale(.94)}
