@@ -30,6 +30,15 @@ const int = (v, max) => { v = Math.round(Number(v)); return Number.isFinite(v) &
 
 export default {
   async fetch(req, env) {
+    try { return await handle(req, env); }
+    catch (e) {
+      return new Response(JSON.stringify({ error: 'server', detail: String(e && e.message || e) }), { status: 500, headers: { 'Access-Control-Allow-Origin': (env && env.ALLOWED_ORIGIN) || '*', 'Content-Type': 'application/json' } });
+    }
+  },
+};
+
+async function handle(req, env) {
+  {
     const cors = {
       'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
       'Access-Control-Allow-Headers': 'Content-Type, X-Init-Data',
@@ -68,5 +77,5 @@ export default {
       return json({ top: rows.map((r) => ({ name: r.name, v: r.v, bestn: r.bestn, lvl: r.lvl, me: r.uid === uid })), me });
     }
     return json({ error: 'not found' }, 404);
-  },
-};
+  }
+}
