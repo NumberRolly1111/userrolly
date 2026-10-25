@@ -807,4 +807,4 @@ html[data-theme=royal]{--bg:#120A1F;--paper:#201336;--tile:#32204F;--fg:#FBF0FF;
 .lrw small{color:var(--mute)}
 .lotbox{gap:12px}
 #cases{margin-top:22px}
-.bcases{margin-top:4px}
+.bcases{margin-top:34px}.bmini{margin-bottom:12px}.cscard.soon{opacity:.55;pointer-events:none}
