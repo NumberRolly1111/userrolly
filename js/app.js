@@ -1457,7 +1457,7 @@ function workList(){S.work=S.work.filter(w=>S.items.some(i=>i.id===w.id));return
 function workRate(it){return Math.max(1,Math.round(val(it.t,it.p,it.n)*WORKRATE))}
 function workAcc(w,it){return Math.floor(workRate(it)*Math.min(WORKCAP,Math.max(0,Date.now()-w.t))/3600e3)}
 function workTotal(){return workList().reduce((s,w)=>{const it=S.items.find(i=>i.id===w.id);return s+(it?workAcc(w,it):0)},0)}
-function workPlate(){const n=workList().length,t=workTotal();return `<button class="pcard achbtn" data-work="1" style="margin-bottom:12px"><div><b>Ники на работе</b><small>${n} из ${WORKMAX}${t>0?' · накоплено '+fmtC(t)+' 🪙':' · приносят монеты, пока ты не играешь'}</small></div><span class="trophy">⛏️</span></button>`}
+function workPlate(){const n=workList().length,t=workTotal();return `<div class="cshd wkhd"><b>Пассивный заработок</b></div><button class="pcard achbtn" data-work="1" style="margin-bottom:12px"><div><b>Ники на работе</b><small>${n} из ${WORKMAX}${t>0?' · накоплено '+fmtC(t)+' 🪙':' · приносят монеты, пока ты не играешь'}</small></div><span class="trophy">⛏️</span></button>`}
 function workSheet(close){
   let o=document.getElementById('worksh');
   if(close){if(o)o.remove();clearInterval(wkTm);wkPick=false;return}
