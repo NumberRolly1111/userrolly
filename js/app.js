@@ -1231,7 +1231,7 @@ async function openTop(){
   lb.load=false;if(!$('#tab-top').hidden)renderTop();
 }
 function renderTop(){
-  const d=lb.data[lb.by],net=lb.by==='net',medal=['🥇','🥈','🥉'];
+  const d=lb.data[lb.by],net=lb.by==='net';
   const val2=x=>net?fmtC(x)+' 🪙':fmtC(x)+' 🪙';
   let body;
   if(!API)body='<div class="pcard lbmsg"><b>Рейтинг пока не подключён</b><small>Нужно развернуть сервер из папки rating-worker и вписать его адрес в app.js (константа API). Подробности в README.</small></div>';
@@ -1239,9 +1239,22 @@ function renderTop(){
   else if(lb.load&&!d)body='<div class="pcard lbmsg"><small>Загружаю…</small></div>';
   else if(lb.err&&!d)body=`<div class="pcard lbmsg"><b>${escH(lb.err)}</b><button class="btn main" id="top-retry">Повторить</button></div>`;
   else if(d){
-    const me=d.me;
-    body=`<div class="pcard lbme"><small>Твоё место</small><b>${me&&me.rank?'#'+fmt(me.rank):'—'}</b><span>${val2(net?Math.round(netWorth()):S.bestv)}${!net&&S.bestn?` · ${escH(S.bestn)}`:''}</span></div>
-    <div class="lbl">`+(d.top.length?d.top.map((r,i)=>`<div class="lbr${r.me?' me':''}"><em>${medal[i]||i+1}</em><span class="rav">${frameRing((()=>{const f=String(r.me?cosKey():(r.cos||'')).split('|')[2];return cosFrame(f)?f:''})())}<b>${escH([...String(r.name||'?')][0]||'?').toUpperCase()}</b></span><div class="lbn"><b>${(()=>{const c=String(r.me?cosKey():(r.cos||'')).split('|');return nickHtml(r.name,c[0])})()}</b><small>${(()=>{const c=String(r.me?cosKey():(r.cos||'')).split('|');return c[1]&&cosTitle(c[1])?titleHtml(c[1])+' ':''})()}${net?`${r.lvl} ур.`:escH(r.bestn||'—')}</small></div><span>${val2(r.v)}</span></div>`).join(''):'<div class="pcard lbmsg"><small>Пока никого нет — стань первым!</small></div>')+'</div>';
+    const me=d.me,esc=escH;
+    const cosOf=r=>String(r.me?cosKey():(r.cos||'')).split('|');
+    const tagC=t=>['#FF5A4D','#FFB62E','#9B7BFF','#27D9BD','#5B9BFF','#FF5FA2'][[...t].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7)%6];
+    const tagH=r=>r.tag?`<em class="ctag" style="color:${tagC(r.tag)}">[${esc(r.tag)}]</em>`:'';
+    const frameOf=r=>{const f=cosOf(r)[2];return cosFrame(f)?frameRing(f):''};
+    const ini=r=>esc([...String(r.name||'?')][0]||'?').toUpperCase();
+    const nick=r=>nickHtml(r.name,cosOf(r)[0]);
+    const sub=r=>{const t=cosOf(r)[1];return net?(t&&cosTitle(t)?titleHtml(t):`<small>${r.lvl} ур.</small>`):`<small>${esc(r.bestn||'—')}</small>`};
+    const top=d.top;
+    const pod=k=>{const r=top[k-1];if(!r)return `<div class="pd p${k} empty"><div class="ped">${k}</div></div>`;
+      return `<div class="pd p${k}${r.me?' me':''}">${k===1?'<span class="crown">👑</span>':''}<div class="pava g${k}">${frameOf(r)}<b>${ini(r)}</b><i class="pbadge">${k}</i></div>
+      <div class="pn">${tagH(r)}<span class="pnk">${nick(r)}</span></div><div class="psub">${sub(r)}</div><b class="pval">${val2(r.v)}</b><div class="ped">${k}</div></div>`};
+    const rows=top.slice(3).map((r,i)=>`<div class="lrow${r.me?' me':''}"><em class="lrk">${i+4}</em>${tagH(r)}<span class="lnk">${nick(r)}</span><span class="lsub">${sub(r)}</span><b class="lval">${val2(r.v)}</b></div>`).join('');
+    const u=tgUser(),mine={name:u.first_name||'Игрок',me:true};
+    body=(top.length?`<div class="podium">${pod(2)}${pod(1)}${pod(3)}</div>`+(rows?`<div class="lbcard">${rows}</div>`:''):'<div class="pcard lbmsg"><small>Пока никого нет. Ты можешь стать первым.</small></div>')+
+    `<div class="mebar"><em>${me&&me.rank?fmt(me.rank):'—'}</em><span class="mnm">${nick(mine)}</span><span class="you">ТЫ</span><b class="lval">${val2(net?Math.round(netWorth()):S.bestv)}</b></div>`;
   }else body='';
   setHtml($('#tab-top'),`<div class="ahead"><h2>Рейтинг</h2></div>
   <button class="pcard achbtn" id="clan-open"><div><b>Кланы</b><small>Вступи в клан или создай свой</small></div><span class="trophy">🛡️</span></button>
