@@ -9,9 +9,59 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Onest:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="css/style.css?v=20261025x">
+<link rel="stylesheet" href="css/style.css?v=20261026c">
 </head>
 <body data-page="ach">
+<div id="boot" aria-hidden="true"><div class="bt-glow"></div><div class="bt-logo"><span>@</span></div>
+<div class="bt-reels" id="btr"></div><div class="bt-sub">Рулетка юзернеймов</div>
+<div class="bt-bar"><i id="btb"></i></div><div class="bt-note">Загрузка…</div></div>
+<style>
+#boot{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;background:radial-gradient(90% 45% at 50% 0,#2a2273 0,transparent 70%),#0D0B1A;color:#F2EFFF;font-family:'Unbounded',system-ui,sans-serif;transition:opacity .55s ease,transform .55s ease,filter .55s ease}
+#boot.out{opacity:0;transform:scale(1.06);filter:blur(6px);pointer-events:none}
+.bt-glow{position:absolute;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(110,90,255,.35),transparent 65%);animation:btg 2.4s ease-in-out infinite}
+.bt-logo{position:relative;width:92px;height:92px;border-radius:28px;display:grid;place-items:center;background:linear-gradient(145deg,#5B6BFF,#9B5BFF);box-shadow:0 0 0 3px #4B4399,0 14px 40px rgba(91,107,255,.5);animation:btl 1.8s cubic-bezier(.3,.9,.3,1) both,btf 3s ease-in-out 1.8s infinite}
+.bt-logo span{font:800 50px 'Unbounded',system-ui,sans-serif;color:#fff;text-shadow:0 3px 0 rgba(0,0,0,.25)}
+.bt-logo::after{content:"";position:absolute;inset:-9px;border-radius:34px;border:2px solid transparent;border-top-color:#FFC933;border-right-color:#27D9BD;animation:bts 1.3s linear infinite}
+.bt-reels{position:relative;display:flex;gap:4px;justify-content:center;flex-wrap:nowrap;max-width:100%}
+.bt-reels b{width:26px;height:38px;display:grid;place-items:center;border-radius:9px;background:#171430;border:2px solid #4B4399;font:800 17px 'Unbounded',system-ui,sans-serif;color:#9AA5DB;overflow:hidden}
+.bt-reels b.lk{color:#fff;border-color:#9B8CFF;background:#241F4A;animation:btp .35s cubic-bezier(.3,1.6,.5,1)}
+.bt-reels b.dash{width:14px;border:0;background:none}
+.bt-sub{position:relative;color:#A29CD6;font:600 13px system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase}
+.bt-bar{position:relative;width:min(240px,70vw);height:8px;border-radius:99px;background:#241F4A;border:2px solid #4B4399;overflow:hidden}
+.bt-bar i{display:block;height:100%;width:6%;border-radius:99px;background:linear-gradient(90deg,#5B6BFF,#27D9BD);transition:width .4s ease;box-shadow:0 0 12px #5B6BFF}
+.bt-note{position:relative;color:#A29CD6;font:600 12px system-ui,sans-serif;min-height:16px}
+@keyframes btl{from{transform:scale(.3) rotate(-25deg);opacity:0}60%{transform:scale(1.12) rotate(4deg);opacity:1}to{transform:none}}
+@keyframes btf{50%{transform:translateY(-6px)}}
+@keyframes bts{to{transform:rotate(360deg)}}
+@keyframes btg{50%{transform:scale(1.15);opacity:.7}}
+@keyframes btp{from{transform:scale(.6)}}
+@media (prefers-reduced-motion:reduce){#boot,#boot *{animation:none!important;transition:opacity .2s!important}.bt-logo::after{display:none}}
+</style>
+<script>
+(function(){
+  var T0=Date.now(),W='НЕЙМ-РУЛЕТКА',el=document.getElementById('btr'),bar=document.getElementById('btb'),boot=document.getElementById('boot'),seen=0,done=0;
+  try{seen=sessionStorage.getItem('nrboot')==='1'}catch(e){}
+  var MIN=seen?450:1900,rm=window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var pool='ABCDEFGHJKLMNPRSTUVWXYZ0123456789@#$%',cells=[];
+  for(var i=0;i<W.length;i++){var c=document.createElement('b');if(W[i]==='-'){c.className='dash';c.textContent='-';cells.push(null)}else{c.textContent=rm?W[i]:pool[Math.floor(Math.random()*pool.length)];if(rm)c.className='lk';cells.push(c)}el.appendChild(c)}
+  var iv=rm?0:setInterval(function(){var t=Date.now()-T0;cells.forEach(function(c,i){if(!c||c.className==='lk')return;
+    if(t>350+i*(seen?40:110)){c.textContent=W[i];c.className='lk'}else c.textContent=pool[Math.floor(Math.random()*pool.length)]})},60);
+  var pv=setInterval(function(){var p=Math.min(90,6+(Date.now()-T0)/MIN*70);bar.style.width=p+'%'},120);
+  function finish(force){
+    if(done)return;done=1;clearInterval(iv);clearInterval(pv);bar.style.width='100%';
+    var wait=force?0:Math.max(0,MIN-(Date.now()-T0));
+    setTimeout(function(){cells.forEach(function(c){if(c){c.textContent=c.textContent;}});boot.className='out';try{sessionStorage.setItem('nrboot','1')}catch(e){}setTimeout(function(){boot.remove()},650)},wait+120);
+  }
+  window.bootDone=function(force){
+    if(force)return finish(true);
+    var go=function(){finish(false)};
+    if(document.fonts&&document.fonts.ready){var to=setTimeout(go,1500);document.fonts.ready.then(function(){clearTimeout(to);go()})}else go();
+  };
+  addEventListener('error',function(){setTimeout(function(){window.bootDone(true)},300)});
+  setTimeout(function(){window.bootDone(true)},8000);   // запасной выход: загрузочный экран не должен закрыть игру навсегда
+})();
+</script>
+
 <canvas id="fx"></canvas>
 <div id="vig" aria-hidden="true"></div>
 <div class="app">
@@ -50,6 +100,6 @@
 <div class="selbar" id="selbar"><span id="selinfo"></span><button class="btn main sm" id="selsell">Продать</button></div>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="js/app.js?v=20261025x"></script>
+<script src="js/app.js?v=20261026c"></script>
 </body>
 </html>
