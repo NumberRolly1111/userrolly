@@ -891,7 +891,7 @@ function tab(n){
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 // ---------- Рейтинг игроков ----------
 // Рейтинг работает через маленький сервер (папка rating-worker). Пока адрес не указан, страница показывает подсказку.
-const API='';   // например: https://nr-rating.твой-аккаунт.workers.dev
+const API='https://rt.wsmp.workers.dev';   // например: https://nr-rating.твой-аккаунт.workers.dev
 const escH=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const netWorth=()=>S.coins+S.items.reduce((s,x)=>s+val(x.t,x.p,x.n),0);   // капитал = монеты + стоимость коллекции
 const lb={by:'net',data:{},load:false,err:'',sent:'',last:0};
