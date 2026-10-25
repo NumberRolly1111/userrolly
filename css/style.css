@@ -298,3 +298,19 @@ button,.pick,.tg{transition-property:transform,box-shadow,background,color,opaci
 .ach .qbar{margin:7px 0 3px;height:8px}
 .ach em{display:block;font:600 11px var(--head);font-style:normal;color:var(--mute)}
 .ach.on em{color:#FFC933}
+
+/* плашка мест в коллекции */
+.cpanel{background:var(--paper);border:var(--bw) solid var(--line);border-radius:18px;padding:14px 16px;box-shadow:4px 4px 0 var(--sh);margin-bottom:16px}
+.ctop{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.ctop b{font:800 24px var(--head)}
+.ctop span{font:700 15px var(--head);color:var(--mute)}
+.ctop small{display:block;color:var(--mute);font-size:12px;margin-top:2px}
+.ctop .r{text-align:right}
+.ctop .r b{font-size:20px}
+.cbar{height:8px;border-radius:999px;background:var(--tile);margin:12px 0;overflow:hidden}
+.cbar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#27D96B,#7CF29B);transition:width .5s}
+.cwide{display:block;width:100%;margin-top:8px;text-align:center}
+.cwide:disabled{opacity:.5}
+.crow{display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:12px;padding:12px 2px 0;border-top:1.5px solid var(--line);background:none;color:var(--fg);font:inherit;font-size:14px;cursor:pointer}
+.crow span{color:var(--mute)}
+.crow b{font-weight:700}
