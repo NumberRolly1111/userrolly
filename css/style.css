@@ -682,3 +682,22 @@ button.slot:active{transform:scale(.97)}
 .pbi img{width:100%;height:100%;object-fit:cover;display:block}
 .pbi b{font:800 17px var(--head);color:#fff}
 .pbl{position:absolute;right:-3px;bottom:-3px;min-width:19px;height:19px;padding:0 4px;border-radius:10px;background:#fff;color:#0d0a1f;border:2px solid #0d0a1f;font:800 11px/15px var(--head);text-align:center;box-sizing:border-box}
+
+/* Косметика: стили ника и титулы */
+.nk{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+.nk-silver,.nk-gold,.nk-emerald,.nk-diamond{-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;background-size:220% 100%;animation:nkshine 3.4s linear infinite}
+.nk-silver{background-image:linear-gradient(100deg,#8E99B5 0%,#F4F7FF 30%,#8E99B5 55%,#DDE4F6 80%,#8E99B5 100%)}
+.nk-gold{background-image:linear-gradient(100deg,#B7791F 0%,#FFE08A 30%,#E0A526 55%,#FFF1B8 80%,#B7791F 100%);filter:drop-shadow(0 0 6px rgba(255,201,51,.35))}
+.nk-emerald{background-image:linear-gradient(100deg,#0F8F4B 0%,#7DFFB4 30%,#1FCB6E 55%,#B9FFD6 80%,#0F8F4B 100%);filter:drop-shadow(0 0 6px rgba(39,217,107,.4))}
+.nk-diamond{background-image:linear-gradient(100deg,#4FB4FF 0%,#E8FBFF 25%,#9BE9FF 45%,#FFFFFF 60%,#7FD6FF 80%,#4FB4FF 100%);filter:drop-shadow(0 0 8px rgba(127,231,255,.6));animation-duration:2.2s}
+@keyframes nkshine{to{background-position:-220% 0}}
+.ttl{display:inline-block;padding:2px 8px;border-radius:999px;font:800 10.5px/1.3 var(--head);color:var(--tc);border:1.5px solid var(--tc);background:color-mix(in srgb,var(--tc) 14%,transparent);letter-spacing:.2px;white-space:nowrap}
+.ttlrow{display:block}
+.cprevbig{text-align:center;padding:14px 8px;border-radius:16px;background:var(--tile);font:800 22px var(--head)}
+.cprevbig div{margin-top:8px}
+.chd{margin:6px 0 0;font:800 13px var(--head);color:var(--mute)}
+.crow2{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--tile);border:2px solid transparent}
+.crow2.on{border-color:#27D96B}
+.cprev{font:800 15px var(--head);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cinfo{min-width:0}.cinfo b{display:block;font-size:13px}.cinfo small{color:var(--mute);font-size:12px}
+.lbmsg.warn{border-color:#FF7A7A}
