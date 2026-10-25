@@ -570,3 +570,4 @@ button.slot:active{transform:scale(.97)}
 .dnc{fill:var(--wc)}
 .dctr b{font:800 38px var(--head);letter-spacing:-.02em;text-shadow:0 0 22px var(--wc)}
 .dctr small{letter-spacing:.14em;text-transform:uppercase;font-size:11px;font-weight:700}
+.invx{gap:10px;flex-wrap:wrap}.invx small{line-height:1.35}.invb{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
