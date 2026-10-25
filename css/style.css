@@ -264,13 +264,29 @@ button,.pick,.tg{transition-property:transform,box-shadow,background,color,opaci
 .at.myt{animation-delay:.15s}
 @keyframes mytIn{0%{opacity:0;transform:scale(1.7);filter:blur(7px)}55%{opacity:1;filter:blur(1px);box-shadow:0 0 28px 4px rgba(255,75,62,.7)}100%{opacity:1;transform:none;filter:none}}
 /* достижения */
-.agrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
-.ach{display:flex;gap:8px;align-items:flex-start;padding:9px 10px;background:var(--tile);border:2px solid var(--line);border-radius:12px;opacity:.5;filter:grayscale(.8)}
-.ach.on{opacity:1;filter:none;border-color:#FFC933}
-.ach .ai{font-size:20px;line-height:1.1}
-.ach b{display:block;font:700 12px var(--head);line-height:1.25}
-.ach small{display:block;font-size:11px;color:var(--mute);margin-top:2px;line-height:1.25}
-.ach em{display:block;font:600 11px var(--head);font-style:normal;color:#FFC933;margin-top:3px}
-
-/* переключение между тремя никами: без тряски, блика и глитча */
-.rrow.calm,.rrow.calm::before,.rrow.calm .reel,.rrow.calm .cell,.rrow.calm .badge{animation:none!important}
+.achbtn{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;color:var(--fg);cursor:pointer;font:inherit}
+.achbtn b{display:block;font:800 15px var(--head)}
+.achbtn small{display:block;color:var(--mute);font-size:12px;margin-top:2px}
+.mini{--p:0;flex:none;width:44px;height:44px;border-radius:50%;background:conic-gradient(#FFC933 calc(var(--p)*1%),var(--tile) 0);display:grid;place-items:center}
+.mini i{width:34px;height:34px;border-radius:50%;background:var(--paper);display:grid;place-items:center;font:800 13px var(--head);font-style:normal}
+.ahead{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.ahead h2{margin:0}
+.ring{position:relative;width:170px;height:170px;margin:6px auto 18px}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:10}
+.ring .rb{stroke:var(--tile)}
+.ring .rf{stroke:#FFC933;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1)}
+.ring>div{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring b{font:800 28px var(--head)}
+.ring small{color:var(--mute);font-size:12px}
+.alist{display:flex;flex-direction:column;gap:10px}
+.ach{display:flex;gap:12px;align-items:center;padding:12px 14px;background:var(--paper);border:2px solid var(--line);border-radius:16px;opacity:.6}
+.ach.on{opacity:1;border-color:#FFC933;box-shadow:3px 3px 0 var(--sh)}
+.ach .ai{flex:none;width:44px;height:44px;border-radius:12px;background:var(--tile);display:grid;place-items:center;font-size:22px;filter:grayscale(1)}
+.ach.on .ai{filter:none;background:#3a2f12}
+.ach .at2{flex:1;min-width:0}
+.ach b{display:block;font:700 14px var(--head);line-height:1.25}
+.ach small{display:block;font-size:12px;color:var(--mute);margin-top:2px;line-height:1.3}
+.ach .qbar{margin:7px 0 3px;height:8px}
+.ach em{display:block;font:600 11px var(--head);font-style:normal;color:var(--mute)}
+.ach.on em{color:#FFC933}
