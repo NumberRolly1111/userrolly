@@ -737,10 +737,17 @@ function pickPrize(s){
 // ----- циферблат шанса -----
 const DR=82,DC=2*Math.PI*DR;
 function dialSvg(){
-  let tk='';for(let i=0;i<60;i++)tk+=`<line x1="100" y1="36" x2="100" y2="${i%5?39:43}" transform="rotate(${i*6} 100 100)"/>`;
+  let tk='';for(let i=0;i<60;i++){const M=i%5===0;tk+=`<line class="${M?'tm':''}" x1="100" y1="${M?37:39}" x2="100" y2="${M?45:42}" transform="rotate(${i*6} 100 100)"/>`}
   // круг неподвижен: дуга успеха идёт от верха (0°) по часовой стрелке; вокруг него вращается стрелка
-  return `<svg viewBox="0 0 200 200" aria-hidden="true"><circle class="dtr" cx="100" cy="100" r="${DR}"/><circle class="dwin" id="dwin" cx="100" cy="100" r="${DR}" transform="rotate(-90 100 100)" stroke-dasharray="0 ${DC}"/>
-    <g class="dtk">${tk}</g><g id="dneedle" style="transform-origin:50% 50%;transform:rotate(${up.rot}deg)"><path class="dptr" d="M91 0H109L100 17Z"/><line class="dnl" x1="100" y1="17" x2="100" y2="26"/></g></svg>`;
+  return `<svg viewBox="0 0 200 200" aria-hidden="true"><defs>
+    <radialGradient id="dgd" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#2a2561"/><stop offset="1" stop-color="#14112b"/></radialGradient>
+    <linearGradient id="dnl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+    <circle class="dbez" cx="100" cy="100" r="97"/>
+    <circle class="ddisk" cx="100" cy="100" r="68" fill="url(#dgd)"/>
+    <circle class="dtr" cx="100" cy="100" r="${DR}"/>
+    <circle class="dwin" id="dwin" cx="100" cy="100" r="${DR}" transform="rotate(-90 100 100)" stroke-dasharray="0 ${DC}"/>
+    <g class="dtk">${tk}</g>
+    <g id="dneedle" style="transform-origin:50% 50%;transform:rotate(${up.rot}deg)"><rect x="98.6" y="22" width="2.8" height="40" rx="1.4" fill="url(#dnl)"/><circle class="dnb" cx="100" cy="18" r="9"/><circle class="dnc" cx="100" cy="18" r="3.6"/></g></svg>`;
 }
 let pctRaf=0;
 function tweenPct(to){
@@ -783,6 +790,7 @@ function fillUp(){
   document.querySelectorAll('#mults [data-m]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.m===String(up.mode))));
   $('#cust').hidden=up.mode!=='c';
   // циферблат
+  if(!ok&&!up.busy&&up.rot){const nd=$('#dneedle');if(nd){nd.style.transition=reduce?'none':'transform .9s cubic-bezier(.3,.9,.3,1)';nd.style.transform='rotate(0deg)'}up.rot=0}
   const w=$('#dwin');w.style.stroke=col;w.setAttribute('stroke-dasharray',`${DC*ch} ${DC}`);$('#dial').style.setProperty('--wc',col);
   tweenPct(ok?Math.round(ch*100):null);
   if(ok&&up.mode==='c'){const v=Math.round(ch*100);$('#upcv').textContent=up.c+'%';if(v!==up.c)$('#upcv').textContent=up.c+'% → '+v+'%'}
