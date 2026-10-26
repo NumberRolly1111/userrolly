@@ -14,9 +14,7 @@ function safeTop(){
 if(tg){tg.ready();tg.expand();safeTop();['safeAreaChanged','contentSafeAreaChanged','fullscreenChanged','viewportChanged'].forEach(ev=>{try{tg.onEvent(ev,safeTop)}catch(e){}});try{tg.setHeaderColor('#0D0B1A');tg.setBackgroundColor('#0D0B1A')}catch(e){}}
 const hap=(k,v)=>{try{tg&&tg.HapticFeedback&&(k==='n'?tg.HapticFeedback.notificationOccurred(v):tg.HapticFeedback.impactOccurred(v))}catch(e){}};
 const T=[{n:'Обычный',c:'#9AA5DB',v:390},{n:'Необычный',c:'#27D9BD',v:1470},{n:'Редкий',c:'#9B7BFF',v:4800},{n:'Эпический',c:'#FF5FA2',v:17700},{n:'Легендарный',c:'#FFC933',v:72000},{n:'Мифический',c:'#FF4B3E',v:378000},{n:'Секретный',c:'#EAF1FF',v:1000000},{n:'Эксклюзивный',c:'#B455FF',v:25000000}]
-const BDG=[['crown','👑','Корона',10000000],['dragon','🐉','Дракон',7500000],['unicorn','🦄','Единорог',5000000],['liberty','🗽','Статуя',4000000],['slot','🎰','Джекпот',3000000],['fire','🔥','Огонь',2000000],['rose','🌹','Роза',1500000],['coin','🪙','Монета',1000000],['moai','🗿','Моаи',1000000]],BDGM=5,TOPP=500000,MULTIP=300000,MULTIN=5;
-const bdgOf=id=>BDG.find(b=>b[0]===id);
-const bdgH=str=>{const a=String(str||'').split(',').filter(x=>bdgOf(x)).slice(0,BDGM);return a.length?`<span class="bdgs">${a.map(x=>bdgOf(x)[1]).join('')}</span>`:''};
+const BDGP={crown:10000000,dragon:7500000,unicorn:5000000,liberty:4000000,slot:3000000,fire:2000000,rose:1500000,coin:1000000,moai:1000000},TOPP=500000,MULTIP=300000,MULTIN=5;
 T.forEach((t,i)=>t.s=['Обычн.','Необыч.','Редкий','Эпик','Легенд.','Миф.','Секрет','Эксклюз.'][i]);;
 const MODES=[{l:'Любой',min:0,cost:3000},{l:'Редкий+',min:2,cost:10500},{l:'Эпик+',min:3,cost:30000}];
 const WORDS=['storm','night','wolf9','cyber','pixel','ghost','nova7','lunar','ember','frost','raven','blaze','orbit','pulse','zenith','vortex','shadow','dragon','falcon','comet','atlas','magic','royal','alpha','omega','delta','sigma','ninja','panda','tiger','cobalt','cipher','quartz','rocket','silent','golden','crystal','phoenix','nexus','vector','matrix','legend','hunter','pirate','wizard','spirit','shiver','velvet','copper','jungle','sunset','thunder','galaxy','planet','meteor','aurora','eclipse','horizon','cosmos','stellar','nebula','quasar','photon','plasma','neutron','proton','carbon','silver','bronze','marble','granite','onyx','amber','jade','ruby','sapphire','opal','ivory','ebony','crimson','scarlet','violet','indigo','azure','emerald','cinder','smoke','steel','iron','titan','giant','knight','archer','viking','samurai','shogun','ronin','sensei','monk','sage','oracle','druid','shaman','rogue','bandit','outlaw','rebel','phantom','specter','wraith','demon','angel','mystic','arcane','cosmic','atomic','turbo','hyper','super','rapid','swift','stealth','blizzard','glacier','tundra','desert','canyon','island','ocean','river','forest','meadow','garden','harbor','castle','temple','tower','bridge','anchor','compass','lantern','candle','mirror','puzzle','riddle','secret','myth','fable','story','poem','melody','rhythm','echo','whisper','thunder','lightning','tornado','cyclone','volcano','crater','spark','flame','inferno','magma','cobra','viper','python','raptor','condor','eagle','hawk','owl','lynx','puma','jaguar','leopard','cheetah','panther','wolfpack','badger','otter','beaver','bison','moose','walrus','penguin','dolphin','octopus','kraken','hydra','griffin','pegasus','unicorn','goblin','ogre','troll','golem','zombie','vampire','captain','sailor','pilot','shuttle','module','sensor','signal','binary','kernel','socket','packet','buffer','cache','proxy','server','client','script','coder','hacker','gamer','streamer','player','winner','champion','master','expert','genius','sorcerer','alchemy','potion','gemstone','diamond','pearl','coral','reef','wave','tide','breeze','zephyr','mistral','monsoon'].filter(w=>/^[a-z]{5,}$/.test(w));
@@ -275,7 +273,8 @@ function fixState(){
   S.show=Array.isArray(S.show)?[...new Set(S.show.filter(n=>n===0||n===1||n===2))]:[];
   S.cnt=Array.isArray(S.cnt)?Array.from({length:8},(_,i)=>Math.max(0,+S.cnt[i]||0)):[0,0,0,0,0,0,0,0];
   if(!S.exc||typeof S.exc!=='object')S.exc={};
-  S.bdg=(Array.isArray(S.bdg)?S.bdg:[]).filter((x,i,a)=>bdgOf(x)&&a.indexOf(x)===i).slice(0,BDGM);S.wheelx=Math.max(0,Math.floor(+S.wheelx)||0);S.toppick=S.toppick?1:0;
+  if(Array.isArray(S.bdg)&&S.bdg.length){S.bdg.filter((x,i,a)=>BDGP[x]&&a.indexOf(x)===i).forEach(x=>{S.coins=Math.min(CAP,S.coins+BDGP[x])})}delete S.bdg;   // значки убраны из игры: покупки возвращаются монетами
+  S.wheelx=Math.max(0,Math.floor(+S.wheelx)||0);S.toppick=S.toppick?1:0;
   if(!S.tday||typeof S.tday!=='object')S.tday={d:'',s:0};
   if(!S.login||typeof S.login!=='object')S.login={n:0,last:''};
   S.login.n=+S.login.n||0;S.login.last=typeof S.login.last==='string'?S.login.last:'';
@@ -750,7 +749,7 @@ function renderHelp(){
 }
 function showPlate(){
   const r=showReady(),d=S.show.length;
-  return `<button class="pcard achbtn" id="show-open" style="margin-bottom:16px"><div><b>Витрины</b><small>Собрано ${d} из ${SHOW.length}${r?` · наград к получению: ${r}`:''}</small></div><span class="mini" style="--p:${d/SHOW.length*100}"><i>${d}</i></span></button>`+`<button class="pcard achbtn" id="market-open" style="margin-bottom:16px"><div><b>Рынок игроков</b><small>Покупай и продавай ники за монеты</small></div><span class="trophy">🛒</span></button>`+`<button class="pcard achbtn" id="shop-open" style="margin-bottom:16px"><div><b>Магазин</b><small>Значки, услуги и эксклюзивный @ceo</small></div><span class="trophy">🏷️</span></button>`+`<button class="pcard achbtn" id="museum-open" style="margin-bottom:16px"><div><b>Музей</b><small>Навсегда поставь ник на витрину славы</small></div><span class="trophy">🏛️</span></button>`+`<button class="pcard achbtn" data-craft="1" style="margin-bottom:16px"><div><b>Крафт</b><small>Три любых ника → один новый, шансы зависят от выбранных</small></div><span class="trophy">⚗️</span></button>`;
+  return `<button class="pcard achbtn" id="show-open" style="margin-bottom:16px"><div><b>Витрины</b><small>Собрано ${d} из ${SHOW.length}${r?` · наград к получению: ${r}`:''}</small></div><span class="mini" style="--p:${d/SHOW.length*100}"><i>${d}</i></span></button>`+`<button class="pcard achbtn" id="market-open" style="margin-bottom:16px"><div><b>Рынок игроков</b><small>Покупай и продавай ники за монеты</small></div><span class="trophy">🛒</span></button>`+`<button class="pcard achbtn" id="shop-open" style="margin-bottom:16px"><div><b>Магазин</b><small>Услуги и эксклюзивный @ceo</small></div><span class="trophy">🏷️</span></button>`+`<button class="pcard achbtn" id="museum-open" style="margin-bottom:16px"><div><b>Музей</b><small>Навсегда поставь ник на витрину славы</small></div><span class="trophy">🏛️</span></button>`+`<button class="pcard achbtn" data-craft="1" style="margin-bottom:16px"><div><b>Крафт</b><small>Три любых ника → один новый, шансы зависят от выбранных</small></div><span class="trophy">⚗️</span></button>`;
 }
 function renderShow(){
   setHtml($('#tab-show'),`<div class="ahead"><button class="btn sm" id="show-back">‹ Помощь</button><h2>Витрины</h2></div><p class="sum">Собери набор из ников коллекции и забери награду. Ники не тратятся, награда выдаётся один раз.</p>`+showHtml());
@@ -1115,7 +1114,7 @@ const cosNick=id=>NSTY.find(x=>x.id===id),cosTitle=id=>TTL.find(x=>x.id===id),co
 const cosOwn=id=>S.cown.includes(id);
 const nickHtml=(name,id)=>`<span class="nk${cosNick(id)?' nk-'+id:''}">${escH(name)}</span>`;
 const titleHtml=id=>{const t=cosTitle(id);return t?`<span class="ttl" style="--tc:${t.c}">${t.n}</span>`:''};
-const cosKey=()=>(cosOwn(S.cn)&&cosNick(S.cn)?S.cn:'')+'|'+(cosOwn(S.ct)&&cosTitle(S.ct)?S.ct:'')+'|'+(cosOwn(S.cf)&&cosFrame(S.cf)?S.cf:'')+'|'+(S.bdg||[]).join(',');
+const cosKey=()=>(cosOwn(S.cn)&&cosNick(S.cn)?S.cn:'')+'|'+(cosOwn(S.ct)&&cosTitle(S.ct)?S.ct:'')+'|'+(cosOwn(S.cf)&&cosFrame(S.cf)?S.cf:'');
 S.cown=S.cown.filter(x=>cosNick(x)||cosTitle(x)||cosFrame(x));if(S.cn&&!cosOwn(S.cn))S.cn='';if(S.ct&&!cosOwn(S.ct))S.ct='';if(S.cf&&!cosOwn(S.cf))S.cf='';
 try{avaKey='';updAva()}catch(e){}
 function cosSheet(){
@@ -1160,12 +1159,6 @@ function albumCard(){
   <div class="algrid">${DEXS.map((x,i)=>{const ok=n>=x[0],cl=got.includes(i),w=Math.min(100,n/x[0]*100);return `<div class="alm${cl?' cl':ok?' ok':''}${i===nxt?' nx':''}"><b>${fmt(x[0])}</b><span class="alr">${short(x[1])} 🪙</span><div class="alb"><i style="width:${w}%"></i></div><em>${cl?'✓ получено':ok?'можно забрать':'ещё '+fmt(x[0]-n)}</em></div>`}).join('')}</div>
   ${ready.length?`<button class="btn main cwide" id="dex-claim">Забрать награды · +${fmt(ready.reduce((a,i)=>a+DEXS[i][1],0))} 🪙</button>`:''}</div>`}
 function dexClaim(){dexSeed();const n=dexCount();if(!Array.isArray(S.dexg))S.dexg=[];let sum=0;DEXS.forEach((x,i)=>{if(n>=x[0]&&!S.dexg.includes(i)){S.dexg.push(i);sum+=x[1]}});if(!sum)return;S.coins=Math.min(CAP,S.coins+sum);save();render();sfx('coins');toast('📖 Альбом: +'+fmt(sum)+' 🪙');renderProf()}
-const askOk=(m,cb)=>{try{if(tg&&tg.showConfirm)return tg.showConfirm(m,ok=>{if(ok)cb()})}catch(e){}if(confirm(m))cb()};
-function bslots(){
-  const a=S.bdg||[];let h='';
-  for(let i=0;i<BDGM;i++){const b=a[i]&&bdgOf(a[i]);h+=b?`<button class="bslot on" data-bdel="${b[0]}" title="${b[2]}" aria-label="Убрать значок ${b[2]}">${b[1]}</button>`:`<button class="bslot" data-bgo="1" aria-label="Купить значок">＋</button>`}
-  return `<div class="bsl"><small>Значки ${a.length}/${BDGM}</small><div>${h}</div></div>`;
-}
 function renderProf(){
   if(typeof refPoll==='function'&&!renderProf.t){renderProf.t=1;setTimeout(()=>{renderProf.t=0;refPoll()},0)}
   const u=tgUser(),name=u.first_name||'Игрок',need=xpNeed(S.lvl),pct=S.xp/need*100,rk=rankOf(S.lvl),nx=RANKS.find(x=>x[0]>S.lvl),nr=lvReward(S.lvl+1);
@@ -1173,8 +1166,7 @@ function renderProf(){
   const doneV=S.show.length;
   $('#tab-prof').innerHTML=`<h2 class="ptitle">Профиль</h2>
   <div class="pcard pro"><div class="ptop"><div class="av" style="--p:${pct}">${frameRing(frameId())}<span class="avi">${av}<b>${name.slice(0,1).toUpperCase()}</b></span><em class="lvb">${S.lvl}</em></div>
-    <div class="pnm"><b class="pname">${nickHtml(name,cosOwn(S.cn)?S.cn:'')}${bdgH((S.bdg||[]).join(','))}</b>${cosOwn(S.ct)?`<span class="ttlrow">${titleHtml(S.ct)}</span>`:''}<span class="rank" style="--rc:${rk[2]}">🛡 ${rk[1]}</span>${nx?`<small>до «${nx[1]}»: ${nx[0]} ур.</small>`:'<small>Высший ранг</small>'}</div></div>
-  ${bslots()}
+    <div class="pnm"><b class="pname">${nickHtml(name,cosOwn(S.cn)?S.cn:'')}</b>${cosOwn(S.ct)?`<span class="ttlrow">${titleHtml(S.ct)}</span>`:''}<span class="rank" style="--rc:${rk[2]}">🛡 ${rk[1]}</span>${nx?`<small>до «${nx[1]}»: ${nx[0]} ур.</small>`:'<small>Высший ранг</small>'}</div></div>
   <div class="pid idc"><span class="idtag">ID</span><b>${idStr()}</b><button id="idcopy" aria-label="Скопировать ID">⧉</button></div>
   <div class="lvrow"><b>Уровень ${S.lvl}</b><small>${fmt(S.xp)} / ${fmt(need)} опыта</small></div>
   <div class="xbar"><i style="width:${pct}%"></i></div>
@@ -1185,7 +1177,7 @@ function renderProf(){
     <button class="ptile" id="clan-open"><span class="pti">🛡️</span><b>Кланы</b><small>${cl.me&&cl.me.clan?escH('['+(cl.me.clan.tag||'')+'] '+(cl.me.clan.name||'')):'Вступи или создай'}</small></button>
     <button class="ptile" id="ach-open"><span class="pti">🎖️</span><b>Достижения</b><small>${ACH.filter(achOk).length} из ${ACH.length}${achReady().length?' · наград: '+achReady().length:''}</small><span class="ptbar"><i style="width:${ACH.filter(achOk).length/ACH.length*100}%"></i></span></button>
     <button class="ptile" id="cos-open"><span class="pti">✨</span><b>Косметика</b><small>куплено ${S.cown.length} из ${NSTY.length+TTL.length+FRM.length}</small></button>
-    <button class="ptile" data-shopgo="1"><span class="pti">🏷️</span><div><b>Магазин</b><small>Значки и эксклюзив</small></div></button>
+    <button class="ptile" data-shopgo="1"><span class="pti">🏷️</span><div><b>Магазин</b><small>Услуги и эксклюзив</small></div></button>
     <button class="ptile wide" data-craft="1"><span class="pti">⚗️</span><div><b>Крафт</b><small>Три любых ника → один новый, шансы зависят от выбранных</small></div></button>
   </div>
   <div class="pcard inv invx"><div><b>Позвать друзей</b><small>За каждого друга: +${fmt(REF_C)} 🪙 и +${REF_E} ⚡ · приглашено ${S.refc} из ${REF_MAX}</small></div><div class="invb">${lb.refn>0?`<button class="btn main" id="ref-claim">Забрать +${fmt(lb.refn*REF_C)} 🪙</button>`:''}<button class="btn${lb.refn>0?'':' main'}" id="invite">Позвать</button></div></div>
@@ -1216,8 +1208,6 @@ $('#tab-prof').onclick=e=>{
   if(e.target.closest('#cos-open'))return cosSheet();
   {const th=e.target.closest('[data-theme]');if(th){S.theme=th.dataset.theme;applyTheme();save();renderProf();return}}
   if(e.target.closest('#snd-tg')){S.snd=!S.snd;save();renderProf();if(S.snd){sfx('ach')}return}
-  {const bd=e.target.closest('[data-bdel]');if(bd){const b=bdgOf(bd.dataset.bdel);if(b)askOk(`Убрать значок ${b[1]} «${b[2]}»? Он пропадёт навсегда, вернуть можно только новой покупкой за ${fmt(b[3])} 🪙.`,()=>{S.bdg=S.bdg.filter(x=>x!==b[0]);save();renderProf();lb.sent='';lbPush();toast('Значок убран')});return}}
-  if(e.target.closest('[data-bgo]'))return tab('shop');
   if(e.target.closest('#idcopy')){(async()=>{try{await navigator.clipboard.writeText(String(S.uid).padStart(6,'0'));toast('ID скопирован')}catch(x){toast('Не удалось скопировать ID')}})();return}
   if(e.target.closest('#ref-claim'))return claimRefs();
   if(e.target.id!=='invite')return;
@@ -1314,7 +1304,7 @@ function renderTop(){
     const tagH=r=>r.tag?`<em class="ctag" style="color:${tagC(r.tag)}">[${esc(r.tag)}]</em>`:'';
     const frameOf=r=>{const f=cosOf(r)[2];return cosFrame(f)?frameRing(f):''};
     const ini=r=>esc([...String(r.name||'?')][0]||'?').toUpperCase();
-    const nick=r=>nickHtml(r.name,cosOf(r)[0])+bdgH(cosOf(r)[3]);
+    const nick=r=>nickHtml(r.name,cosOf(r)[0]);
     const sub=r=>{const t=cosOf(r)[1];return net?(t&&cosTitle(t)?titleHtml(t):`<small>${r.lvl} ур.</small>`):`<small>${esc(r.bestn||'—')}</small>`};
     const top=d.top;
     const pod=k=>{const r=top[k-1];if(!r)return `<div class="pd p${k} empty"><div class="ped">${k}</div></div>`;
@@ -1597,7 +1587,7 @@ function plDraw(){
     const ttl=cs3[1]&&cosTitle(cs3[1])?`<span class="ttlrow">${titleHtml(cs3[1])}</span>`:'';
     const fr=cs3[2]&&cosFrame(cs3[2])?frameRing(cs3[2]):'';
     b=`<div class="plhd"><div class="av">${fr}<span class="avi"><b>${eh([...String(d.name||'?')][0]||'?').toUpperCase()}</b></span><em class="lvb">${d.lvl||1}</em></div>
-    <div class="pnm"><b class="pname">${d.tag?`<em class="ctag">[${eh(d.tag)}]</em> `:''}${nickHtml(d.name,cs3[0])}${bdgH(cs3[3])}</b>${ttl}<span class="rank" style="--rc:${rk[2]}">🛡 ${rk[1]}</span></div></div>
+    <div class="pnm"><b class="pname">${d.tag?`<em class="ctag">[${eh(d.tag)}]</em> `:''}${nickHtml(d.name,cs3[0])}</b>${ttl}<span class="rank" style="--rc:${rk[2]}">🛡 ${rk[1]}</span></div></div>
     <div class="pgrid"><div class="pt"><small>Место в рейтинге</small><b>#${d.rank}</b></div><div class="pt"><small>Капитал</small><b>${fmtC(d.net)} 🪙</b></div>
     <div class="pt"><small>Уровень</small><b>${d.lvl||1}</b></div><div class="pt"><small>Клан</small><b>${d.cname?eh(d.cname):'—'}</b></div></div>
     <div class="pcard" style="margin:10px 0 0"><small class="cap2">Самый дорогой ник</small>${bn?`<div class="muprev">${plate(d.bestn,bn.t)}<span>${fmtC(d.best)} 🪙</span></div>`:'<p class="sum">—</p>'}</div>`;
@@ -2276,7 +2266,7 @@ $('#bon-btn').onclick=()=>tab($('#tab-bon').hidden?'bon':'game');
 // Аукцион хранит сервер (rating-worker). Ставка списывается сразу, при перебитии возвращается; победитель и продавец получают своё автоматически.
 const shEl=()=>$('#tab-'+(PAGE==='auction'?'auction':'shop')),AUCP=PAGE==='auction';
 const sh={tab:AUCP?'auc':'ex',lots:null,my:null,hist:null,ex:null,off:0,lot:null,sort:'end',q:'',sheet:false,sel:'',price:'',hours:24,bid:'',busy:false,err:'',load:false,fin:0};
-const SHE={sync:'Подожди пару секунд: профиль ещё не отправлен на сервер',gone:'Аукцион уже закончился или лот снят',own:'Это твой лот',lead:'Твоя ставка и так лидирует',low:'Ставка ниже минимальной',changed:'Ставка изменилась, попробуй ещё раз',poor:'Не хватает монет (по данным сервера)',sold:'Этот ник уже купили',toomany:'Не больше 5 лотов одновременно',price:'Цена от 10 🪙',flag:'Данные не прошли проверку'};
+const SHE={have:'Этот ник у тебя уже есть',sync:'Подожди пару секунд: профиль ещё не отправлен на сервер',gone:'Аукцион уже закончился или лот снят',own:'Это твой лот',lead:'Твоя ставка и так лидирует',low:'Ставка ниже минимальной',changed:'Ставка изменилась, попробуй ещё раз',poor:'Не хватает монет (по данным сервера)',sold:'Этот ник уже купили',toomany:'Не больше 5 лотов одновременно',price:'Цена от 10 🪙',flag:'Данные не прошли проверку'};
 const sherr=e=>{const m=String(e&&e.message||e).replace(/^e:/,'');return SHE[m]||merr(e)};
 const shNow=()=>Date.now()+sh.off;
 const shLeft=end=>{const s=Math.max(0,Math.floor((end-shNow())/1000)),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),c=s%60,z=x=>String(x).padStart(2,'0');return d?`${d} д ${h} ч`:h?`${h}:${z(m)}:${z(c)}`:`${z(m)}:${z(c)}`};
@@ -2352,19 +2342,16 @@ function renderShop(){
   else if(sh.err&&!sh.lots)body=`<div class="pcard lbmsg"><b>${escH(sh.err)}</b><button class="btn main" id="sh-retry">Повторить</button></div>`;
   else if(lot){el.innerHTML=shDetail(lot)+shSheet();return shAfter(keepBid,keepQ)}
   else if(sh.tab==='ex'){
-    const c=(sh.ex&&sh.ex.ceo)||{price:25000000,sold:0,mine:0},own=c.mine||S.exc.ceo,canb=!c.sold&&S.coins>=c.price,full=(S.bdg||[]).length>=BDGM;
+    const c=(sh.ex&&sh.ex.ceo)||{price:25000000,total:3,sold:0,left:3,mine:0},own=c.mine||S.exc.ceo,canb=c.left>0&&S.coins>=c.price;
     const svc=(ic,t,d,pr,id,ok,lab)=>`<div class="pcard svc"><span class="svi">${ic}</span><div><b>${t}</b><small>${d}</small></div><button class="btn main sm" id="${id}"${ok?'':' disabled'}>${lab}<br><small>${fmt(pr)} 🪙</small></button></div>`;
     body=`<h3 class="ch3">Услуги</h3>`+
     svc('🔝','Лот в топ','Твой лот станет первым на рынке на 24 часа',TOPP,'sh-top',S.coins>=TOPP,S.coins>=TOPP?'Купить':'Мало 🪙')+
     svc('🎡',`Мульти-крутка ×${MULTIN}`,`${MULTIN} раз прокрутить ежедневное колесо${S.wheelx?` · сейчас осталось ${S.wheelx}`:''}`,MULTIP,'sh-multi',S.coins>=MULTIP,S.coins>=MULTIP?'Купить':'Мало 🪙')+
-    `<h3 class="ch3">Значки <small>${(S.bdg||[]).length} из ${BDGM} мест в профиле</small></h3>
-    <div class="bgrid">${BDG.map(b=>{const has=(S.bdg||[]).includes(b[0]),can=!has&&!full&&S.coins>=b[3];return `<button class="bcard${has?' has':''}" data-bbuy="${b[0]}"${has||!can?' disabled':''}><span class="bem">${b[1]}</span><b>${b[2]}</b><small>${has?'Куплен':full?'Нет места':fmt(b[3])+' 🪙'}</small></button>`}).join('')}</div>
-    <small class="sum">Значки клеятся в профиль (до ${BDGM}) и видны в рейтинге. Если убрать значок, он пропадёт навсегда.</small>
-    <h3 class="ch3">Эксклюзив</h3>
-    <div class="pcard excard"><div class="exlab">ЭКСКЛЮЗИВ · ТОЛЬКО 1 НА ВЕСЬ СЕРВЕР</div><div class="aubig">${plate('ceo',7)}</div><div class="aunm">@ceo</div>
-    <small class="ausub">Фиолетовый эксклюзивный ник. Редкость выше секретных. Купить может только один игрок, потом его можно продать на рынке или аукционе.</small>
-    <div class="exprice">${fmt(c.price)} 🪙</div>
-    <button class="btn main cwide" id="sh-buyex"${own||!canb?' disabled':''}>${own?'Он у тебя':c.sold?'Уже куплен':canb?'Купить':`Не хватает ${fmt(c.price-S.coins)} 🪙`}</button></div>`;
+    `<h3 class="ch3">Эксклюзив</h3>
+    <div class="pcard excard"><div class="exlab">ЭКСКЛЮЗИВ · ТОЛЬКО 3 НА ВЕСЬ СЕРВЕР</div><div class="aubig">${plate('ceo',7)}</div><div class="aunm">@ceo</div>
+    <small class="ausub">Фиолетовый эксклюзивный ник. Редкость выше секретных. Всего 3 экземпляра на весь сервер, по одному на игрока. Потом его можно продать на рынке или аукционе.</small>
+    <div class="exprice">${fmt(c.price)} 🪙</div><small class="ausub">Осталось ${c.left} из ${c.total}</small>
+    <button class="btn main cwide" id="sh-buyex"${own||!canb?' disabled':''}>${own?'Он у тебя':c.left<1?'Все раскуплены':canb?'Купить':`Не хватает ${fmt(c.price-S.coins)} 🪙`}</button></div>`;
   }
   else if(sh.tab==='auc'){
     body=`<input class="csearch" id="sh-q" type="search" placeholder="Поиск ника" value="${escH(sh.q)}" autocomplete="off">
@@ -2423,8 +2410,6 @@ if(shEl()){
       const r=await shAct('/auction/bid',{id:l.id,amount:amt},r=>{S.coins-=r.amount;save();render();try{sfx('coins')}catch(e){}toast(`Ставка принята: ${fmt(r.amount)} 🪙`)});
       if(r){const nl=(sh.lots||[]).find(x=>x.id===l.id);sh.bid=nl?String(nl.min):''}return renderShop();
     }
-    {const bb=t.closest('[data-bbuy]');if(bb){const b=bdgOf(bb.dataset.bbuy);if(!b||S.bdg.includes(b[0])||S.bdg.length>=BDGM||S.coins<b[3])return;
-      S.coins-=b[3];S.bdg.push(b[0]);save();render();lb.sent='';lbPush();try{sfx('tier',4)}catch(x){}toast(`Значок ${b[1]} «${b[2]}» приклеен в профиль`);return renderShop()}}
     if(t.closest('#sh-multi')){
       if(S.coins<MULTIP)return;S.coins-=MULTIP;S.wheelx+=MULTIN;save();render();try{sfx('coins')}catch(x){}toast(`+${MULTIN} крутки колеса`);
       try{sessionStorage.setItem('nr_gw','1')}catch(x){}setTimeout(()=>tab('bon'),700);return renderShop();
@@ -2433,7 +2418,7 @@ if(shEl()){
       if(S.coins<TOPP)return;S.toppick=1;save();toast('Выбери лот, который поднять в топ');setTimeout(()=>tab('market'),500);return;
     }
     if(t.closest('#sh-buyex')){
-      const c=sh.ex&&sh.ex.ceo;if(!c||c.sold||S.coins<c.price)return;
+      const c=sh.ex&&sh.ex.ceo;if(!c||c.left<1||c.mine||S.coins<c.price)return;
       const r=await shAct('/shop/buy',{item:'ceo'},r=>{S.coins-=r.price;S.exc.ceo=1;addItem('ceo',7,0);save();render();try{sfx('tier',5)}catch(e){}toast('Ты купил эксклюзивный ник @ceo!')});
       return renderShop();
     }
