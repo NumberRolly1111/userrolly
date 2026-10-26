@@ -857,3 +857,5 @@ button.gso:not([disabled]):active{transform:scale(.98)}
 .hsec{margin-top:6px}.hsec>b{display:block;font:800 14px var(--head);margin:6px 2px}
 .hopts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.hopt{display:grid;gap:2px;justify-items:start;text-align:left;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:2px solid var(--line);color:var(--fg);font:inherit}
 .hopt b{font:800 13px var(--head)}.hopt small{font-size:11px;color:#FFD66B;font-weight:700}.hopt.on{border-color:#8B7CFF;background:rgba(139,124,255,.2)}
+
+.htitle{font:800 16px var(--head);margin:14px 2px 2px;padding-top:10px;border-top:2px solid var(--line)}.hbon{display:block;text-align:center;color:#7BE0A4;font-weight:700;font-size:12px;margin-top:6px}
