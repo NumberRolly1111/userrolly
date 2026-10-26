@@ -342,8 +342,11 @@ button,.pick,.tg{transition-property:transform,box-shadow,background,color,opaci
 
 /* кнопка «Крутить» закреплена над нижней панелью */
 #spin{position:fixed;left:0;right:0;margin:0 auto;width:min(448px,calc(100% - 32px));bottom:calc(64px + env(safe-area-inset-bottom));z-index:4;padding:15px}
-#tab-game{padding-bottom:84px}
-.toast{bottom:calc(132px + env(safe-area-inset-bottom))}
+#tab-game{padding-bottom:132px}
+#cnt{position:fixed;left:0;right:0;margin:0 auto;width:min(448px,calc(100% - 32px));bottom:calc(126px + env(safe-area-inset-bottom));z-index:4;padding:3px;gap:4px;border-radius:14px;box-shadow:3px 3px 0 var(--sh)}
+#cnt button{padding:6px 4px;border-radius:10px;font-size:13px}
+#cnt small{display:inline;margin-left:6px;font-size:11px}
+.toast{bottom:calc(178px + env(safe-area-inset-bottom))}
 /* витрины */
 .vhead{margin:4px 0 10px}
 .vhead h2{margin:0}
