@@ -217,7 +217,7 @@ function score(s){
   return{t:tierOf(p),tags:t,p};
 }
 
-const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,upl:0,uph:[],refd:0,refc:0,casen:0,dcase:'',fast:0,theme:'',cf:'',work:[],lotp:null,lotn:0,dex:'',dexg:[],cown:[],cn:'',ct:'',inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
+const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,upl:0,uph:[],refd:0,refc:0,casen:0,dcase:'',fast:0,theme:'',cf:'',work:[],lotp:null,lotn:0,dex:'',dexg:[],promo:[],cfree:{},gbest:0,cown:[],cn:'',ct:'',inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 fixState();
 // Темы оформления: меняют цвета через переменные CSS (html[data-theme=…])
@@ -1273,9 +1273,9 @@ function renderTop(){
     const sub=r=>{const t=cosOf(r)[1];return net?(t&&cosTitle(t)?titleHtml(t):`<small>${r.lvl} ур.</small>`):`<small>${esc(r.bestn||'—')}</small>`};
     const top=d.top;
     const pod=k=>{const r=top[k-1];if(!r)return `<div class="pd p${k} empty"><div class="ped">${k}</div></div>`;
-      return `<div class="pd p${k}${r.me?' me':''}">${k===1?'<span class="crown">👑</span>':''}<div class="pava g${k}">${frameOf(r)}<b>${ini(r)}</b><i class="pbadge">${k}</i></div>
+      return `<div class="pd p${k}${r.me?' me':''}" data-pi="${k-1}">${k===1?'<span class="crown">👑</span>':''}<div class="pava g${k}">${frameOf(r)}<b>${ini(r)}</b><i class="pbadge">${k}</i></div>
       <div class="pn">${tagH(r)}<span class="pnk">${nick(r)}</span></div><div class="psub">${sub(r)}</div><b class="pval">${val2(r.v)}</b><div class="ped">${k}</div></div>`};
-    const rows=top.slice(3).map((r,i)=>`<div class="lrow${r.me?' me':''}"><em class="lrk">${i+4}</em>${tagH(r)}<span class="lnk">${nick(r)}</span><span class="lsub">${sub(r)}</span><b class="lval">${val2(r.v)}</b></div>`).join('');
+    const rows=top.slice(3).map((r,i)=>`<div class="lrow${r.me?' me':''}" data-pi="${i+3}"><em class="lrk">${i+4}</em>${tagH(r)}<span class="lnk">${nick(r)}</span><span class="lsub">${sub(r)}</span><b class="lval">${val2(r.v)}</b></div>`).join('');
     const u=tgUser(),mine={name:u.first_name||'Игрок',me:true};
     body=(top.length?`<div class="podium">${pod(2)}${pod(1)}${pod(3)}</div>`+(rows?`<div class="lbcard">${rows}</div>`:''):'<div class="pcard lbmsg"><small>Пока никого нет. Ты можешь стать первым.</small></div>')+
     `<div class="mebar"><em>${me&&me.rank?fmt(me.rank):'—'}</em><span class="mnm">${nick(mine)}</span><span class="you">ТЫ</span><b class="lval">${val2(net?Math.round(netWorth()):S.bestv)}</b></div>`;
@@ -1288,6 +1288,7 @@ function renderTop(){
   <div class="pcard sndrow"><div><b>Показывать меня</b><small>Если выключить, тебя не будет в таблице</small></div><button class="sw${S.hide?'':' on'}" id="top-hide" role="switch" aria-checked="${!S.hide}"></button></div>`);
 }
 $('#tab-top').onclick=e=>{
+  {const pr=e.target.closest('[data-pi]');if(pr&&!e.target.closest('#top-hide'))return playerSheet(+pr.dataset.pi)}
   if(e.target.closest('#top-back'))return tab('prof');
   if(e.target.closest('#clan-open'))return tab('clan');
   if(e.target.closest('#top-retry'))return openTop();
@@ -1434,20 +1435,20 @@ function caseSheet(){
     sh.onclick=e=>{if(e.target.closest('[data-cclose]')&&!cs.busy){cs.id='';cs.res=null;caseSheet()}if(e.target.closest('#cs-open'))openCase()}}
   const c=CASES.find(x=>x.id===cs.id);if(!c){sh.hidden=true;sh.innerHTML='';return}
   sh.hidden=false;
-  const rs=cs.res,need=c.price-S.coins,dd=c.daily&&dClaimed()&&!cs.busy;
+  const fr=(S.cfree&&S.cfree[c.id])|0,rs=cs.res,need=(fr>0?0:c.price)-S.coins,dd=c.daily&&dClaimed()&&!cs.busy;
   sh.innerHTML=`<div class="sbg" data-cclose="1"></div><div class="sbox casebox" style="--cc:${c.c}"><div class="shead"><b>${c.ic} ${c.n}</b><button class="btn sm" data-cclose="1"${cs.busy?' disabled':''}>✕</button></div>
   <p class="cdesc3">${c.d}</p>
   <div class="codds">${c.w.map(([t,w])=>`<span style="--tc:${T[t].c}"><i></i>${T[t].n} <b>${pctw(w)}%</b></span>`).join('')}</div>
   <div class="crl" id="crl"><i class="cptr"></i><div class="crt" id="crt"></div></div>
   <div id="cres">${rs?`<div class="cresc" style="--tc:${T[rs.t].c}"><small>${T[rs.t].n}</small><b>@${escH(rs.name)}</b><span>${fmt(rs.price)} 🪙</span><em>${escH(rs.msg)}</em></div>`:''}</div>
-  <button class="btn main" id="cs-open"${cs.busy||need>0||dd?' disabled':''}>${cs.busy?'Открываем…':c.daily?(dd?'Следующий через '+leftT(msToDay()):'Открыть бесплатно'):need>0?`Не хватает ${fmt(need)} 🪙`:(rs?'Открыть ещё · ':'Открыть за ')+fmt(c.price)+' 🪙'}</button></div>`;
+  <button class="btn main" id="cs-open"${cs.busy||need>0||dd?' disabled':''}>${cs.busy?'Открываем…':c.daily?(dd?'Следующий через '+leftT(msToDay()):'Открыть бесплатно'):need>0?`Не хватает ${fmt(need)} 🪙`:(fr>0?`Открыть бесплатно (промокод ×${fr})`:(rs?'Открыть ещё · ':'Открыть за ')+fmt(c.price)+' 🪙')}</button></div>`;
 }
 function caseTile(t,name){return `<b class="ct" style="--tc:${T[t].c}"><i>${escH(name)}</i><small>${T[t].s}</small></b>`}
 async function openCase(){
-  const c=CASES.find(x=>x.id===cs.id);if(!c||cs.busy||S.coins<c.price||(c.daily&&dClaimed()))return;
+  const c=CASES.find(x=>x.id===cs.id);const fr=S.cfree&&S.cfree[c&&c.id]>0;if(!c||cs.busy||(!fr&&S.coins<c.price)||(c.daily&&dClaimed()))return;
   cs.busy=true;xbusy=1;cs.res=null;
   const tier=rollTier(c),pr=P(poolOf(tier));
-  S.coins-=c.price;if(c.daily)S.dcase=todayK();S.casen++;S.cnt[pr.t]++;S.best=Math.max(S.best,pr.t);noteBest(pr.price,pr.name);addXp(8+pr.t*6);
+  if(fr)S.cfree[c.id]--;else S.coins-=c.price;if(c.daily)S.dcase=todayK();S.casen++;S.cnt[pr.t]++;S.best=Math.max(S.best,pr.t);noteBest(pr.price,pr.name);addXp(8+pr.t*6);
   const msg=stashAll([{name:pr.name,t:pr.t,p:pr.p}]);save();render();   // приз выдан сразу: закрытие приложения его не отменит
   caseSheet();
   const trk=$('#crt'),rl=$('#crl'),N=46,WIN=36,tw=96,gap=8,pitch=tw+gap;
@@ -1512,6 +1513,101 @@ function workSheet(close){
     ${[0,1,2].map(slot).join('')}
     <button class="btn main cwide" data-wclaim="1"${tot>0?'':' disabled'}>${tot>0?`Забрать всё · +${fmt(tot)} 🪙`:'Пока нечего забирать'}</button></div>`;
 }
+
+// ---------- Промокоды ----------
+var PROMOS={NAMEROULETTE:{c:'star',n:1}};   // код → бесплатное открытие кейса (один раз на игрока)
+function promoUse(raw){
+  const code=String(raw||'').trim().toUpperCase().replace(/[^A-Z0-9_-]/g,''),pr=PROMOS[code];
+  if(!code)return toast('Введи промокод');
+  if(!pr)return toast('Такого промокода нет');
+  if(!Array.isArray(S.promo))S.promo=[];
+  if(S.promo.includes(code))return toast('Ты уже использовал этот промокод');
+  const c=CASES.find(x=>x.id===pr.c);
+  S.promo.push(code);if(!S.cfree||typeof S.cfree!=='object')S.cfree={};S.cfree[pr.c]=(S.cfree[pr.c]|0)+pr.n;
+  save();sfx('ach');toast(`🎟️ Промокод принят: кейс «${c.n}»`);render();
+  cs.id=pr.c;cs.res=null;caseSheet();
+}
+function promoCard(){return `<div class="pcard promo"><div class="bhead"><h3>Промокод</h3><span class="bsub">один раз на игрока</span></div><div class="prow"><input id="promo-in" type="text" placeholder="Введи код" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn main" id="promo-go">Применить</button></div></div>`}
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#promo-go')){const i=document.getElementById('promo-in');promoUse(i&&i.value);if(i)i.value=''}});
+
+// ---------- Профиль другого игрока ----------
+var pls={i:-1,d:null,err:'',busy:false};
+async function playerSheet(i){
+  let sh=document.getElementById('plsh');
+  if(!sh){sh=document.createElement('div');sh.id='plsh';sh.className='usheet';document.body.append(sh);
+    sh.onclick=e=>{if(e.target.closest('[data-plx]')){sh.remove()}}}
+  pls.i=i;pls.d=null;pls.err='';plDraw();
+  try{pls.d=await lbReq('/player?by='+lb.by+'&i='+i)}catch(e){pls.err='Не удалось загрузить профиль'}
+  if(document.getElementById('plsh'))plDraw();
+}
+function plDraw(){
+  const sh=document.getElementById('plsh');if(!sh)return;
+  const d=pls.d,eh=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  let b;
+  if(pls.err)b=`<div class="pcard lbmsg"><b>${eh(pls.err)}</b></div>`;
+  else if(!d)b='<div class="pcard lbmsg"><small>Загружаю…</small></div>';
+  else{
+    const cs3=String(d.cos||'').split('|'),rk=rankOf(d.lvl||1),bn=d.bestn?nickVal(d.bestn):null;
+    const ttl=cs3[1]&&cosTitle(cs3[1])?`<span class="ttlrow">${titleHtml(cs3[1])}</span>`:'';
+    const fr=cs3[2]&&cosFrame(cs3[2])?frameRing(cs3[2]):'';
+    b=`<div class="plhd"><div class="av">${fr}<span class="avi"><b>${eh([...String(d.name||'?')][0]||'?').toUpperCase()}</b></span><em class="lvb">${d.lvl||1}</em></div>
+    <div class="pnm"><b class="pname">${d.tag?`<em class="ctag">[${eh(d.tag)}]</em> `:''}${nickHtml(d.name,cs3[0])}</b>${ttl}<span class="rank" style="--rc:${rk[2]}">🛡 ${rk[1]}</span></div></div>
+    <div class="pgrid"><div class="pt"><small>Место в рейтинге</small><b>#${d.rank}</b></div><div class="pt"><small>Капитал</small><b>${fmtC(d.net)} 🪙</b></div>
+    <div class="pt"><small>Уровень</small><b>${d.lvl||1}</b></div><div class="pt"><small>Клан</small><b>${d.cname?eh(d.cname):'—'}</b></div></div>
+    <div class="pcard" style="margin:10px 0 0"><small class="cap2">Самый дорогой ник</small>${bn?`<div class="muprev">${plate(d.bestn,bn.t)}<span>${fmtC(d.best)} 🪙</span></div>`:'<p class="sum">—</p>'}</div>`;
+  }
+  sh.innerHTML=`<div class="sbg" data-plx="1"></div><div class="sbox casebox"><div class="shead"><b>Профиль игрока</b><button class="btn sm" data-plx="1">✕</button></div>${b}</div>`;
+}
+
+// ---------- Мини игра «Угадай юзернейм» ----------
+var GSC=50000,GSM=[0,2.2,5,11,24,50,110],gs={run:false,streak:0,r:null,pick:-1};
+function gsRound(){
+  const hard=gs.streak>=3,pool=[];
+  let tiers;
+  if(hard){const b=R(4);tiers=[b,b+1,b+2]}else{const a=[0,1,2,3,4,5];tiers=[];while(tiers.length<3){const t=a.splice(R(a.length),1)[0];tiers.push(t)}}
+  for(let k=0;k<30;k++){
+    const c=tiers.map(t=>P(poolOf(t))).filter(Boolean);
+    if(c.length<3)continue;
+    const v=c.map(x=>x.price).sort((a,b)=>b-a);
+    if(new Set(c.map(x=>x.name)).size===3&&v[0]>=v[1]*1.25){gs.r=c.sort(()=>Math.random()-.5);gs.pick=-1;return}
+  }
+  gs.r=tiers.map(t=>P(poolOf(t)));gs.pick=-1;
+}
+function gsPrize(){return Math.round(GSC*GSM[Math.min(gs.streak,GSM.length-1)])}
+function gsSheet(close){
+  let sh=document.getElementById('gssh');
+  if(close){if(sh)sh.remove();return}
+  if(!sh){sh=document.createElement('div');sh.id='gssh';sh.className='usheet';document.body.append(sh);
+    sh.onclick=e=>{
+      if(e.target.closest('[data-gsx]'))return gsSheet(true);
+      if(e.target.closest('#gs-start')){if(S.coins<GSC)return;S.coins-=GSC;gs.run=true;gs.streak=0;gsRound();save();render();sfx('tap');return gsSheet()}
+      const pk=e.target.closest('[data-gsp]');
+      if(pk&&gs.run&&gs.pick<0){gs.pick=+pk.dataset.gsp;const mx=Math.max(...gs.r.map(x=>x.price)),ok=gs.r[gs.pick].price===mx;
+        if(ok){gs.streak++;if(gs.streak>(S.gbest|0))S.gbest=gs.streak;sfx('upwin');addXp(4)}else{gs.run=false;sfx('lose');gs.lost=true}
+        if(gs.run&&gs.streak>=GSM.length-1){S.coins=Math.min(CAP,S.coins+gsPrize());gs.run=false;gs.maxed=true;toast('🏆 Максимальная серия: +'+fmt(gsPrize())+' 🪙');sfx('coins')}
+        save();render();return gsSheet()}
+      if(e.target.closest('#gs-next')){gs.streak=gs.streak;gsRound();return gsSheet()}
+      if(e.target.closest('#gs-take')){const p=gsPrize();S.coins=Math.min(CAP,S.coins+p);gs.run=false;gs.taken=p;sfx('coins');toast('Забрано: +'+fmt(p)+' 🪙');save();render();return gsSheet()}
+    }}
+  const eh=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const lad=GSM.slice(1).map((m,i)=>`<span class="gsl${gs.run&&gs.streak===i+1?' on':''}${gs.streak>i+1?' dn':''}"><b>${i+1}</b><small>×${m}</small></span>`).join('');
+  let main;
+  if(gs.run&&gs.r){
+    const rev=gs.pick>=0,mx=Math.max(...gs.r.map(x=>x.price));
+    main=`<p class="cdesc3">Какой из трёх ников дороже всех? Серия: <b>${gs.streak}</b> · сейчас в банке <b>${fmt(gsPrize())} 🪙</b></p>
+    <div class="gsc">${gs.r.map((x,i)=>`<button class="gso${rev?(x.price===mx?' ok':(i===gs.pick?' bad':'')):''}" data-gsp="${i}"${rev?' disabled':''}><b>@${eh(x.name)}</b>${rev?`<small style="color:${T[x.t].c}">${T[x.t].n} · ${fmt(x.price)} 🪙</small>`:''}</button>`).join('')}</div>
+    ${rev&&gs.run?`<button class="btn main" id="gs-next">Дальше</button><button class="btn cwide" id="gs-take">Забрать ${fmt(gsPrize())} 🪙</button>`:''}`;
+  }else{
+    const end=gs.lost?`<div class="pcard lbmsg warn"><b>Не угадал — серия сгорела</b><small>Ставка ${fmt(GSC)} 🪙 потеряна.</small></div>`:gs.taken?`<div class="pcard lbmsg"><b>Забрано +${fmt(gs.taken)} 🪙</b></div>`:gs.maxed?`<div class="pcard lbmsg"><b>Серия из ${GSM.length-1} — максимум!</b></div>`:'';
+    main=`${end}${gs.lost&&gs.r?`<div class="gsc">${gs.r.map((x,i)=>`<div class="gso${x.price===Math.max(...gs.r.map(y=>y.price))?' ok':(i===gs.pick?' bad':'')}"><b>@${eh(x.name)}</b><small style="color:${T[x.t].c}">${fmt(x.price)} 🪙</small></div>`).join('')}</div>`:''}
+    <p class="cdesc3">Показываем три ника — выбери самый дорогой. Каждый верный ответ увеличивает приз, забрать можно после любого. Ошибка — ставка сгорает. Рекорд серии: <b>${S.gbest|0}</b>.</p>
+    <button class="btn main" id="gs-start"${S.coins<GSC?' disabled':''}>${S.coins<GSC?'Не хватает '+fmt(GSC-S.coins)+' 🪙':'Играть за '+fmt(GSC)+' 🪙'}</button>`;
+  }
+  sh.innerHTML=`<div class="sbg" data-gsx="1"></div><div class="sbox casebox"><div class="shead"><b>🔎 Угадай юзернейм</b><button class="btn sm" data-gsx="1">✕</button></div><div class="gsl-row">${lad}</div>${main}</div>`;
+  if(!gs.run){gs.lost=gs.lost&&!gs.run;}
+}
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#gs-open')){gs.run=false;gs.lost=gs.taken=gs.maxed=false;gs.r=null;gsSheet()}});
+
 // ---------- Моментальная лотерея: три одинаковых символа — приз ----------
 var LOTP=100000,LOT=[{s:'🍒',v:200000,p:.07},{s:'🍋',v:300000,p:.035},{s:'🔔',v:600000,p:.018},{s:'⭐',v:1500000,p:.006},{s:'💎',v:5000000,p:.0012},{s:'👑',v:25000000,p:.0001},{s:'🔮',nick:1,p:.0002}],lt={t:null,done:false};
 function lotCard(){return `<button class="lotcard${S.coins<LOTP?' poor':''}" id="lot-open"><span class="lci">🎟️</span><div><b>Моментальная лотерея</b><small>Билет ${fmt(LOTP)} 🪙 · найди три одинаковых из девяти</small></div><span class="lcp">›</span></button>`}
@@ -1811,7 +1907,8 @@ function renderBon(){
       return `<div class="quest${q.got?' got':''}"><div class="qtop"><b>${d.t(q.n)}</b><span>${fmt(d.r)} 🪙</span></div>${d.h?`<small class="qh">${d.h}</small>`:''}<div class="qbar"><i style="width:${q.p/q.n*100}%"></i></div>`+
       `<div class="qbot"><small>${q.p} / ${q.n}</small>${q.got?'<em>Получено ✓</em>':ok?`<button class="btn main sm" data-b="quest" data-i="${i}">Забрать</button>`:''}</div></div>`}).join('')+`</div>`;
   try{h+=`<div class="bcases">${casesHtml()}</div>`}catch(e){}
-  try{h+=`<div class="bcases bmini"><div class="cshd"><b>Мини игры</b><small>1 из 4</small></div><div class="csgrid"><button class="cscard${S.coins<LOTP?' poor':''}" id="lot-open" style="--cc:#FFC933"><span class="csi">🎟️</span><b>Лотерея</b><small>Найди три одинаковых из девяти</small><span class="csp">${fmt(LOTP)} 🪙</span></button>`+[1,2,3].map(()=>`<div class="cscard soon" style="--cc:#7A7F9A"><span class="csi">🔒</span><b>Скоро…</b><small>Новая мини игра</small><span class="csp">В разработке</span></div>`).join('')+`</div></div>`}catch(e){}
+  try{h+=promoCard()}catch(e){}
+  try{h+=`<div class="bcases bmini"><div class="cshd"><b>Мини игры</b><small>2 из 4</small></div><div class="csgrid"><button class="cscard${S.coins<LOTP?' poor':''}" id="lot-open" style="--cc:#FFC933"><span class="csi">🎟️</span><b>Лотерея</b><small>Найди три одинаковых из девяти</small><span class="csp">${fmt(LOTP)} 🪙</span></button><button class="cscard${S.coins<GSC?' poor':''}" id="gs-open" style="--cc:#27D9BD"><span class="csi">🔎</span><b>Угадай юзернейм</b><small>Выбери самый дорогой из трёх</small><span class="csp">${fmt(GSC)} 🪙</span></button>`+[1,2].map(()=>`<div class="cscard soon" style="--cc:#7A7F9A"><span class="csi">🔒</span><b>Скоро…</b><small>Новая мини игра</small><span class="csp">В разработке</span></div>`).join('')+`</div></div>`}catch(e){}
   if(el._h!==h){
     el.innerHTML=h;el._h=h;
     const fr=bon.fresh;bon.fresh=false;
