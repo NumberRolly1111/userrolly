@@ -971,10 +971,15 @@ nav [aria-selected=true]::before{content:"";position:absolute;top:-7px;left:50%;
 .nct{display:grid;gap:2px;min-width:0}.nct b{font:800 14px var(--head);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nct small{font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ndot{position:absolute;top:10px;right:10px;width:9px;height:9px;border-radius:50%;background:#ff3b52;box-shadow:0 0 0 2px var(--paper)}
 .ncard:active{transform:scale(.98)}
-/* плавные переходы между страницами */
-.app{transition:opacity .16s ease,transform .16s ease}
-html.navout .app{opacity:0;transform:translateY(-8px)}
-html.navout nav{opacity:.9}
-html.navin .app{animation:navin .3s cubic-bezier(.2,.8,.3,1) both}
-@keyframes navin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){html.navin .app{animation:none}.app{transition:none}}
+/* плавные переходы между страницами: старый экран остаётся на месте, пока новый не нарисован, затем мягкое перетекание; шапка и нижняя панель не двигаются */
+@view-transition{navigation:auto}
+header{view-transition-name:apphead}
+nav{view-transition-name:appnav}
+::view-transition-group(apphead),::view-transition-group(appnav){animation-duration:0s}
+::view-transition-old(root){animation:vtout .2s ease both}
+::view-transition-new(root){animation:vtin .24s ease both}
+@keyframes vtout{to{opacity:0}}
+@keyframes vtin{from{opacity:0}}
+html.navin .app{animation:navin .22s ease-out both}
+@keyframes navin{from{opacity:.55}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){html.navin .app{animation:none}::view-transition-old(root),::view-transition-new(root){animation:none}}
