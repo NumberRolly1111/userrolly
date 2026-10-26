@@ -872,3 +872,9 @@ button.gso:not([disabled]):active{transform:scale(.98)}
 .hallbox{max-height:74vh}
 .hallprev .hallsvg{max-height:190px;width:auto;max-width:100%;margin:0 auto}
 .hallprev{padding:8px 0 4px}
+/* профиль: больше воздуха между плашками */
+#tab-prof .pcard{margin-bottom:22px}
+#tab-prof .ptiles{gap:18px;margin-bottom:22px}
+#tab-prof .pgrid{gap:14px}
+#tab-prof .pgrid+.pgrid{margin-top:14px}
+#tab-prof .pgrid>.pcard{margin-bottom:22px}
