@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Onest:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="css/style.css?v=20261028v">
+<link rel="stylesheet" href="css/style.css?v=20261028x">
 </head>
 <body>
 <div id="boot" aria-hidden="true"><div class="bt-glow"></div><div class="bt-logo"><span>@</span></div>
@@ -42,6 +42,8 @@
 (function(){
   var T0=Date.now(),W='НЕЙМ-РУЛЕТКА',el=document.getElementById('btr'),bar=document.getElementById('btb'),boot=document.getElementById('boot'),seen=0,done=0;
   try{seen=sessionStorage.getItem('nrboot')==='1'}catch(e){}
+  var nav=0;try{nav=sessionStorage.getItem('nr_nav')==='1';sessionStorage.removeItem('nr_nav')}catch(e){}
+  if(nav){boot.style.display='none';document.documentElement.className+=' navin'}
   var MIN=seen?450:1900,rm=window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches;
   var pool='ABCDEFGHJKLMNPRSTUVWXYZ0123456789@#$%',cells=[];
   for(var i=0;i<W.length;i++){var c=document.createElement('b');if(W[i]==='-'){c.className='dash';c.textContent='-';cells.push(null)}else{c.textContent=rm?W[i]:pool[Math.floor(Math.random()*pool.length)];if(rm)c.className='lk';cells.push(c)}el.appendChild(c)}
@@ -111,6 +113,6 @@
 <div class="selbar" id="selbar"><span id="selinfo"></span><button class="btn main sm" id="selsell">Продать</button></div>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="js/app.js?v=20261028v"></script>
+<script src="js/app.js?v=20261028x"></script>
 </body>
 </html>
