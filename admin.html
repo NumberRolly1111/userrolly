@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0D0B1A">
+<meta name="robots" content="noindex,nofollow">
+<title>Админка — Нейм-рулетка</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0D0B1A;color:#EDEBFF;font:500 15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.w{max-width:520px;margin:0 auto;padding:20px 16px 48px}
+h1{font:800 20px system-ui;margin:0 0 4px}p.s{color:#9A96C8;font-size:13px;margin:0 0 14px}
+.c{background:#171430;border:2px solid #2E2970;border-radius:16px;padding:16px;margin-bottom:16px}
+label{display:block;font:700 12px system-ui;color:#9A96C8;margin:12px 0 6px}label:first-child{margin-top:0}
+input{width:100%;padding:13px;border-radius:12px;border:2px solid #2E2970;background:#0D0B1A;color:#fff;font:600 16px system-ui}
+.r{display:flex;gap:8px}.r>*{flex:1}
+button{padding:14px;border-radius:12px;border:0;background:#2E2970;color:#fff;font:700 15px system-ui;cursor:pointer}
+button.m{background:linear-gradient(145deg,#5B6BFF,#9B5BFF)}button:disabled{opacity:.5}
+.q{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.q button{flex:none;padding:8px 12px;font-size:13px}
+.p{padding:10px 12px;border-radius:12px;background:#0D0B1A;border:2px solid #2E2970;margin-top:8px;cursor:pointer}
+.p.on{border-color:#9B8CFF}.p small{display:block;color:#9A96C8;font-size:12px}
+#msg{min-height:20px;margin-top:12px;font-weight:700;font-size:14px}.ok{color:#6BE38A}.er{color:#FF7A7A}
+.lg{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid #2E2970;font-size:13px}.lg:first-of-type{border-top:0}
+.lg small{color:#9A96C8}
+</style>
+</head>
+<body>
+<div class="w">
+  <h1>Админка</h1>
+  <p class="s">Выдача монет игроку по ID из его профиля. Игрок получит их при следующем открытии игры.</p>
+  <div class="c" id="kc">
+    <label for="key">Пароль админа (ADMIN_KEY)</label>
+    <input id="key" type="password" autocomplete="off" placeholder="Пароль из настроек воркера">
+    <p class="s" style="margin:8px 0 0">В Telegram под владельцем пароль не нужен.</p>
+  </div>
+  <div class="c">
+    <label for="pid">ID игрока (из профиля, 6 цифр)</label>
+    <input id="pid" inputmode="numeric" placeholder="например 123456">
+    <button id="find" style="width:100%;margin-top:10px" type="button">Найти игрока</button>
+    <div id="pl"></div>
+    <label for="am">Сумма монет (минус — списать)</label>
+    <input id="am" inputmode="numeric" placeholder="например 5 000 000">
+    <div class="q"><button type="button" data-a="100000">100K</button><button type="button" data-a="1000000">1M</button><button type="button" data-a="10000000">10M</button><button type="button" data-a="100000000">100M</button></div>
+    <button class="m" id="go" style="width:100%;margin-top:14px" type="button">Выдать</button>
+    <div id="msg"></div>
+  </div>
+  <div class="c"><b>Последние выдачи</b><div id="log" style="margin-top:8px"><small style="color:#9A96C8">Загрузка…</small></div></div>
+</div>
+<script>
+const API='https://rt.wsmp.workers.dev';
+const tg=window.Telegram&&Telegram.WebApp;try{tg&&tg.ready()}catch(e){}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>Number(n).toLocaleString('ru-RU');
+let sel='';
+try{$('#key').value=sessionStorage.getItem('nr_ak')||''}catch(e){}
+async function req(path,body){
+  const key=$('#key').value.trim();try{sessionStorage.setItem('nr_ak',key)}catch(e){}
+  const r=await fetch(API+path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json','X-Admin-Key':key,'X-Init-Data':tg&&tg.initData||''},body:body?JSON.stringify(body):undefined});
+  let d={};try{d=await r.json()}catch(e){}
+  if(r.status===401)throw new Error('Нет доступа: неверный пароль');
+  if(!r.ok&&r.status!==409)throw new Error(d.error==='nouser'?'Игрок с таким ID не найден (он должен хотя бы раз открыть игру)':d.error==='bad'?'Проверь ID и сумму':'Ошибка '+r.status);
+  d._s=r.status;return d;
+}
+const say=(t,ok)=>{$('#msg').className=ok?'ok':'er';$('#msg').textContent=t};
+function showPl(a){
+  $('#pl').innerHTML=a.map(p=>`<div class="p${sel===p.uid?' on':''}" data-u="${esc(p.uid)}"><b>${esc(p.name)}</b><small>Капитал ${fmt(p.net)} 🪙 · ур. ${p.lvl} · TG ${esc(p.uid)}</small></div>`).join('')||'<small style="color:#FF7A7A;display:block;margin-top:8px">Не найден</small>';
+}
+$('#pl').onclick=e=>{const p=e.target.closest('[data-u]');if(!p)return;sel=p.dataset.u;document.querySelectorAll('.p').forEach(x=>x.classList.toggle('on',x===p))};
+$('#find').onclick=async()=>{
+  const id=$('#pid').value.replace(/\D/g,'');if(!id)return say('Введи ID',0);
+  try{const d=await req('/admin/find?id='+id);sel=d.players.length===1?d.players[0].uid:'';showPl(d.players);say('',1)}catch(e){say(e.message,0)}
+};
+document.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{$('#am').value=b.dataset.a});
+$('#go').onclick=async()=>{
+  const id=$('#pid').value.replace(/\D/g,''),am=Math.trunc(+$('#am').value.replace(/[\s_,]/g,''));
+  if(!id)return say('Введи ID',0);if(!am||!isFinite(am))return say('Введи сумму',0);
+  $('#go').disabled=true;
+  try{
+    const d=await req('/admin/grant',{id,amount:am,uid:sel||undefined});
+    if(d._s===409){showPl(d.players);say('Несколько игроков с таким ID: выбери нужного и нажми ещё раз',0)}
+    else{say(`${am>0?'Выдано':'Списано'} ${fmt(Math.abs(am))} 🪙 игроку ${d.name}`,1);$('#am').value='';loadLog()}
+  }catch(e){say(e.message,0)}
+  $('#go').disabled=false;
+};
+async function loadLog(){
+  try{const d=await req('/admin/log');$('#log').innerHTML=d.log.length?d.log.map(l=>`<div class="lg"><span>${esc(l.name||'?')}<br><small>${new Date(l.ts).toLocaleString('ru-RU')}</small></span><span style="text-align:right"><b class="${l.amount>0?'ok':'er'}">${l.amount>0?'+':''}${fmt(l.amount)}</b><br><small>${l.claimed?'получено':'ждёт игрока'}</small></span></div>`).join(''):'<small style="color:#9A96C8">Пока пусто</small>'}
+  catch(e){$('#log').innerHTML='<small style="color:#9A96C8">'+esc(e.message)+'</small>'}
+}
+loadLog();$('#key').onchange=loadLog;
+</script>
+</body>
+</html>
