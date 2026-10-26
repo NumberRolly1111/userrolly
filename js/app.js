@@ -1640,6 +1640,7 @@ function crSheet(close){
       if(it&&!cr.busy){const id=it.dataset.cri,k=cr.sel.indexOf(id);if(k>=0)cr.sel.splice(k,1);else if(cr.sel.length<3)cr.sel.push(id);cr.res=null;sfx('tick');return crSheet()}
       if(e.target.closest('#cr-go'))return crGo();
     }}
+  const oldBox=sh.querySelector('.sbox'),keep=oldBox?oldBox.scrollTop:0;
   const eh=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   cr.sel=cr.sel.filter(id=>S.items.some(i=>i.id===id&&i.t<=CRM));
   const list=S.items.filter(i=>i.t<=CRM).sort((a,b)=>a.t-b.t||val(b.t,b.p,b.n)-val(a.t,a.p,a.n)),its=crItems();
@@ -1653,6 +1654,7 @@ function crSheet(close){
   ${oddsH}${res}
   <div class="slist mpick">${list.length?list.map(x=>`<button class="item wpk${cr.sel.includes(x.id)?' crsel':''}" data-cri="${x.id}" style="--tc:${T[x.t].c}"><div><b>@${eh(x.n)}</b><small>${T[x.t].n}</small></div><span>${fmt(val(x.t,x.p,x.n))} 🪙</span></button>`).join(''):'<div class="pcard lbmsg"><small>Нет ников для крафта (легендарные и выше не берём).</small></div>'}</div>
   <button class="btn main" id="cr-go"${ok?'':' disabled'}>${its.length<3?`Выбрано ${its.length} из 3`:S.coins<fee?`Не хватает ${fmt(fee-S.coins)} 🪙`:`Скрафтить · ${fmt(fee)} 🪙`}</button></div>`;
+  const nb=sh.querySelector('.sbox');if(nb&&keep)nb.scrollTop=keep;
 }
 function crGo(){
   const items=crItems();if(items.length!==3||cr.busy||items.some(x=>x.t>CRM))return;
@@ -1869,8 +1871,9 @@ function muClaim(){const g=muTotal();if(g<=0)return;S.coins=Math.min(CAP,S.coins
 // ---------- Свой зал в музее: покупка, интерьер, предпросмотр ----------
 var HALL_PRICE=2400000;
 var HF=[['f_concrete','Бетон',0],['f_tile','Плитка',0],['f_check','Шахматка',1500000],['f_parquet','Паркет',3000000],['f_gloss','Наливной глянец',6000000],['f_carbon','Карбон',50000000]];
-var HW=[['w_concrete','Бетон',0],['w_profl','Профлист',0],['w_panels','Белые панели',2000000],['w_quartz','Кварц',3000000],['w_board','Доска',4000000],['w_graf','Граффити',6000000],['w_neon','Неоновая сетка',10000000]];
+var HW=[['w_concrete','Бетон',0],['w_profl','Профлист',0],['w_panels','Белые панели',2000000],['w_quartz','Кварц',3000000],['w_wood','Дерево',4000000]];
 var HL=[['l_bulb','Лампочка',0],['l_warm','Тёплый',1000000],['l_cold','Холодный',1000000],['l_neon','Неон синий',2000000],['l_spots','Прожекторы',5000000]];
+try{if(Array.isArray(S.hown)){let ref=0;const old={w_graf:6000000,w_neon:10000000};S.hown=S.hown.filter(id=>{if(old[id]){ref+=old[id];return false}return true});if(S.hown.includes('w_board')){S.hown=S.hown.filter(id=>id!=='w_board');S.hown.push('w_wood')}if(ref)S.coins=Math.min(CAP,S.coins+ref);if(S.hw==='w_board')S.hw='w_wood';if(S.hw==='w_graf'||S.hw==='w_neon')S.hw='w_concrete'}}catch(e){}
 var HALLALL=HF.concat(HW,HL),hs={f:'f_concrete',w:'w_concrete',l:'l_bulb',open:false};
 function hallItem(id){return HALLALL.find(x=>x[0]===id)}
 function hallOwn(id){const x=hallItem(id);return !!x&&(x[2]===0||(Array.isArray(S.hown)&&S.hown.includes(id)))}
@@ -1893,10 +1896,23 @@ function hallWallDefs(w,u){
   if(w==='w_concrete')return `<pattern id="${pid}" width="60" height="60" patternUnits="userSpaceOnUse"><rect width="60" height="60" fill="#8c8f97"/><circle cx="12" cy="14" r="2" fill="#000" opacity=".1"/><circle cx="40" cy="30" r="3" fill="#fff" opacity=".08"/><circle cx="22" cy="48" r="2.5" fill="#000" opacity=".08"/><path d="M0 30h60" stroke="#000" opacity=".08"/></pattern>`;
   if(w==='w_profl')return `<pattern id="${pid}" width="12" height="20" patternUnits="userSpaceOnUse"><rect width="12" height="20" fill="#9eb0bd"/><rect width="4" height="20" fill="#c3d2dc"/><rect x="4" width="4" height="20" fill="#8497a6"/></pattern>`;
   if(w==='w_panels')return `<pattern id="${pid}" width="44" height="64" patternUnits="userSpaceOnUse"><rect width="44" height="64" fill="#e3e3ea"/><rect x="3" y="3" width="38" height="58" rx="2" fill="#fafafd" stroke="#cfcfd9"/><rect x="8" y="8" width="28" height="48" rx="1" fill="none" stroke="#e1e1e8"/></pattern>`;
-  if(w==='w_quartz')return `<pattern id="${pid}" width="70" height="70" patternUnits="userSpaceOnUse"><rect width="70" height="70" fill="#b9c7d9"/><polygon points="0,0 70,0 0,70" fill="#d3deec" opacity=".6"/><polygon points="70,70 70,10 10,70" fill="#8ea2bc" opacity=".35"/><circle cx="20" cy="22" r="1.4" fill="#fff"/><circle cx="52" cy="40" r="1.8" fill="#fff"/><circle cx="34" cy="58" r="1.2" fill="#fff"/></pattern>`;
-  if(w==='w_board')return `<pattern id="${pid}" width="110" height="70" patternUnits="userSpaceOnUse"><rect width="110" height="70" fill="#2a4a3c"/><rect x="2" y="2" width="106" height="66" fill="none" stroke="#7a5a35" stroke-width="3"/><path d="M14 22q10-10 20 0t20 0M16 40h30M60 34l10 12 10-14M88 22v18" stroke="#fff" stroke-width="1.6" fill="none" opacity=".55" stroke-linecap="round"/><path d="M20 56h60" stroke="#fff" stroke-width="3" opacity=".12"/></pattern>`;
-  if(w==='w_graf')return `<pattern id="${pid}" width="130" height="90" patternUnits="userSpaceOnUse"><rect width="130" height="90" fill="#262633"/><circle cx="26" cy="24" r="16" fill="#ff3c8e"/><path d="M52 70q14-34 30-8t30-30" stroke="#2ee6ff" stroke-width="6" fill="none" stroke-linecap="round"/><text x="46" y="40" font-size="26" font-weight="900" fill="#ffe14d" transform="rotate(-8 60 30)" font-family="Arial Black,sans-serif">WOW</text><rect x="94" y="52" width="26" height="26" fill="#7cff6b" transform="rotate(14 107 65)"/><path d="M6 78h40" stroke="#fff" stroke-width="3" opacity=".6"/></pattern>`;
-  return `<pattern id="${pid}" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="24" fill="#0b0720"/><path d="M24 0H0V24" fill="none" stroke="#19e6ff" stroke-width="1" opacity=".75"/><path d="M12 0V24M0 12H24" stroke="#ff3cf0" stroke-width=".5" opacity=".35"/></pattern>`;
+  if(w==='w_quartz')return `<pattern id="${pid}" width="55" height="55" patternUnits="userSpaceOnUse"><rect width="55" height="55" fill="#c6d2e2"/><rect x="1" y="1" width="53" height="53" fill="#cfdae9" stroke="#eef3fa" stroke-width="1.4"/><path d="M6 40q14-10 22-4t22-16" stroke="#9fb1c9" stroke-width=".8" fill="none" opacity=".7"/><path d="M10 14q8 6 16 0" stroke="#fff" stroke-width=".8" fill="none" opacity=".7"/></pattern>`;
+  return `<pattern id="${pid}" width="64" height="40" patternUnits="userSpaceOnUse"><rect width="64" height="40" fill="#a9733f"/><rect y="0" width="64" height="10" fill="#b8814a"/><rect y="10" width="64" height="10" fill="#9a6736"/><rect y="20" width="64" height="10" fill="#b07a45"/><rect y="30" width="64" height="10" fill="#a06b39"/><path d="M0 10H64M0 20H64M0 30H64M0 0H64" stroke="#4e2f14" stroke-width="1.2" opacity=".7"/><path d="M0 5q16-3 32 0t32 0M0 15q16 3 32 0t32 0M0 26q16-3 32 0t32 0M0 35q16 3 32 0t32 0" stroke="#6b4421" stroke-width=".8" fill="none" opacity=".55"/><path d="M20 0v10M50 10v10M12 20v10M40 30v10" stroke="#4e2f14" stroke-width="1" opacity=".6"/></pattern>`;
+}
+function hallSide(kind,side,u){
+  const cf={w_concrete:[4,3],w_profl:[16,1],w_panels:[4,2],w_quartz:[3,2],w_wood:[1,7]}[kind]||[4,3],nu=cf[0],nv=cf[1];
+  const P=(t,v)=>{const uu=1-Math.pow(1-t,1.6),x=70*uu,top=40*uu,bot=240-90*uu,y=top+(bot-top)*v;return (side==='L'?x:360-x).toFixed(1)+','+y.toFixed(1)};
+  let o='';
+  for(let i=0;i<nu;i++)for(let j=0;j<nv;j++){
+    let f,st='';
+    if(kind==='w_profl')f=i%2?'#9db0be':'#b9cad6';
+    else if(kind==='w_panels'){f='#f1f1f6';st=' stroke="#cdcdd8" stroke-width="1"'}
+    else if(kind==='w_quartz'){f=(i+j)%2?'#bccade':'#cad6e7';st=' stroke="#eef3fa" stroke-width="1"'}
+    else if(kind==='w_wood'){f=j%2?'#a56f3b':'#b47e48';st=' stroke="#4e2f14" stroke-width="1"'}
+    else{f=['#8a8d95','#82858d','#90939b'][(i+j)%3];st=' stroke="#6c6f77" stroke-width=".8"'}
+    o+=`<polygon points="${P(i/nu,j/nv)} ${P((i+1)/nu,j/nv)} ${P((i+1)/nu,(j+1)/nv)} ${P(i/nu,(j+1)/nv)}" fill="${f}"${st}/>`;
+  }
+  return o+`<polygon points="${P(0,0)} ${P(1,0)} ${P(1,1)} ${P(0,1)}" fill="#000" opacity=".22"/>`;
 }
 function hallSvg(cfg,ex,u){
   cfg=cfg||hallCfg();ex=ex||[];u=u||'x';
@@ -1908,21 +1924,29 @@ function hallSvg(cfg,ex,u){
   <radialGradient id="vg${u}" cx=".5" cy=".42" r=".75"><stop offset=".35" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="${l==='l_bulb'?.62:l==='l_spots'?.6:.34}"/></radialGradient>
   <radialGradient id="gl${u}" cx=".5" cy=".12" r=".7"><stop offset="0" stop-color="${l==='l_warm'?'#ffb45a':l==='l_cold'?'#cfe6ff':'#ffe7a0'}" stop-opacity="${l==='l_bulb'?.45:.5}"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
   <linearGradient id="cn${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6c8" stop-opacity=".85"/><stop offset="1" stop-color="#fff6c8" stop-opacity="0"/></linearGradient>
+  <linearGradient id="pg${u}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8e8ea3"/><stop offset=".35" stop-color="#f4f4fb"/><stop offset=".7" stop-color="#cfcfdb"/><stop offset="1" stop-color="#8a8aa0"/></linearGradient>
+  <linearGradient id="pv${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6f6fc"/><stop offset="1" stop-color="#b9b9c9"/></linearGradient>
   <filter id="bl${u}"><feGaussianBlur stdDeviation="2.4"/></filter></defs>`;
-  const walls=`<polygon points="0,0 360,0 290,40 70,40" fill="#000" opacity=".55"/><rect x="70" y="40" width="220" height="110" fill="url(#${pid})"/>
-  <polygon points="0,0 70,40 70,150 0,240" fill="url(#${pid})"/><polygon points="0,0 70,40 70,150 0,240" fill="#000" opacity=".28"/>
-  <polygon points="360,0 290,40 290,150 360,240" fill="url(#${pid})"/><polygon points="360,0 290,40 290,150 360,240" fill="#000" opacity=".28"/>
-  <polygon points="0,0 360,0 290,40 70,40" fill="#14141c" opacity=".7"/>`;
+  const walls=`<rect x="70" y="40" width="220" height="110" fill="url(#${pid})"/>${hallSide(w,'L',u)}${hallSide(w,'R',u)}<polygon points="0,0 360,0 290,40 70,40" fill="#14141c" opacity=".78"/><polygon points="70,40 290,40 290,44 70,44" fill="#000" opacity=".25"/>`;
   const frame=(x,y)=>`<g><rect x="${x}" y="${y}" width="26" height="20" fill="#2b2b36" stroke="#caa86a" stroke-width="2"/><polygon points="${x+3},${y+17} ${x+10},${y+8} ${x+15},${y+14} ${x+19},${y+10} ${x+23},${y+17}" fill="#6fd3a3"/><circle cx="${x+19}" cy="${y+6}" r="2.5" fill="#ffd66b"/></g>`;
   const shelf=`<g><rect x="104" y="72" width="152" height="4" fill="#6b4a2a"/><rect x="104" y="76" width="152" height="2" fill="#000" opacity=".3"/><path d="M114 76v8M246 76v8" stroke="#3b2814" stroke-width="2"/>
   <rect x="122" y="60" width="6" height="12" fill="#e0536b"/><rect x="129" y="58" width="5" height="14" fill="#4aa3ff"/><rect x="135" y="62" width="6" height="10" fill="#ffd66b"/>
   <path d="M176 72c-3-6-3-10 0-14h8c3 4 3 8 0 14z" fill="#7ad3c6"/><path d="M180 58c-5-6-8-6-10-12M180 58c3-6 8-8 12-10" stroke="#2e9a54" stroke-width="2" fill="none"/>
   <rect x="226" y="62" width="16" height="10" rx="1" fill="#c9b6ff"/></g>`;
   const pos=[110,180,250],ped=pos.map((cx,i)=>{
-    const top=186,e=ex[i],nv=e?nickVal(e):null,P2=nv?PLATE[nv.t]:null;
-    let o=`<g><ellipse cx="${cx}" cy="212" rx="30" ry="6" fill="#000" opacity=".28"/><polygon points="${cx-24},${top+4} ${cx+24},${top+4} ${cx+24},208 ${cx-24},208" fill="#d7d7e0"/><polygon points="${cx+24},${top+4} ${cx+30},${top} ${cx+30},204 ${cx+24},208" fill="#a9a9b6"/><polygon points="${cx-24},${top+4} ${cx-18},${top} ${cx+30},${top} ${cx+24},${top+4}" fill="#f4f4fa"/>`;
-    if(e){const nm=e.length>8?e.slice(0,7)+'…':e;o+=`<defs><linearGradient id="pl${u}${i}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${P2[0]}"/><stop offset="1" stop-color="${P2[1]}"/></linearGradient></defs><rect x="${cx-26}" y="${top-24}" width="56" height="20" rx="4" fill="url(#pl${u}${i})" stroke="#fff" stroke-opacity=".6"/><text x="${cx+2}" y="${top-10.5}" font-size="9.5" font-weight="800" text-anchor="middle" fill="#14142a" font-family="system-ui,sans-serif">${String(nm).replace(/[&<>]/g,'')}</text>`}
-    else o+=`<rect x="${cx-22}" y="${top-20}" width="48" height="16" rx="4" fill="none" stroke="#fff" stroke-opacity=".35" stroke-dasharray="3 3"/><text x="${cx+2}" y="${top-8.5}" font-size="10" text-anchor="middle" fill="#fff" fill-opacity=".45" font-family="system-ui,sans-serif">＋</text>`;
+    const ee=ex[i],nv=ee?nickVal(ee):null,P2=nv?PLATE[nv.t]:null,g=P2?P2[1]:'#8791c9',gl=P2?P2[0]:'#c9d0f5';
+    let o=`<g><ellipse cx="${cx+3}" cy="214" rx="38" ry="6" fill="#000" opacity=".38"/>
+    <polygon points="${cx-27},191 ${cx-20},186 ${cx+33},186 ${cx+27},191" fill="#fbfbff"/>
+    <polygon points="${cx+27},191 ${cx+33},186 ${cx+33},208 ${cx+27},213" fill="#9d9db0"/>
+    <rect x="${cx-27}" y="191" width="54" height="22" fill="url(#pv${u})"/><rect x="${cx-27}" y="196" width="54" height="1.6" fill="#e6c067"/><rect x="${cx-27}" y="206" width="54" height="1" fill="#000" opacity=".12"/>
+    <polygon points="${cx-26},187 ${cx-21},150 ${cx+31},150 ${cx+32},187" fill="#cfe8ff" opacity=".09"/>`;
+    if(ee){const nm=ee.length>6?ee.slice(0,5)+'…':ee,safe='@'+String(nm).replace(/[&<>]/g,'');
+      o+=`<ellipse cx="${cx+3}" cy="170" rx="30" ry="16" fill="${g}" opacity=".4" filter="url(#bl${u})"/>
+      <rect x="${cx-22}" y="163" width="50" height="18" rx="4" fill="url(#pq${u}${i})" stroke="#fff" stroke-width="1.4"/>
+      <text x="${cx+3}" y="175.5" font-size="9" font-weight="800" text-anchor="middle" fill="#14142a" font-family="system-ui,sans-serif">${safe}</text>
+      <defs><linearGradient id="pq${u}${i}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${gl}"/><stop offset="1" stop-color="${g}"/></linearGradient></defs>`}
+    else o+=`<text x="${cx+3}" y="174" font-size="13" text-anchor="middle" fill="#fff" fill-opacity=".4" font-family="system-ui,sans-serif">＋</text>`;
+    o+=`<rect x="${cx-26}" y="150" width="52" height="37" fill="#dff0ff" fill-opacity=".10" stroke="#fff" stroke-opacity=".6" stroke-width="1.2"/><polygon points="${cx+26},150 ${cx+32},146 ${cx+32},183 ${cx+26},187" fill="#bfe0ff" fill-opacity=".22" stroke="#fff" stroke-opacity=".4" stroke-width=".8"/><polygon points="${cx-26},150 ${cx-20},146 ${cx+32},146 ${cx+26},150" fill="#fff" fill-opacity=".3"/><polygon points="${cx-18},150 ${cx-8},150 ${cx-20},187 ${cx-26},187" fill="#fff" fill-opacity=".16"/>`;
     return o+'</g>'}).join('');
   let fx='';
   if(l==='l_bulb'){fx=`<path d="M180 0V24" stroke="#222" stroke-width="1.4"/><circle cx="180" cy="28" r="5" fill="#fff3b5"/><circle cx="180" cy="28" r="14" fill="#ffe27a" opacity=".35" filter="url(#bl${u})"/>`}
@@ -1954,6 +1978,7 @@ function hallSheet(close){
         S.coins-=cost;need.forEach(id=>S.hown.push(id));S.hf=hs.f;S.hw=hs.w;S.hl=hs.l;save();render();sfx(cost?'coins':'tap');
         toast(cost?'Интерьер куплен и применён':'Интерьер применён');renderMuseum();return hallSheet()}
     }}
+  const oldBox=sh.querySelector('.sbox'),keep=oldBox?oldBox.scrollTop:0;
   const eh=x=>String(x);
   const sec=(t,list,k)=>`<div class="hsec"><b>${t}</b><div class="hopts">${list.map(([id,n,pr])=>{const own=hallOwn(id);return `<button class="hopt${hs[k]===id?' on':''}" data-ho="${id}"><b>${n}</b><small>${pr===0?'бесплатно':own?'куплено ✓':fmt(pr)+' 🪙'}</small></button>`}).join('')}</div></div>`;
   const ids=[hs.f,hs.w,hs.l],need=ids.filter(id=>!hallOwn(id)),cost=need.reduce((a,id)=>a+hallItem(id)[2],0),cur=hallCfg();
@@ -1962,6 +1987,7 @@ function hallSheet(close){
   <div class="hallprev">${hallSvg({f:hs.f,w:hs.w,l:hs.l},hallExNames(),'sh')}</div>
   ${sec('Пол',HF,'f')}${sec('Стены',HW,'w')}${sec('Свет',HL,'l')}
   <button class="btn main" id="hall-ok"${same||S.coins<cost?' disabled':''}>${same?'Так и стоит':S.coins<cost?'Не хватает '+fmt(cost-S.coins)+' 🪙':cost?`Купить и применить · ${fmt(cost)} 🪙`:'Применить'}</button></div>`;
+  const nb=sh.querySelector('.sbox');if(nb&&keep)nb.scrollTop=keep;
 }
 function hallBuy(){
   if(S.hall)return;if(S.coins<HALL_PRICE)return toast('Не хватает '+fmt(HALL_PRICE-S.coins)+' 🪙');
