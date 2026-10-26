@@ -833,7 +833,7 @@ $('#tab-col').onclick=e=>{
   const g=e.target.closest('[data-go]');if(g)return tab(g.dataset.go);
   if(e.target.closest('#show-open'))return tab('show');
   if(e.target.closest('#market-open'))return tab('market');
-  if(e.target.closest('#shop-open'))return tab('shop');
+  if(e.target.closest('#shop-open,[data-shopgo]'))return tab('shop');
   if(e.target.closest('#museum-open'))return tab('museum');
   const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
   if(a==='buy'){
@@ -1163,6 +1163,7 @@ function renderProf(){
     <button class="ptile" id="clan-open"><span class="pti">🛡️</span><b>Кланы</b><small>${cl.me&&cl.me.clan?escH('['+(cl.me.clan.tag||'')+'] '+(cl.me.clan.name||'')):'Вступи или создай'}</small></button>
     <button class="ptile" id="ach-open"><span class="pti">🎖️</span><b>Достижения</b><small>${ACH.filter(achOk).length} из ${ACH.length}${achReady().length?' · наград: '+achReady().length:''}</small><span class="ptbar"><i style="width:${ACH.filter(achOk).length/ACH.length*100}%"></i></span></button>
     <button class="ptile" id="cos-open"><span class="pti">✨</span><b>Косметика</b><small>куплено ${S.cown.length} из ${NSTY.length+TTL.length+FRM.length}</small></button>
+    <button class="ptile wide" data-shopgo="1"><span class="pti">🏷️</span><div><b>Магазин</b><small>Аукцион, значки, мульти-крутка и эксклюзив</small></div></button>
     <button class="ptile wide" data-craft="1"><span class="pti">⚗️</span><div><b>Крафт</b><small>Три любых ника → один новый, шансы зависят от выбранных</small></div></button>
   </div>
   <div class="pcard inv invx"><div><b>Позвать друзей</b><small>За каждого друга: +${fmt(REF_C)} 🪙 и +${REF_E} ⚡ · приглашено ${S.refc} из ${REF_MAX}</small></div><div class="invb">${lb.refn>0?`<button class="btn main" id="ref-claim">Забрать +${fmt(lb.refn*REF_C)} 🪙</button>`:''}<button class="btn${lb.refn>0?'':' main'}" id="invite">Позвать</button></div></div>
@@ -1229,7 +1230,7 @@ function tab(n){
   location.href=(PAGES[n]||'index.html')+(PAGES[n]||n==='game'?'':'#'+n);
 }
 function tabIn(n){
-  {const nn=n==='show'||n==='market'||n==='museum'||n==='shop'?'col':n==='clan'?'top':n;document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===nn))}
+  {const nn=n==='show'||n==='market'||n==='museum'?'col':n==='clan'?'top':n;document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===nn))}
   ['game','col','up','prof','bon','ach','show','top','clan','market','museum','shop'].forEach(k=>{const e=$('#tab-'+k);if(!e)return;
     if(k===n){if(e.hidden){e.hidden=false;e.classList.remove('tabin');void e.offsetWidth;e.classList.add('tabin');clearTimeout(e._ti);e._ti=setTimeout(()=>e.classList.remove('tabin'),900)}}else e.hidden=true});
   $('#prof-btn').setAttribute('aria-pressed',n==='prof');
