@@ -1242,8 +1242,7 @@ function tab(n){
   save();try{if(cloudDone)cloudPush()}catch(e){}
   const go=(PAGES[n]||'index.html')+(PAGES[n]||n==='game'?'':'#'+n);
   try{sessionStorage.setItem('nr_nav','1')}catch(e){}
-  document.documentElement.classList.add('navout');
-  setTimeout(()=>{location.href=go},reduce?0:170);
+  location.href=go;
 }
 function tabIn(n){
   {const nn=['show','market','museum','top','clan','ach','help','auction'].includes(n)?'help':n;document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===nn))}
