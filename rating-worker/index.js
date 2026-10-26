@@ -20,6 +20,14 @@ async function migrate(db) {   // добавляем новые столбцы �
   }
   await db.prepare('CREATE TABLE IF NOT EXISTS grants (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, amount INTEGER NOT NULL, claimed INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_grants_uid ON grants(uid, claimed)').run();
+  try {
+    const mh = (await db.prepare('PRAGMA table_info(market)').all()).results.map((r) => r.name);
+    if (mh.length && !mh.includes('top')) await db.prepare('ALTER TABLE market ADD COLUMN top INTEGER NOT NULL DEFAULT 0').run();
+  } catch (e) {}
+  await db.prepare('CREATE TABLE IF NOT EXISTS feed (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, name TEXT NOT NULL, tier INTEGER NOT NULL, ts INTEGER NOT NULL)').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS auctions (id INTEGER PRIMARY KEY AUTOINCREMENT, seller TEXT NOT NULL, name TEXT NOT NULL, start INTEGER NOT NULL, cur INTEGER NOT NULL, bidder TEXT, bids INTEGER NOT NULL DEFAULT 0, end_ts INTEGER NOT NULL, status INTEGER NOT NULL DEFAULT 0, done INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_au ON auctions(status, end_ts)').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS shop (item TEXT PRIMARY KEY, uid TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0)').run();
   migrated = true;
 }
 const enc = new TextEncoder();
@@ -114,7 +122,7 @@ async function handle(req, env) {
       const now = Date.now();
       const old = await env.DB.prepare('SELECT net,best,upd,flag,allow FROM players WHERE uid=?').bind(uid).first();
       if (old && now - old.upd < MIN_GAP_MS) return json({ error: 'wait' }, 429);
-      const cos = String(b.cos || '').match(/^[a-z0-9_]{0,16}\|[a-z0-9_]{0,16}(\|[a-z0-9_]{0,16})?$/) ? String(b.cos) : '';
+      const cos = String(b.cos || '').match(/^[a-z0-9_]{0,16}\|[a-z0-9_]{0,16}(\|[a-z0-9_]{0,16})?(\|[a-z,]{0,60})?$/) ? String(b.cos) : '';
       if (!isAdmin(uid, env)) {
         const el = old ? Math.min(MAX_ELAPSED_S, Math.max(0, (now - old.upd) / 1000)) : 0;
         const limit = old ? old.net + BURST + RATE * el + (old.allow || 0) : FIRST_NET;
@@ -150,6 +158,23 @@ async function handle(req, env) {
       const r = await env.DB.prepare(`SELECT p.uid,p.name,p.net,p.best,p.bestn,p.lvl,p.cos,(SELECT c.tag FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=p.uid) AS tag,(SELECT c.name FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=p.uid) AS cname FROM players p WHERE p.hide=0 AND p.flag=0 AND p.${col}>0 ORDER BY p.${col} DESC, p.upd ASC LIMIT 1 OFFSET ?`).bind(i).first();
       if (!r) return json({ error: 'none' }, 404);
       return json({ rank: i + 1, name: r.name, net: r.net, best: r.best, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', tag: r.tag || '', cname: r.cname || '', me: r.uid === uid });
+    }
+    // ---- LIVE-лента: крупные выпадения игроков ----
+    if (url.pathname === '/feed' && req.method === 'GET') {
+      const rows = (await env.DB.prepare('SELECT f.name,f.tier,f.ts,p.name AS who,p.hide FROM feed f LEFT JOIN players p ON p.uid=f.uid WHERE f.ts>? ORDER BY f.id DESC LIMIT 14').bind(Date.now() - 86400000).all()).results;
+      return json({ items: rows.map((r) => ({ name: r.name, tier: r.tier, ts: r.ts, who: r.hide ? 'Игрок' : (r.who || 'Игрок') })) });
+    }
+    if (url.pathname === '/feed' && req.method === 'POST') {
+      let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
+      const name = String(b.name || ''), tier = Math.floor(Number(b.tier));
+      if (!/^[\p{L}\p{N}_]{1,32}$/u.test(name) || !(tier >= 3 && tier <= 7)) return json({ ok: false });
+      const me = await env.DB.prepare('SELECT 1 AS x FROM players WHERE uid=?').bind(uid).first();
+      if (!me) return json({ ok: false });
+      const last = await env.DB.prepare('SELECT ts FROM feed WHERE uid=? ORDER BY id DESC LIMIT 1').bind(uid).first();
+      if (last && Date.now() - last.ts < 15000) return json({ ok: false });
+      await env.DB.prepare('INSERT INTO feed(uid,name,tier,ts) VALUES(?,?,?,?)').bind(uid, name, tier, Date.now()).run();
+      if (Math.random() < 0.05) await env.DB.prepare('DELETE FROM feed WHERE ts<?').bind(Date.now() - 2 * 86400000).run();
+      return json({ ok: true });
     }
     // ---- подарки от админа: игрок забирает сам ----
     if (url.pathname === '/grants/claim' && req.method === 'POST') {
@@ -192,6 +217,8 @@ async function handle(req, env) {
     if (cr) return cr;
     const mr = await marketRoutes(url, req, env, uid, json);
     if (mr) return mr;
+    const au = await auctionRoutes(url, req, env, uid, json);
+    if (au) return au;
     const mu = await museumRoutes(url, req, env, uid, json);
     if (mu) return mu;
     return json({ error: 'not found' }, 404);
@@ -348,6 +375,7 @@ async function clanRoutes(url, req, env, uid, json) {
 // ======================= РЫНОК МЕЖДУ ИГРОКАМИ =======================
 // Сервер хранит лоты и сделки. Ник при выставлении «замораживается» в лоте, покупатель получает его после успешной покупки,
 // продавец забирает выручку кнопкой (комиссия MARKET_FEE). Тип и цену ника клиент пересчитывает сам по названию.
+const MARKET_TOP_PRICE = 500_000;   // «Лот в топ»: первое место на рынке на 24 часа
 const MARKET_FEE = 0.05, MARKET_MAX_LOTS = 10, MARKET_MIN = 10, MARKET_MAX = 1_000_000_000_000;
 const NICK_RE = /^[\p{L}\p{N}_#$%@?!*~.\-]{1,24}$/u;
 
@@ -358,12 +386,12 @@ async function marketRoutes(url, req, env, uid, json) {
 
   if (p === '/market' && req.method === 'GET') {
     const q = clean(url.searchParams.get('q') || '', 24), sort = url.searchParams.get('sort');
-    const order = sort === 'cheap' ? 'm.price ASC' : sort === 'exp' ? 'm.price DESC' : 'm.id DESC';
-    const base = `SELECT m.id,m.name,m.price,m.seller,p.name AS sname,p.hide FROM market m LEFT JOIN players p ON p.uid=m.seller WHERE m.status=0`;
+    const order = '(m.top > ' + Date.now() + ') DESC, ' + (sort === 'cheap' ? 'm.price ASC' : sort === 'exp' ? 'm.price DESC' : 'm.id DESC');
+    const base = `SELECT m.id,m.name,m.price,m.seller,m.top,p.name AS sname,p.hide FROM market m LEFT JOIN players p ON p.uid=m.seller WHERE m.status=0`;
     const rows = (q
       ? await db.prepare(base + " AND m.name LIKE ?1 ESCAPE '\\' ORDER BY " + order + ' LIMIT 60').bind(like(q)).all()
       : await db.prepare(base + ' ORDER BY ' + order + ' LIMIT 60').all()).results;
-    return json({ lots: rows.map((r) => ({ id: r.id, name: r.name, price: r.price, seller: r.hide ? 'Игрок' : (r.sname || 'Игрок'), mine: r.seller === uid ? 1 : 0 })) });
+    return json({ lots: rows.map((r) => ({ id: r.id, name: r.name, price: r.price, seller: r.hide ? 'Игрок' : (r.sname || 'Игрок'), mine: r.seller === uid ? 1 : 0, top: r.top > Date.now() ? 1 : 0 })) });
   }
 
   if (p === '/market/history' && req.method === 'GET') {
@@ -378,13 +406,26 @@ async function marketRoutes(url, req, env, uid, json) {
   }
 
   if (p === '/market/my' && req.method === 'GET') {
-    const act = (await db.prepare('SELECT id,name,price FROM market WHERE seller=? AND status=0 ORDER BY id DESC').bind(uid).all()).results;
+    const act = (await db.prepare('SELECT id,name,price,top FROM market WHERE seller=? AND status=0 ORDER BY id DESC').bind(uid).all()).results;
     const sold = (await db.prepare('SELECT id,name,price FROM market WHERE seller=? AND status=1 AND claimed=0 ORDER BY id DESC').bind(uid).all()).results;
-    return json({ active: act, sold: sold.map((s) => ({ ...s, get: Math.floor(s.price * (1 - MARKET_FEE)) })), fee: MARKET_FEE, max: MARKET_MAX_LOTS });
+    return json({ now: Date.now(), active: act, sold: sold.map((s) => ({ ...s, get: Math.floor(s.price * (1 - MARKET_FEE)) })), fee: MARKET_FEE, max: MARKET_MAX_LOTS });
   }
 
   if (req.method !== 'POST') return json({ error: 'not found' }, 404);
   let b; try { b = await req.json(); } catch { b = {}; }
+
+  if (p === '/market/top') {
+    const id = Number(b.id) || 0;
+    const lot = await db.prepare('SELECT top FROM market WHERE id=? AND seller=? AND status=0').bind(id, uid).first();
+    if (!lot) return json({ error: 'gone' }, 404);
+    if (lot.top > Date.now()) return json({ error: 'already' }, 409);
+    const me = await db.prepare('SELECT net FROM players WHERE uid=?').bind(uid).first();
+    if (!me || me.net < MARKET_TOP_PRICE) return json({ error: 'poor' }, 400);
+    const until = Date.now() + 24 * 3600000;
+    const r = await db.prepare('UPDATE market SET top=? WHERE id=? AND seller=? AND status=0').bind(until, id, uid).run();
+    if (!r.meta.changes) return json({ error: 'gone' }, 404);
+    return json({ ok: true, price: MARKET_TOP_PRICE, until });
+  }
 
   if (p === '/market/list') {
     const name = String(b.name || ''), price = Math.round(Number(b.price));
@@ -462,6 +503,121 @@ async function museumRoutes(url, req, env, uid, json) {
     const r = await db.prepare('INSERT OR IGNORE INTO museum(name,v,owner,ts) VALUES(?,?,?,?)').bind(name, v, uid, Date.now()).run();
     if (!r.meta.changes) return json({ error: 'taken' }, 409);
     return json({ ok: true });
+  }
+  return json({ error: 'not found' }, 404);
+}
+
+
+// ======================= МАГАЗИН И АУКЦИОН =======================
+// Аукцион ников: ставка списывается у игрока сразу, при перебитии возвращается (через таблицу grants).
+// По окончании победитель забирает ник (/auction/claim), продавец получает монеты (за вычетом комиссии) тоже через grants.
+const AU_FEE = 0.05, AU_MAX_LOTS = 5, AU_MIN = 10, AU_MAX = 1_000_000_000_000, AU_HOURS = [1, 6, 12, 24], AU_SNIPE = 120000;
+const EXCL = { ceo: 25_000_000 };   // эксклюзивные ники магазина
+const EXCL_STOCK = { ceo: 3 };      // сколько экземпляров каждого на весь сервер (первый уже куплен)
+const auMin = (l) => (l.bids === 0 ? l.start : Math.max(l.cur + 1, Math.ceil(l.cur * 1.05)));
+async function auSettle(db) {
+  const now = Date.now();
+  const rows = (await db.prepare('SELECT id,seller,cur,bidder FROM auctions WHERE status=0 AND end_ts<=? LIMIT 100').bind(now).all()).results;
+  for (const r of rows) {
+    if (r.bidder) {
+      const u = await db.prepare('UPDATE auctions SET status=1 WHERE id=? AND status=0').bind(r.id).run();
+      if (u.meta.changes) await db.prepare('INSERT INTO grants(uid,amount,claimed,ts) VALUES(?,?,0,?)').bind(r.seller, Math.floor(r.cur * (1 - AU_FEE)), now).run();
+    } else {
+      await db.prepare('UPDATE auctions SET status=2 WHERE id=? AND status=0').bind(r.id).run();
+    }
+  }
+}
+async function auctionRoutes(url, req, env, uid, json) {
+  const p = url.pathname, db = env.DB;
+  const slotsOf = (k) => Array.from({ length: EXCL_STOCK[k] }, (_, i) => (i === 0 ? k : k + (i + 1)));   // 'ceo', 'ceo2', 'ceo3'
+  if (p === '/shop' && req.method === 'GET') {
+    const out = {};
+    for (const [k, price] of Object.entries(EXCL)) {
+      const sl = slotsOf(k), rows = (await db.prepare(`SELECT item,uid FROM shop WHERE item IN (${sl.map(() => '?').join(',')})`).bind(...sl).all()).results;
+      out[k] = { price, total: sl.length, sold: rows.length, left: sl.length - rows.length, mine: rows.some((r) => r.uid === uid) ? 1 : 0 };
+    }
+    return json({ ex: out });
+  }
+  if (p === '/shop/buy' && req.method === 'POST') {
+    let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
+    const item = String(b.item || ''), price = EXCL[item];
+    if (!price) return json({ error: 'bad' }, 400);
+    const sl = slotsOf(item), rows = (await db.prepare(`SELECT item,uid FROM shop WHERE item IN (${sl.map(() => '?').join(',')})`).bind(...sl).all()).results;
+    if (rows.some((r) => r.uid === uid)) return json({ error: 'have' }, 400);
+    const me = await db.prepare('SELECT net FROM players WHERE uid=?').bind(uid).first();
+    if (!me || me.net < price) return json({ error: 'poor' }, 400);
+    for (const slot of sl) {
+      if (rows.some((r) => r.item === slot)) continue;
+      const r = await db.prepare('INSERT OR IGNORE INTO shop(item,uid,ts) VALUES(?,?,?)').bind(slot, uid, Date.now()).run();
+      if (r.meta.changes) return json({ ok: true, item, price });
+    }
+    return json({ error: 'sold' }, 409);
+  }
+  if (!p.startsWith('/auction')) return null;
+  await auSettle(db);
+  const now = Date.now();
+  if (p === '/auction' && req.method === 'GET') {
+    const sort = url.searchParams.get('sort'), q = (url.searchParams.get('q') || '').toLowerCase().replace(/[^a-z0-9_а-яё]/g, '').slice(0, 32);
+    const ord = sort === 'cheap' ? 'a.cur ASC' : sort === 'exp' ? 'a.cur DESC' : 'a.end_ts ASC';
+    const rows = (await db.prepare(`SELECT a.id,a.name,a.start,a.cur,a.bids,a.end_ts,a.bidder,a.seller,p.name AS sname,p.hide FROM auctions a LEFT JOIN players p ON p.uid=a.seller WHERE a.status=0 AND a.end_ts>? AND a.name LIKE ? ORDER BY ${ord} LIMIT 60`).bind(now, '%' + q + '%').all()).results;
+    return json({ now, lots: rows.map((r) => ({ id: r.id, name: r.name, start: r.start, cur: r.cur, bids: r.bids, end: r.end_ts, min: auMin(r), lead: r.bidder === uid ? 1 : 0, mine: r.seller === uid ? 1 : 0, seller: r.hide ? 'Игрок' : (r.sname || 'Игрок') })) });
+  }
+  if (p === '/auction/my' && req.method === 'GET') {
+    const lots = (await db.prepare('SELECT id,name,start,cur,bids,end_ts FROM auctions WHERE seller=? AND status=0 ORDER BY end_ts ASC').bind(uid).all()).results;
+    const lead = (await db.prepare('SELECT id,name,cur,end_ts FROM auctions WHERE bidder=? AND status=0 ORDER BY end_ts ASC').bind(uid).all()).results;
+    const pend = await db.prepare('SELECT COUNT(*) AS n FROM auctions WHERE done=0 AND ((status=1 AND bidder=?1) OR (status=2 AND seller=?1))').bind(uid).first();
+    return json({ now, lots: lots.map((r) => ({ id: r.id, name: r.name, start: r.start, cur: r.cur, bids: r.bids, end: r.end_ts })), lead: lead.map((r) => ({ id: r.id, name: r.name, cur: r.cur, end: r.end_ts })), pend: pend.n, fee: AU_FEE, max: AU_MAX_LOTS });
+  }
+  if (p === '/auction/history' && req.method === 'GET') {
+    const rows = (await db.prepare(`SELECT a.id,a.name,a.cur,a.status,a.seller,a.bidder,a.end_ts,ps.name AS sn,pb.name AS bn FROM auctions a LEFT JOIN players ps ON ps.uid=a.seller LEFT JOIN players pb ON pb.uid=a.bidder WHERE a.status IN (1,2) AND (a.seller=?1 OR a.bidder=?1) ORDER BY a.end_ts DESC LIMIT 30`).bind(uid).all()).results;
+    return json({ items: rows.map((r) => {
+      const sell = r.seller === uid;
+      return { name: r.name, price: r.cur, kind: sell ? (r.status === 1 ? 'sold' : 'unsold') : 'won', who: sell ? (r.bn || 'Игрок') : (r.sn || 'Игрок'), ts: r.end_ts, get: Math.floor(r.cur * (1 - AU_FEE)) };
+    }) });
+  }
+  if (req.method !== 'POST') return json({ error: 'not found' }, 404);
+  let b; try { b = await req.json(); } catch { b = {}; }
+  if (p === '/auction/list') {
+    const name = String(b.name || '').trim().slice(0, 32), price = Math.floor(Number(b.price)), hours = Number(b.hours);
+    if (!/^[\p{L}\p{N}_]{1,32}$/u.test(name) || !AU_HOURS.includes(hours)) return json({ error: 'bad' }, 400);
+    if (!(price >= AU_MIN && price <= AU_MAX)) return json({ error: 'price' }, 400);
+    const c = await db.prepare('SELECT COUNT(*) AS n FROM auctions WHERE seller=? AND status=0').bind(uid).first();
+    if (c.n >= AU_MAX_LOTS) return json({ error: 'toomany' }, 400);
+    const r = await db.prepare('INSERT INTO auctions(seller,name,start,cur,bids,end_ts,status,done,ts) VALUES(?,?,?,?,0,?,0,0,?)').bind(uid, name, price, price, now + hours * 3600000, now).run();
+    return json({ ok: true, id: r.meta.last_row_id });
+  }
+  if (p === '/auction/bid') {
+    const id = Number(b.id) || 0, amount = Math.floor(Number(b.amount));
+    const lot = await db.prepare('SELECT * FROM auctions WHERE id=?').bind(id).first();
+    if (!lot || lot.status !== 0 || lot.end_ts <= now) return json({ error: 'gone' }, 404);
+    if (lot.seller === uid) return json({ error: 'own' }, 400);
+    if (lot.bidder === uid) return json({ error: 'lead' }, 400);
+    const min = auMin(lot);
+    if (!(amount >= min) || amount > AU_MAX) return json({ error: 'low', min }, 409);
+    const me = await db.prepare('SELECT net FROM players WHERE uid=?').bind(uid).first();
+    if (!me || me.net < amount) return json({ error: 'poor' }, 400);
+    const end = lot.end_ts - now < AU_SNIPE ? now + AU_SNIPE : lot.end_ts;
+    const r = await db.prepare('UPDATE auctions SET cur=?,bidder=?,bids=bids+1,end_ts=? WHERE id=? AND status=0 AND cur=? AND bids=? AND end_ts>?').bind(amount, uid, end, id, lot.cur, lot.bids, now).run();
+    if (!r.meta.changes) return json({ error: 'changed' }, 409);
+    if (lot.bidder) await db.prepare('INSERT INTO grants(uid,amount,claimed,ts) VALUES(?,?,0,?)').bind(lot.bidder, lot.cur, now).run();
+    return json({ ok: true, name: lot.name, amount, end });
+  }
+  if (p === '/auction/cancel') {
+    const id = Number(b.id) || 0;
+    const lot = await db.prepare('SELECT name FROM auctions WHERE id=? AND seller=? AND status=0 AND bids=0').bind(id, uid).first();
+    if (!lot) return json({ error: 'gone' }, 404);
+    const r = await db.prepare('UPDATE auctions SET status=3,done=1 WHERE id=? AND seller=? AND status=0 AND bids=0').bind(id, uid).run();
+    if (!r.meta.changes) return json({ error: 'gone' }, 404);
+    return json({ ok: true, name: lot.name });
+  }
+  if (p === '/auction/claim') {
+    const rows = (await db.prepare('SELECT id,name,status FROM auctions WHERE done=0 AND ((status=1 AND bidder=?1) OR (status=2 AND seller=?1)) LIMIT 50').bind(uid).all()).results;
+    const won = [], back = [];
+    for (const r of rows) {
+      const u = await db.prepare('UPDATE auctions SET done=1 WHERE id=? AND done=0').bind(r.id).run();
+      if (u.meta.changes) (r.status === 1 ? won : back).push(r.name);
+    }
+    return json({ won, back });
   }
   return json({ error: 'not found' }, 404);
 }
