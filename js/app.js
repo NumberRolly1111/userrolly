@@ -217,7 +217,7 @@ function score(s){
   return{t:tierOf(p),tags:t,p};
 }
 
-const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,upl:0,uph:[],refd:0,refc:0,casen:0,dcase:'',fast:0,theme:'',cf:'',work:[],lotp:null,lotn:0,dex:'',dexg:[],promo:[],cfree:{},gbest:0,cown:[],cn:'',ct:'',inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
+const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,upl:0,uph:[],refd:0,refc:0,casen:0,dcase:'',fast:0,theme:'',cf:'',work:[],lotp:null,lotn:0,muT:0,hall:0,hf:'f_concrete',hw:'w_concrete',hl:'l_bulb',hown:[],dex:'',dexg:[],promo:[],cfree:{},gbest:0,cown:[],cn:'',ct:'',inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 fixState();
 // Темы оформления: меняют цвета через переменные CSS (html[data-theme=…])
@@ -1479,7 +1479,8 @@ function workList(){S.work=S.work.filter(w=>S.items.some(i=>i.id===w.id));return
 function workRate(it){return Math.max(1,Math.round(val(it.t,it.p,it.n)*WORKRATE))}
 function workAcc(w,it){return Math.floor(workRate(it)*Math.min(WORKCAP,Math.max(0,Date.now()-w.t))/3600e3)}
 function workTotal(){return workList().reduce((s,w)=>{const it=S.items.find(i=>i.id===w.id);return s+(it?workAcc(w,it):0)},0)}
-function workPlate(){const n=workList().length,t=workTotal();return `<div class="cshd wkhd"><b>Пассивный заработок</b></div><button class="pcard achbtn" data-work="1" style="margin-bottom:12px"><div><b>Мой зал в музее</b><small>${n} из ${WORKMAX} на показе${t>0?' · накоплено '+fmtC(t)+' 🪙':' · посетители платят за просмотр'}</small></div><span class="trophy">🖼️</span></button>`}
+function workPlateOld(){const n=workList().length,t=workTotal();return `<div class="cshd wkhd"><b>Пассивный заработок</b></div><button class="pcard achbtn" data-work="1" style="margin-bottom:12px"><div><b>Мой зал в музее</b><small>${n} из ${WORKMAX} на показе${t>0?' · накоплено '+fmtC(t)+' 🪙':' · посетители платят за просмотр'}</small></div><span class="trophy">🖼️</span></button>`}
+try{if(Array.isArray(S.work)&&S.work.length){const g=workTotal();S.work=[];if(g>0)S.coins=Math.min(CAP,S.coins+g);save()}}catch(e){}   // старый «зал»: выплачиваем накопленное и закрываем
 function workSheet(close){
   let o=document.getElementById('worksh');
   if(close){if(o)o.remove();clearInterval(wkTm);wkPick=false;return}
@@ -1852,7 +1853,122 @@ async function openMuseum(){
   try{await lbPush(true);await muLoad()}catch(e){mu.err=merr(e)}
   mu.load=false;if(!$('#tab-museum').hidden)renderMuseum();
 }
-async function muLoad(){const r=await lbReq('/museum');mu.items=r.items;mu.total=r.total;mu.mine=r.mine;mu.max=r.max}
+async function muLoad(){const r=await lbReq('/museum');mu.my=r.my;mu.items=r.items;mu.total=r.total;mu.mine=r.mine;mu.max=r.max}
+
+// ---------- Доход музея: ники, которые стоят в музее, приносят монеты ----------
+function muMine(){const a=Array.isArray(mu.my)?mu.my:(mu.items||[]).filter(x=>x.mine);return a.filter(x=>x&&x.name&&isFinite(+x.ts))}
+function muRate(x){return Math.max(1,Math.round(nickVal(x.name).v*WORKRATE))}
+function muTotal(){const now=Date.now(),t0=+S.muT||0;return muMine().reduce((a,x)=>a+Math.floor(muRate(x)*Math.min(WORKCAP,Math.max(0,now-Math.max(+x.ts,t0)))/3600e3),0)}
+function museumIncome(){
+  const my=muMine();
+  if(!my.length)return `<div class="pcard mincome"><b>Доход музея</b><small>Ники, которые стоят в музее, приносят монеты: 0,25% цены в час, копится до 8 часов. Поставь первый ник.</small></div>`;
+  const acc=muTotal(),rate=my.reduce((a,x)=>a+muRate(x),0);
+  return `<div class="pcard mincome"><div class="mirow"><div><b>Доход музея</b><small>${my.length} ${pl(my.length)} в музее · +${fmt(rate)} 🪙/ч · копится до 8 ч</small></div><b class="miacc">${fmt(acc)} 🪙</b></div><button class="btn main cwide" id="mu-claim"${acc>0?'':' disabled'}>${acc>0?'Забрать · +'+fmt(acc)+' 🪙':'Пока нечего забирать'}</button></div>`;
+}
+function muClaim(){const g=muTotal();if(g<=0)return;S.coins=Math.min(CAP,S.coins+g);S.muT=Date.now();save();render();sfx('coins');toast('Музей принёс +'+fmt(g)+' 🪙');renderMuseum()}
+// ---------- Свой зал в музее: покупка, интерьер, предпросмотр ----------
+var HALL_PRICE=2400000;
+var HF=[['f_concrete','Бетон',0],['f_tile','Плитка',0],['f_check','Шахматка',1500000],['f_parquet','Паркет',3000000],['f_gloss','Наливной глянец',6000000],['f_carbon','Карбон',50000000]];
+var HW=[['w_concrete','Бетон',0],['w_profl','Профлист',0],['w_panels','Белые панели',2000000],['w_quartz','Кварц',3000000],['w_board','Доска',4000000],['w_graf','Граффити',6000000],['w_neon','Неоновая сетка',10000000]];
+var HL=[['l_bulb','Лампочка',0],['l_warm','Тёплый',1000000],['l_cold','Холодный',1000000],['l_neon','Неон синий',2000000],['l_spots','Прожекторы',5000000]];
+var HALLALL=HF.concat(HW,HL),hs={f:'f_concrete',w:'w_concrete',l:'l_bulb',open:false};
+function hallItem(id){return HALLALL.find(x=>x[0]===id)}
+function hallOwn(id){const x=hallItem(id);return !!x&&(x[2]===0||(Array.isArray(S.hown)&&S.hown.includes(id)))}
+function hallCfg(){const g=(id,list,d)=>list.some(x=>x[0]===id)&&hallOwn(id)?id:d;return{f:g(S.hf,HF,'f_concrete'),w:g(S.hw,HW,'w_concrete'),l:g(S.hl,HL,'l_bulb')}}
+function hallFloor(k,u){
+  const ny=k==='f_carbon'?12:k==='f_parquet'?10:7,nx=k==='f_carbon'?18:k==='f_parquet'?10:k==='f_check'?8:8;
+  const Y=j=>150+90*Math.pow(j/ny,1.55),X=(i,y)=>{const t=(y-150)/90,l=70-70*t,r=290+70*t;return l+(r-l)*i/nx};
+  const quad=(i,j,fill,st)=>{const a=Y(j),b=Y(j+1);return `<polygon points="${X(i,a).toFixed(1)},${a.toFixed(1)} ${X(i+1,a).toFixed(1)},${a.toFixed(1)} ${X(i+1,b).toFixed(1)},${b.toFixed(1)} ${X(i,b).toFixed(1)},${b.toFixed(1)}" fill="${fill}"${st||''}/>`};
+  const base=`<polygon points="0,240 360,240 290,150 70,150" fill="#777"/>`;let o='';
+  if(k==='f_concrete'){o=`<polygon points="0,240 360,240 290,150 70,150" fill="url(#fc${u})"/>`;for(let i=0;i<14;i++){const x=40+(i*83)%280,y=165+(i*37)%70;o+=`<ellipse cx="${x}" cy="${y}" rx="${5+i%4*3}" ry="${1.5+i%3}" fill="#000" opacity=".07"/>`}o+=`<line x1="180" y1="150" x2="180" y2="240" stroke="#000" opacity=".12"/><line x1="125" y1="150" x2="60" y2="240" stroke="#000" opacity=".1"/><line x1="235" y1="150" x2="300" y2="240" stroke="#000" opacity=".1"/>`}
+  else if(k==='f_tile'){for(let j=0;j<ny;j++)for(let i=0;i<nx;i++)o+=quad(i,j,(i+j)%3===0?'#d9dde4':'#cdd2da',' stroke="#9aa1ad" stroke-width=".8"')}
+  else if(k==='f_check'){for(let j=0;j<ny;j++)for(let i=0;i<nx;i++)o+=quad(i,j,(i+j)%2?'#16161d':'#ececf2')}
+  else if(k==='f_parquet'){const c=['#a8743f','#8e5f33','#b8844d','#9b6a39'];for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const h=(i*7+j*13+(j%2?3:0))%4;o+=quad(i,j,c[h],' stroke="#4e3017" stroke-width=".7"')}}
+  else if(k==='f_gloss'){o=`<polygon points="0,240 360,240 290,150 70,150" fill="url(#fg${u})"/><polygon points="120,150 170,150 120,240 40,240" fill="#fff" opacity=".12"/><polygon points="215,150 235,150 270,240 235,240" fill="#fff" opacity=".1"/><polygon points="70,150 290,150 300,165 60,165" fill="#fff" opacity=".07"/>`}
+  else{for(let j=0;j<ny;j++)for(let i=0;i<nx;i++)o+=quad(i,j,(i+j)%2?'#23232b':'#0d0d11');o+=`<polygon points="0,240 360,240 290,150 70,150" fill="url(#fk${u})" opacity=".55"/>`}
+  return base+o;
+}
+function hallWallDefs(w,u){
+  const pid='wp'+u;
+  if(w==='w_concrete')return `<pattern id="${pid}" width="60" height="60" patternUnits="userSpaceOnUse"><rect width="60" height="60" fill="#8c8f97"/><circle cx="12" cy="14" r="2" fill="#000" opacity=".1"/><circle cx="40" cy="30" r="3" fill="#fff" opacity=".08"/><circle cx="22" cy="48" r="2.5" fill="#000" opacity=".08"/><path d="M0 30h60" stroke="#000" opacity=".08"/></pattern>`;
+  if(w==='w_profl')return `<pattern id="${pid}" width="12" height="20" patternUnits="userSpaceOnUse"><rect width="12" height="20" fill="#9eb0bd"/><rect width="4" height="20" fill="#c3d2dc"/><rect x="4" width="4" height="20" fill="#8497a6"/></pattern>`;
+  if(w==='w_panels')return `<pattern id="${pid}" width="44" height="64" patternUnits="userSpaceOnUse"><rect width="44" height="64" fill="#e3e3ea"/><rect x="3" y="3" width="38" height="58" rx="2" fill="#fafafd" stroke="#cfcfd9"/><rect x="8" y="8" width="28" height="48" rx="1" fill="none" stroke="#e1e1e8"/></pattern>`;
+  if(w==='w_quartz')return `<pattern id="${pid}" width="70" height="70" patternUnits="userSpaceOnUse"><rect width="70" height="70" fill="#b9c7d9"/><polygon points="0,0 70,0 0,70" fill="#d3deec" opacity=".6"/><polygon points="70,70 70,10 10,70" fill="#8ea2bc" opacity=".35"/><circle cx="20" cy="22" r="1.4" fill="#fff"/><circle cx="52" cy="40" r="1.8" fill="#fff"/><circle cx="34" cy="58" r="1.2" fill="#fff"/></pattern>`;
+  if(w==='w_board')return `<pattern id="${pid}" width="110" height="70" patternUnits="userSpaceOnUse"><rect width="110" height="70" fill="#2a4a3c"/><rect x="2" y="2" width="106" height="66" fill="none" stroke="#7a5a35" stroke-width="3"/><path d="M14 22q10-10 20 0t20 0M16 40h30M60 34l10 12 10-14M88 22v18" stroke="#fff" stroke-width="1.6" fill="none" opacity=".55" stroke-linecap="round"/><path d="M20 56h60" stroke="#fff" stroke-width="3" opacity=".12"/></pattern>`;
+  if(w==='w_graf')return `<pattern id="${pid}" width="130" height="90" patternUnits="userSpaceOnUse"><rect width="130" height="90" fill="#262633"/><circle cx="26" cy="24" r="16" fill="#ff3c8e"/><path d="M52 70q14-34 30-8t30-30" stroke="#2ee6ff" stroke-width="6" fill="none" stroke-linecap="round"/><text x="46" y="40" font-size="26" font-weight="900" fill="#ffe14d" transform="rotate(-8 60 30)" font-family="Arial Black,sans-serif">WOW</text><rect x="94" y="52" width="26" height="26" fill="#7cff6b" transform="rotate(14 107 65)"/><path d="M6 78h40" stroke="#fff" stroke-width="3" opacity=".6"/></pattern>`;
+  return `<pattern id="${pid}" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="24" fill="#0b0720"/><path d="M24 0H0V24" fill="none" stroke="#19e6ff" stroke-width="1" opacity=".75"/><path d="M12 0V24M0 12H24" stroke="#ff3cf0" stroke-width=".5" opacity=".35"/></pattern>`;
+}
+function hallSvg(cfg,ex,u){
+  cfg=cfg||hallCfg();ex=ex||[];u=u||'x';
+  const pid='wp'+u,w=cfg.w,l=cfg.l;
+  const defs=`<defs>${hallWallDefs(w,u)}
+  <pattern id="fc${u}" width="50" height="50" patternUnits="userSpaceOnUse"><rect width="50" height="50" fill="#797c84"/><circle cx="10" cy="12" r="1.6" fill="#000" opacity=".12"/><circle cx="34" cy="28" r="2" fill="#fff" opacity=".07"/></pattern>
+  <linearGradient id="fg${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b3358"/><stop offset="1" stop-color="#0d0f1c"/></linearGradient>
+  <linearGradient id="fk${u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".18"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".1"/></linearGradient>
+  <radialGradient id="vg${u}" cx=".5" cy=".42" r=".75"><stop offset=".35" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="${l==='l_bulb'?.62:l==='l_spots'?.6:.34}"/></radialGradient>
+  <radialGradient id="gl${u}" cx=".5" cy=".12" r=".7"><stop offset="0" stop-color="${l==='l_warm'?'#ffb45a':l==='l_cold'?'#cfe6ff':'#ffe7a0'}" stop-opacity="${l==='l_bulb'?.45:.5}"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  <linearGradient id="cn${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6c8" stop-opacity=".85"/><stop offset="1" stop-color="#fff6c8" stop-opacity="0"/></linearGradient>
+  <filter id="bl${u}"><feGaussianBlur stdDeviation="2.4"/></filter></defs>`;
+  const walls=`<polygon points="0,0 360,0 290,40 70,40" fill="#000" opacity=".55"/><rect x="70" y="40" width="220" height="110" fill="url(#${pid})"/>
+  <polygon points="0,0 70,40 70,150 0,240" fill="url(#${pid})"/><polygon points="0,0 70,40 70,150 0,240" fill="#000" opacity=".28"/>
+  <polygon points="360,0 290,40 290,150 360,240" fill="url(#${pid})"/><polygon points="360,0 290,40 290,150 360,240" fill="#000" opacity=".28"/>
+  <polygon points="0,0 360,0 290,40 70,40" fill="#14141c" opacity=".7"/>`;
+  const frame=(x,y)=>`<g><rect x="${x}" y="${y}" width="26" height="20" fill="#2b2b36" stroke="#caa86a" stroke-width="2"/><polygon points="${x+3},${y+17} ${x+10},${y+8} ${x+15},${y+14} ${x+19},${y+10} ${x+23},${y+17}" fill="#6fd3a3"/><circle cx="${x+19}" cy="${y+6}" r="2.5" fill="#ffd66b"/></g>`;
+  const shelf=`<g><rect x="104" y="72" width="152" height="4" fill="#6b4a2a"/><rect x="104" y="76" width="152" height="2" fill="#000" opacity=".3"/><path d="M114 76v8M246 76v8" stroke="#3b2814" stroke-width="2"/>
+  <rect x="122" y="60" width="6" height="12" fill="#e0536b"/><rect x="129" y="58" width="5" height="14" fill="#4aa3ff"/><rect x="135" y="62" width="6" height="10" fill="#ffd66b"/>
+  <path d="M176 72c-3-6-3-10 0-14h8c3 4 3 8 0 14z" fill="#7ad3c6"/><path d="M180 58c-5-6-8-6-10-12M180 58c3-6 8-8 12-10" stroke="#2e9a54" stroke-width="2" fill="none"/>
+  <rect x="226" y="62" width="16" height="10" rx="1" fill="#c9b6ff"/></g>`;
+  const pos=[110,180,250],ped=pos.map((cx,i)=>{
+    const top=186,e=ex[i],nv=e?nickVal(e):null,P2=nv?PLATE[nv.t]:null;
+    let o=`<g><ellipse cx="${cx}" cy="212" rx="30" ry="6" fill="#000" opacity=".28"/><polygon points="${cx-24},${top+4} ${cx+24},${top+4} ${cx+24},208 ${cx-24},208" fill="#d7d7e0"/><polygon points="${cx+24},${top+4} ${cx+30},${top} ${cx+30},204 ${cx+24},208" fill="#a9a9b6"/><polygon points="${cx-24},${top+4} ${cx-18},${top} ${cx+30},${top} ${cx+24},${top+4}" fill="#f4f4fa"/>`;
+    if(e){const nm=e.length>8?e.slice(0,7)+'…':e;o+=`<defs><linearGradient id="pl${u}${i}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${P2[0]}"/><stop offset="1" stop-color="${P2[1]}"/></linearGradient></defs><rect x="${cx-26}" y="${top-24}" width="56" height="20" rx="4" fill="url(#pl${u}${i})" stroke="#fff" stroke-opacity=".6"/><text x="${cx+2}" y="${top-10.5}" font-size="9.5" font-weight="800" text-anchor="middle" fill="#14142a" font-family="system-ui,sans-serif">${String(nm).replace(/[&<>]/g,'')}</text>`}
+    else o+=`<rect x="${cx-22}" y="${top-20}" width="48" height="16" rx="4" fill="none" stroke="#fff" stroke-opacity=".35" stroke-dasharray="3 3"/><text x="${cx+2}" y="${top-8.5}" font-size="10" text-anchor="middle" fill="#fff" fill-opacity=".45" font-family="system-ui,sans-serif">＋</text>`;
+    return o+'</g>'}).join('');
+  let fx='';
+  if(l==='l_bulb'){fx=`<path d="M180 0V24" stroke="#222" stroke-width="1.4"/><circle cx="180" cy="28" r="5" fill="#fff3b5"/><circle cx="180" cy="28" r="14" fill="#ffe27a" opacity=".35" filter="url(#bl${u})"/>`}
+  else if(l==='l_warm'){fx=`<rect width="360" height="240" fill="#ff9a3c" opacity=".16"/><g><rect x="70" y="30" width="30" height="5" fill="#2b2b33"/><rect x="165" y="30" width="30" height="5" fill="#2b2b33"/><rect x="260" y="30" width="30" height="5" fill="#2b2b33"/><circle cx="85" cy="38" r="5" fill="#ffd9a0"/><circle cx="180" cy="38" r="5" fill="#ffd9a0"/><circle cx="275" cy="38" r="5" fill="#ffd9a0"/></g>`}
+  else if(l==='l_cold'){fx=`<rect width="360" height="240" fill="#bfe0ff" opacity=".14"/><rect x="90" y="34" width="180" height="5" rx="2" fill="#f2f9ff"/><rect x="90" y="34" width="180" height="5" rx="2" fill="#dff0ff" filter="url(#bl${u})"/>`}
+  else if(l==='l_neon'){fx=`<rect width="360" height="240" fill="#2442ff" opacity=".2"/><path d="M0 0L70 40H290L360 0M70 40V150M290 40V150" stroke="#3b7bff" stroke-width="3" fill="none" filter="url(#bl${u})"/><path d="M70 40H290M70 150H290" stroke="#9fc4ff" stroke-width="1.6" fill="none"/>`}
+  else{fx=pos.map(cx=>`<polygon points="${cx-6},36 ${cx+6},36 ${cx+30},205 ${cx-30},205" fill="url(#cn${u})" opacity=".5"/><circle cx="${cx}" cy="36" r="5" fill="#fff6c8"/>`).join('')+`<rect x="70" y="30" width="220" height="5" fill="#1b1b22"/>`}
+  const decor=frame(84,64)+frame(250,64);
+  return `<svg class="hallsvg" viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Зал в музее">${defs}${hallFloor(cfg.f,u)}${walls}${decor}${shelf}${ped}<rect width="360" height="240" fill="url(#gl${u})"/>${fx}<rect width="360" height="240" fill="url(#vg${u})"/></svg>`;
+}
+function hallExNames(){try{return muMine().map(x=>x.name).slice(0,3)}catch(e){return[]}}
+function hallPlate(){
+  const cfg=hallCfg(),own=!!S.hall;
+  return `<div class="pcard hallpl">${hallSvg(own?cfg:{f:'f_concrete',w:'w_concrete',l:'l_bulb'},own?hallExNames():[],'pl')}
+  <div class="hallrow"><div><b>${own?'Мой зал':'Свой зал в музее'}</b><small>${own?'Интерьер, свет и твои экспонаты':'Нужен, чтобы ставить ники в музей и получать доход'}</small></div>
+  <button class="btn main" id="hall-go">${own?'Мой зал':'Купить · '+fmt(HALL_PRICE)+' 🪙'}</button></div></div>`;
+}
+function hallSheet(close){
+  let sh=document.getElementById('hallsh');
+  if(close){if(sh)sh.remove();return}
+  if(!sh){sh=document.createElement('div');sh.id='hallsh';sh.className='usheet';document.body.append(sh);
+    sh.onclick=e=>{
+      if(e.target.closest('[data-hx]'))return hallSheet(true);
+      const o=e.target.closest('[data-ho]');if(o){const id=o.dataset.ho;hs[id[0]]=id;sfx('tick');return hallSheet()}
+      if(e.target.closest('#hall-ok')){
+        const ids=[hs.f,hs.w,hs.l],need=ids.filter(id=>!hallOwn(id)),cost=need.reduce((a,id)=>a+hallItem(id)[2],0);
+        if(S.coins<cost)return toast('Не хватает монет');
+        if(!Array.isArray(S.hown))S.hown=[];
+        S.coins-=cost;need.forEach(id=>S.hown.push(id));S.hf=hs.f;S.hw=hs.w;S.hl=hs.l;save();render();sfx(cost?'coins':'tap');
+        toast(cost?'Интерьер куплен и применён':'Интерьер применён');renderMuseum();return hallSheet()}
+    }}
+  const eh=x=>String(x);
+  const sec=(t,list,k)=>`<div class="hsec"><b>${t}</b><div class="hopts">${list.map(([id,n,pr])=>{const own=hallOwn(id);return `<button class="hopt${hs[k]===id?' on':''}" data-ho="${id}"><b>${n}</b><small>${pr===0?'бесплатно':own?'куплено ✓':fmt(pr)+' 🪙'}</small></button>`}).join('')}</div></div>`;
+  const ids=[hs.f,hs.w,hs.l],need=ids.filter(id=>!hallOwn(id)),cost=need.reduce((a,id)=>a+hallItem(id)[2],0),cur=hallCfg();
+  const same=hs.f===cur.f&&hs.w===cur.w&&hs.l===cur.l;
+  sh.innerHTML=`<div class="sbg" data-hx="1"></div><div class="sbox casebox hallbox"><div class="shead"><b>🏛️ Мой зал</b><button class="btn sm" data-hx="1">✕</button></div>
+  <div class="hallprev">${hallSvg({f:hs.f,w:hs.w,l:hs.l},hallExNames(),'sh')}</div>
+  ${sec('Пол',HF,'f')}${sec('Стены',HW,'w')}${sec('Свет',HL,'l')}
+  <button class="btn main" id="hall-ok"${same||S.coins<cost?' disabled':''}>${same?'Так и стоит':S.coins<cost?'Не хватает '+fmt(cost-S.coins)+' 🪙':cost?`Купить и применить · ${fmt(cost)} 🪙`:'Применить'}</button></div>`;
+}
+function hallBuy(){
+  if(S.hall)return;if(S.coins<HALL_PRICE)return toast('Не хватает '+fmt(HALL_PRICE-S.coins)+' 🪙');
+  S.coins-=HALL_PRICE;S.hall=1;save();render();sfx('ach');hap('n','success');toast('🏛️ Зал куплен!');renderMuseum();
+}
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#hall-go')){if(S.hall){const c=hallCfg();hs.f=c.f;hs.w=c.w;hs.l=c.l;hallSheet()}else hallBuy()}});
+
 function renderMuseum(){
   const el=$('#tab-museum');if(!el)return;
   let body;
@@ -1862,7 +1978,7 @@ function renderMuseum(){
   else if(mu.err&&!mu.items)body=`<div class="pcard lbmsg"><b>${escH(mu.err)}</b><button class="btn main" id="mu-retry">Повторить</button></div>`;
   else{
     const rows=(mu.items||[]).map(x=>({...x,n:nickVal(x.name)})).sort((p,q)=>q.n.v-p.n.v||p.ts-q.ts);
-    body=`<div class="pcard mus"><div><b>В музее ${fmt(mu.total)} ${pl(mu.total)}</b><small>Твоих экспонатов: ${mu.mine} из ${mu.max}</small></div><button class="btn main" id="mu-new"${mu.mine>=mu.max?' disabled':''}>＋ Поставить</button></div>`+
+    body=`<div class="pcard mus"><div><b>В музее ${fmt(mu.total)} ${pl(mu.total)}</b><small>Твоих экспонатов: ${mu.mine} из ${mu.max}</small></div><button class="btn main" id="mu-new"${mu.mine>=mu.max||!S.hall?' disabled':''}>＋ Поставить</button></div>`+
     (rows.length?rows.map((x,i)=>`<div class="murow${x.mine?' me':''}"><em>${i+1}</em>${plate(x.name,x.n.t)}<div class="mui"><b>${fmt(x.n.v)} 🪙</b><span>${escH(x.owner)}</span><small>${fmtDate(x.ts)}</small></div></div>`).join(''):'<div class="pcard lbmsg"><small>В музее пока пусто. Поставь первый ник!</small></div>');
   }
   const its=[...S.items].sort((a,b)=>val(b.t,b.p,b.n)-val(a.t,a.p,a.n)),sel=S.items.find(i=>i.id===mu.sel);
@@ -1871,15 +1987,16 @@ function renderMuseum(){
     ${sel?`<div class="muprev">${plate(sel.n,sel.t)}<span>${fmt(val(sel.t,sel.p,sel.n))} 🪙</span></div>`:''}
     <small class="sum">Ник навсегда уйдёт из коллекции и станет экспонатом. Вернуть или продать его будет нельзя.</small>
     <button class="btn main${mu.armed?' danger':''}" id="mu-ok"${sel?'':' disabled'}>${mu.armed?'Точно поставить навсегда?':'Поставить в музей'}</button></div></div>`:'';
-  setHtml(el,`<div class="ahead"><button class="btn sm" id="mu-back">‹ Коллекция</button><h2>Музей</h2></div>${(()=>{try{return workPlate()}catch(e){return ''}})()}${body}${sheet}`);
+  setHtml(el,`<div class="ahead"><button class="btn sm" id="mu-back">‹ Коллекция</button><h2>Музей</h2></div>${(()=>{try{return hallPlate()}catch(e){return ''}})()}${(()=>{try{return S.hall?museumIncome():''}catch(e){return ''}})()}${body}${sheet}`);
 }
 $('#tab-museum').onchange=e=>{const s=e.target.closest('[data-musel]');if(!s)return;mu.sel=s.dataset.musel;mu.armed=false;renderMuseum()};
 $('#tab-museum').onclick=async e=>{
+  if(e.target.closest('#mu-claim'))return muClaim();
   const t=e.target;
   if(t.closest('#mu-back'))return tab('col');
   if(t.closest('#mu-retry'))return openMuseum();
   if(t.closest('[data-muclose]')){mu.sheet=false;mu.armed=false;return renderMuseum()}
-  if(t.closest('#mu-new')){mu.sheet=true;mu.sel='';mu.armed=false;return renderMuseum()}
+  if(t.closest('#mu-new')){if(!S.hall)return toast('Сначала купи свой зал');mu.sheet=true;mu.sel='';mu.armed=false;return renderMuseum()}
   if(t.closest('#mu-ok')){
     const it=S.items.find(i=>i.id===mu.sel);if(!it||mu.busy)return;
     if(!mu.armed){mu.armed=true;renderMuseum();setTimeout(()=>{if(mu.armed){mu.armed=false;renderMuseum()}},4000);return}
