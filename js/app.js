@@ -217,7 +217,7 @@ function score(s){
   return{t:tierOf(p),tags:t,p};
 }
 
-const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,upl:0,uph:[],refd:0,refc:0,casen:0,dcase:'',fast:0,theme:'',cf:'',work:[],lotp:null,lotn:0,muT:0,hall:0,hf:'f_concrete',hw:'w_concrete',hl:'l_bulb',hown:[],dex:'',dexg:[],promo:[],cfree:{},gbest:0,cown:[],cn:'',ct:'',inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
+const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0,0,0,0,0,0],time:0,tday:{d:'',s:0},pend:null,econ:4,login:{n:0,last:''},wheel:'',q:{wk:'',list:[]},slots:10,auto:0,saved:0,sold:0,bestv:0,wheelN:0,maxStreak:0,qn:0,maxCoins:0,bestn:'',hide:0,upl:0,uph:[],refd:0,refc:0,casen:0,dcase:'',fast:0,theme:'',cf:'',work:[],lotp:null,lotn:0,muT:0,hd:{},hall:0,hf:'f_concrete',hw:'w_concrete',hl:'l_bulb',hown:[],dex:'',dexg:[],promo:[],cfree:{},gbest:0,cown:[],cn:'',ct:'',inv:0,tri:0,luck:0,five:0,ach:null,achGot:[],en:15,enT:0,src:'free',show:[],snd:true,lvl:1,xp:0,xpv:0};
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 fixState();
 // Темы оформления: меняют цвета через переменные CSS (html[data-theme=…])
@@ -1859,13 +1859,13 @@ async function muLoad(){const r=await lbReq('/museum');mu.my=r.my;mu.items=r.ite
 
 // ---------- Доход музея: ники, которые стоят в музее, приносят монеты ----------
 function muMine(){const a=Array.isArray(mu.my)?mu.my:(mu.items||[]).filter(x=>x.mine);return a.filter(x=>x&&x.name&&isFinite(+x.ts))}
-function muRate(x){return Math.max(1,Math.round(nickVal(x.name).v*WORKRATE))}
+function muRate(x){return Math.max(1,Math.round(nickVal(x.name).v*WORKRATE*(1+hallBonus()/100)))}
 function muTotal(){const now=Date.now(),t0=+S.muT||0;return muMine().reduce((a,x)=>a+Math.floor(muRate(x)*Math.min(WORKCAP,Math.max(0,now-Math.max(+x.ts,t0)))/3600e3),0)}
 function museumIncome(){
   const my=muMine();
   if(!my.length)return `<div class="pcard mincome"><b>Доход музея</b><small>Ники, которые стоят в музее, приносят монеты: 0,25% цены в час, копится до 8 часов. Поставь первый ник.</small></div>`;
   const acc=muTotal(),rate=my.reduce((a,x)=>a+muRate(x),0);
-  return `<div class="pcard mincome"><div class="mirow"><div><b>Доход музея</b><small>${my.length} ${pl(my.length)} в музее · +${fmt(rate)} 🪙/ч · копится до 8 ч</small></div><b class="miacc">${fmt(acc)} 🪙</b></div><button class="btn main cwide" id="mu-claim"${acc>0?'':' disabled'}>${acc>0?'Забрать · +'+fmt(acc)+' 🪙':'Пока нечего забирать'}</button></div>`;
+  return `<div class="pcard mincome"><div class="mirow"><div><b>Доход музея</b><small>${my.length} ${pl(my.length)} в музее · +${fmt(rate)} 🪙/ч · копится до 8 ч${hallBonus()?` · декор +${hallBonus()}%`:''}</small></div><b class="miacc">${fmt(acc)} 🪙</b></div><button class="btn main cwide" id="mu-claim"${acc>0?'':' disabled'}>${acc>0?'Забрать · +'+fmt(acc)+' 🪙':'Пока нечего забирать'}</button></div>`;
 }
 function muClaim(){const g=muTotal();if(g<=0)return;S.coins=Math.min(CAP,S.coins+g);S.muT=Date.now();save();render();sfx('coins');toast('Музей принёс +'+fmt(g)+' 🪙');renderMuseum()}
 // ---------- Свой зал в музее: покупка, интерьер, предпросмотр ----------
@@ -1874,10 +1874,50 @@ var HF=[['f_concrete','Бетон',0],['f_tile','Плитка',0],['f_check','Ш
 var HW=[['w_concrete','Бетон',0],['w_profl','Профлист',0],['w_panels','Белые панели',2000000],['w_quartz','Кварц',3000000],['w_wood','Дерево',4000000]];
 var HL=[['l_bulb','Лампочка',0],['l_warm','Тёплый',1000000],['l_cold','Холодный',1000000],['l_neon','Неон синий',2000000],['l_spots','Прожекторы',5000000]];
 try{if(Array.isArray(S.hown)){let ref=0;const old={w_graf:6000000,w_neon:10000000};S.hown=S.hown.filter(id=>{if(old[id]){ref+=old[id];return false}return true});if(S.hown.includes('w_board')){S.hown=S.hown.filter(id=>id!=='w_board');S.hown.push('w_wood')}if(ref)S.coins=Math.min(CAP,S.coins+ref);if(S.hw==='w_board')S.hw='w_wood';if(S.hw==='w_graf'||S.hw==='w_neon')S.hw='w_concrete'}}catch(e){}
-var HALLALL=HF.concat(HW,HL),hs={f:'f_concrete',w:'w_concrete',l:'l_bulb',open:false};
-function hallItem(id){return HALLALL.find(x=>x[0]===id)}
+var HALLALL=HF.concat(HW,HL,[]),hs={f:'f_concrete',w:'w_concrete',l:'l_bulb',d:{},open:false};
+function hallItem(id){return HALLALL.find(x=>x[0]===id)||(typeof HD!=='undefined'?HD.find(x=>x[0]===id):null)}
 function hallOwn(id){const x=hallItem(id);return !!x&&(x[2]===0||(Array.isArray(S.hown)&&S.hown.includes(id)))}
 function hallCfg(){const g=(id,list,d)=>list.some(x=>x[0]===id)&&hallOwn(id)?id:d;return{f:g(S.hf,HF,'f_concrete'),w:g(S.hw,HW,'w_concrete'),l:g(S.hl,HL,'l_bulb')}}
+// ---------- Декорации зала ----------
+// слот → список вещей; у каждой вещи: id, название, цена, бонус к доходу музея в %
+var HD=[
+ ['d_land','Пейзаж',500000,.3],['d_abs','Абстракция',1500000,.5],['d_port','Портрет в золотой раме',4000000,1],
+ ['d_clock','Большие часы',1000000,.4],['d_rug','Красная дорожка',2000000,.8],
+ ['d_ficus','Фикус',800000,.3],['d_palm','Пальма',1500000,.5],['d_bonsai','Бонсай',3000000,.8],
+ ['d_bust','Бюст',5000000,1.2],['d_knight','Рыцарь в доспехах',12000000,2],
+ ['d_bench','Скамейка',1000000,.4],['d_rope','Бархатные канаты',3000000,.8],
+ ['d_robot','Робот-экскурсовод',15000000,2],['d_trophy','Витрина с трофеями',20000000,2.5]];
+var HDS=[['a','Картина слева',['d_land','d_abs','d_port']],['b','Картина справа',['d_land','d_abs','d_port']],['c','Часы',['d_clock']],['r','Ковровая дорожка',['d_rug']],['p','Растение',['d_ficus','d_palm','d_bonsai']],['s','Статуя',['d_bust','d_knight']],['n','Скамейка',['d_bench']],['e','Ограждение',['d_rope']],['g','Экскурсовод',['d_robot']],['t','Трофеи',['d_trophy']]];
+function hdItem(id){return HD.find(x=>x[0]===id)}
+function hallDec(){const o={},h=(S.hd&&typeof S.hd==='object')?S.hd:{};HDS.forEach(([k,,list])=>{const id=h[k];o[k]=list.includes(id)&&hallOwn(id)?id:''});return o}
+function hallBonus(d){d=d||hallDec();return Math.round(HDS.reduce((a,[k])=>{const it=d[k]&&hdItem(d[k]);return a+(it?it[3]:0)},0)*10)/10}
+// рисунки
+function hdPic(k,x,y){
+  if(k==='d_land')return `<g><rect x="${x}" y="${y}" width="26" height="22" fill="#b98a3e"/><rect x="${x+2}" y="${y+2}" width="22" height="18" fill="#8fd0ff"/><circle cx="${x+19}" cy="${y+7}" r="3" fill="#ffe27a"/><polygon points="${x+2},${y+20} ${x+9},${y+9} ${x+14},${y+15} ${x+18},${y+11} ${x+24},${y+20}" fill="#4aa56b"/><polygon points="${x+2},${y+20} ${x+9},${y+13} ${x+13},${y+20}" fill="#2f7d4f"/></g>`;
+  if(k==='d_abs')return `<g><rect x="${x}" y="${y}" width="26" height="22" fill="#2b2b36" stroke="#caa86a" stroke-width="1.5"/><rect x="${x+2}" y="${y+2}" width="22" height="18" fill="#fff3df"/><circle cx="${x+9}" cy="${y+9}" r="5" fill="#ff5a5f"/><rect x="${x+13}" y="${y+8}" width="8" height="8" fill="#3b82f6" transform="rotate(18 ${x+17} ${y+12})"/><polygon points="${x+4},${y+19} ${x+11},${y+12} ${x+14},${y+19}" fill="#ffd23f"/><path d="M${x+3} ${y+6}q8 8 19 -1" stroke="#222" stroke-width="1" fill="none"/></g>`;
+  return `<g><rect x="${x-2}" y="${y-2}" width="30" height="26" rx="1.5" fill="#c9a24a" stroke="#8a6a1f" stroke-width="1"/><rect x="${x+1}" y="${y+1}" width="24" height="20" fill="#4a2f1c"/><circle cx="${x+13}" cy="${y+9}" r="4.6" fill="#e8c39e"/><path d="M${x+8} ${y+7}q5-7 10 0q-1-4-5-4t-5 4z" fill="#3a2414"/><path d="M${x+3} ${y+21}q2-8 10-8t10 8z" fill="#1f2f56"/><circle cx="${x+13}" cy="${y+15}" r="1.2" fill="#e6c067"/><circle cx="${x-1}" cy="${y-1}" r="1.6" fill="#e6c067"/><circle cx="${x+27}" cy="${y-1}" r="1.6" fill="#e6c067"/><circle cx="${x-1}" cy="${y+23}" r="1.6" fill="#e6c067"/><circle cx="${x+27}" cy="${y+23}" r="1.6" fill="#e6c067"/></g>`;
+}
+function hdClock(x,y){let t='';for(let i=0;i<12;i++){const a=i*Math.PI/6,r1=i%3===0?7.6:8.6;t+=`<line x1="${(x+Math.sin(a)*r1).toFixed(1)}" y1="${(y-Math.cos(a)*r1).toFixed(1)}" x2="${(x+Math.sin(a)*10).toFixed(1)}" y2="${(y-Math.cos(a)*10).toFixed(1)}" stroke="#3a2a18" stroke-width="${i%3===0?1.4:.8}"/>`}
+  return `<g><circle cx="${x}" cy="${y}" r="13" fill="#6b4a2a" stroke="#caa86a" stroke-width="1.4"/><circle cx="${x}" cy="${y}" r="11" fill="#f6f1e3"/>${t}<line x1="${x}" y1="${y}" x2="${x-4}" y2="${y-4.5}" stroke="#222" stroke-width="1.8" stroke-linecap="round"/><line x1="${x}" y1="${y}" x2="${x+2}" y2="${y-8}" stroke="#222" stroke-width="1.2" stroke-linecap="round"/><circle cx="${x}" cy="${y}" r="1.4" fill="#c0392b"/></g>`}
+function hdRug(){return `<g><polygon points="132,240 228,240 195,150 165,150" fill="#8f1d2c"/><polygon points="132,240 228,240 195,150 165,150" fill="none" stroke="#e6c067" stroke-width="2"/><polygon points="145,240 215,240 190,152 170,152" fill="none" stroke="#e6c067" stroke-width=".9" opacity=".8"/><polygon points="132,240 228,240 195,150 165,150" fill="#000" opacity=".12"/></g>`}
+function hdPot(c){return `<polygon points="-9,0 9,0 7,-12 -7,-12" fill="${c}"/><rect x="-10" y="-15" width="20" height="4" rx="1" fill="#000" opacity=".16"/><rect x="-10" y="-15" width="20" height="3.5" rx="1" fill="${c}"/>`}
+function hdPlant(k,x,y){
+  let o;
+  if(k==='d_palm')o=hdPot('#b5603a')+`<path d="M0 -14C-3 -28 3 -40 0 -54" stroke="#7a5230" stroke-width="3" fill="none"/><path d="M0 -54Q-16 -64 -27 -48M0 -54Q-8 -70 -20 -66M0 -54Q10 -70 22 -64M0 -54Q16 -62 27 -46M0 -54Q0 -68 2 -72" stroke="#2e9a54" stroke-width="3.2" fill="none" stroke-linecap="round"/><path d="M0 -54Q-12 -58 -18 -50M0 -54Q12 -58 18 -50" stroke="#52c27a" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+  else if(k==='d_ficus')o=hdPot('#c9d0dd')+`<path d="M0 -14V-36" stroke="#6b4a2a" stroke-width="2.4"/><circle cx="0" cy="-46" r="12" fill="#2f8f4e"/><circle cx="-9" cy="-38" r="8" fill="#3fae63"/><circle cx="9" cy="-38" r="8" fill="#287a42"/><circle cx="2" cy="-55" r="7" fill="#4cbf72"/><circle cx="-4" cy="-48" r="2" fill="#7fe0a0" opacity=".6"/>`;
+  else o=`<rect x="-13" y="-6" width="26" height="6" rx="2" fill="#4a3d63"/><rect x="-13" y="-6" width="26" height="1.6" fill="#fff" opacity=".25"/><path d="M-1 -6C-8 -14 4 -18 -3 -26M-3 -26C-6 -30 -2 -32 0 -30" stroke="#6b4a2a" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="-4" cy="-30" rx="11" ry="6" fill="#2f8f4e"/><ellipse cx="9" cy="-22" rx="8" ry="4.6" fill="#3fae63"/><ellipse cx="-12" cy="-22" rx="6" ry="3.6" fill="#287a42"/><circle cx="-6" cy="-32" r="1.5" fill="#ffb3c7"/><circle cx="3" cy="-29" r="1.3" fill="#ffb3c7"/>`;
+  return `<g transform="translate(${x} ${y}) scale(.95)"><ellipse cx="2" cy="1" rx="14" ry="3" fill="#000" opacity=".3"/>${o}</g>`}
+function hdStatue(k,x,y){
+  let o;
+  if(k==='d_bust')o=`<rect x="-11" y="-24" width="22" height="24" fill="#d8d8e2"/><rect x="2" y="-24" width="9" height="24" fill="#a9a9b8"/><rect x="-13" y="-27" width="26" height="4" fill="#ececf4"/><path d="M-13 -27Q-13 -37 0 -39Q13 -37 13 -27Z" fill="#e9e9f1"/><rect x="-3.5" y="-44" width="7" height="7" fill="#dcdce6"/><ellipse cx="0" cy="-51" rx="7.5" ry="9.5" fill="#efeff6"/><path d="M-7 -55q7-9 14 0q-2-2-7-2t-7 2z" fill="#c9c9d6"/><path d="M0 -51l-1.4 5h2.8z" fill="#b8b8c8"/><circle cx="-2.8" cy="-52" r=".9" fill="#8a8aa0"/><circle cx="2.8" cy="-52" r=".9" fill="#8a8aa0"/>`;
+  else o=`<rect x="-13" y="-4" width="26" height="4" fill="#555a66"/><rect x="-8" y="-20" width="6.5" height="17" fill="#c5ccd8"/><rect x="1.5" y="-20" width="6.5" height="17" fill="#aab2c0"/><rect x="-11" y="-42" width="22" height="23" rx="4" fill="#cdd3de"/><rect x="2" y="-42" width="9" height="23" rx="3" fill="#a3abba"/><circle cx="-13" cy="-38" r="5.5" fill="#bcc3cf"/><circle cx="13" cy="-38" r="5.5" fill="#9ca4b3"/><rect x="-6.5" y="-57" width="13" height="15" rx="5.5" fill="#b9c0cc"/><rect x="-4.5" y="-51" width="9" height="2.2" fill="#1b1f2a"/><path d="M0 -57q6-8 11 -3q-5 0-8 5z" fill="#c0392b"/><rect x="16" y="-58" width="2.4" height="46" fill="#e1e6ee"/><rect x="12.5" y="-30" width="9.4" height="2.6" fill="#caa44a"/><path d="M-4 -34h8M0 -38v8" stroke="#7a828f" stroke-width="1.4"/>`;
+  return `<g transform="translate(${x} ${y}) scale(.95)"><ellipse cx="2" cy="1" rx="15" ry="3" fill="#000" opacity=".3"/>${o}</g>`}
+function hdBench(){return `<g><ellipse cx="182" cy="238" rx="48" ry="3" fill="#000" opacity=".25"/><polygon points="142,221 218,221 224,226 136,226" fill="#b98550"/><rect x="136" y="226" width="88" height="6" fill="#8e5f33"/><rect x="136" y="226" width="88" height="1.4" fill="#fff" opacity=".25"/><rect x="141" y="232" width="5" height="7" fill="#4e2f14"/><rect x="214" y="232" width="5" height="7" fill="#4e2f14"/><rect x="152" y="222.4" width="56" height="3" rx="1.4" fill="#9d1f2e" opacity=".9"/></g>`}
+function hdRope(){const post=x=>`<g><ellipse cx="${x}" cy="229" rx="7" ry="2.3" fill="#caa44a"/><rect x="${x-1.6}" y="207" width="3.2" height="22" fill="#e6c067"/><rect x="${x-1.6}" y="207" width="1.2" height="22" fill="#fff" opacity=".45"/><circle cx="${x}" cy="206" r="3.6" fill="#e6c067"/><circle cx="${x-1}" cy="205" r="1.2" fill="#fff" opacity=".7"/></g>`;
+  return `<g><path d="M64 208Q180 232 296 208" stroke="#7d1020" stroke-width="3.4" fill="none" stroke-linecap="round"/><path d="M64 207.4Q180 231.4 296 207.4" stroke="#d6354a" stroke-width="1.6" fill="none" stroke-linecap="round"/>${post(64)}${post(296)}</g>`}
+function hdRobot(x,y){return `<g transform="translate(${x} ${y})"><ellipse cx="0" cy="1" rx="14" ry="3" fill="#000" opacity=".3"/><rect x="-10" y="-5" width="20" height="5" rx="2.5" fill="#3b3f4a"/><rect x="-8.5" y="-24" width="17" height="19" rx="4.5" fill="#5aa9ff"/><rect x="2" y="-24" width="6.5" height="19" rx="3" fill="#3b86d8"/><rect x="-4.5" y="-19.5" width="9" height="6.5" rx="1.5" fill="#d7ecff"/><circle cx="-1.6" cy="-16.3" r="1.1" fill="#ff5a5f"/><circle cx="2" cy="-16.3" r="1.1" fill="#5ad07a"/><path d="M-8.5 -20L-15 -12" stroke="#cfd6e4" stroke-width="2.6" stroke-linecap="round"/><path d="M8.5 -20L16 -30" stroke="#cfd6e4" stroke-width="2.6" stroke-linecap="round"/><circle cx="16.4" cy="-31" r="2.6" fill="#e9edf5"/><rect x="-10" y="-39" width="20" height="14" rx="6" fill="#eef1f8"/><rect x="2" y="-39" width="8" height="14" rx="5" fill="#cfd5e2"/><circle cx="-3.8" cy="-32.5" r="2.7" fill="#14142a"/><circle cx="3.8" cy="-32.5" r="2.7" fill="#14142a"/><circle cx="-3" cy="-33.4" r=".9" fill="#fff"/><circle cx="4.6" cy="-33.4" r=".9" fill="#fff"/><path d="M-3 -28q3 2.6 6 0" stroke="#14142a" stroke-width="1.1" fill="none" stroke-linecap="round"/><path d="M0 -39v-5" stroke="#8c93a3" stroke-width="1.4"/><circle cx="0" cy="-45" r="2.2" fill="#ff5a5f"/></g>`}
+function hdTrophy(x,y){return `<g transform="translate(${x} ${y})"><ellipse cx="2" cy="1" rx="18" ry="3.4" fill="#000" opacity=".32"/><rect x="-16" y="-58" width="32" height="58" rx="2" fill="#5a3b1f"/><rect x="-13.5" y="-55.5" width="27" height="50" fill="#1a2038"/><rect x="-13.5" y="-55.5" width="27" height="50" fill="#ffe9a8" opacity=".12"/><rect x="-13.5" y="-31" width="27" height="2.4" fill="#8a6a3a"/><path d="M-6 -50h12v6q0 8-6 8t-6-8z" fill="#f2c94c"/><path d="M-6 -48q-6 0-6 4t6 4M6 -48q6 0 6 4t-6 4" stroke="#d9a62a" stroke-width="1.4" fill="none"/><rect x="-1.4" y="-36" width="2.8" height="5" fill="#d9a62a"/><rect x="-5" y="-33" width="10" height="2.2" fill="#f2c94c"/><path d="M-4 -26l-3 8h3zM4 -26l3 8h-3z" fill="#c0392b"/><circle cx="0" cy="-14" r="5.4" fill="#f2c94c" stroke="#d9a62a" stroke-width="1"/><path d="M0 -17l1.2 2.6 2.8.3-2.1 1.9.6 2.8-2.5-1.4-2.5 1.4.6-2.8-2.1-1.9 2.8-.3z" fill="#fff6c8"/><polygon points="-12,-55 -4,-55 -13,-8 -13.5,-8" fill="#fff" opacity=".14"/><rect x="-16" y="-58" width="32" height="58" rx="2" fill="none" stroke="#caa86a" stroke-width="1"/></g>`}
+
 function hallFloor(k,u){
   const ny=k==='f_carbon'?12:k==='f_parquet'?10:7,nx=k==='f_carbon'?18:k==='f_parquet'?10:k==='f_check'?8:8;
   const Y=j=>150+90*Math.pow(j/ny,1.55),X=(i,y)=>{const t=(y-150)/90,l=70-70*t,r=290+70*t;return l+(r-l)*i/nx};
@@ -1914,8 +1954,8 @@ function hallSide(kind,side,u){
   }
   return o+`<polygon points="${P(0,0)} ${P(1,0)} ${P(1,1)} ${P(0,1)}" fill="#000" opacity=".22"/>`;
 }
-function hallSvg(cfg,ex,u){
-  cfg=cfg||hallCfg();ex=ex||[];u=u||'x';
+function hallSvg(cfg,ex,u,dec){
+  cfg=cfg||hallCfg();ex=ex||[];u=u||'x';dec=dec||{};
   const pid='wp'+u,w=cfg.w,l=cfg.l;
   const defs=`<defs>${hallWallDefs(w,u)}
   <pattern id="fc${u}" width="50" height="50" patternUnits="userSpaceOnUse"><rect width="50" height="50" fill="#797c84"/><circle cx="10" cy="12" r="1.6" fill="#000" opacity=".12"/><circle cx="34" cy="28" r="2" fill="#fff" opacity=".07"/></pattern>
@@ -1931,11 +1971,11 @@ function hallSvg(cfg,ex,u){
   const frame=(x,y)=>`<g><rect x="${x}" y="${y}" width="26" height="20" fill="#2b2b36" stroke="#caa86a" stroke-width="2"/><polygon points="${x+3},${y+17} ${x+10},${y+8} ${x+15},${y+14} ${x+19},${y+10} ${x+23},${y+17}" fill="#6fd3a3"/><circle cx="${x+19}" cy="${y+6}" r="2.5" fill="#ffd66b"/></g>`;
   const shelf=`<g><rect x="104" y="72" width="152" height="4" fill="#6b4a2a"/><rect x="104" y="76" width="152" height="2" fill="#000" opacity=".3"/><path d="M114 76v8M246 76v8" stroke="#3b2814" stroke-width="2"/>
   <rect x="122" y="60" width="6" height="12" fill="#e0536b"/><rect x="129" y="58" width="5" height="14" fill="#4aa3ff"/><rect x="135" y="62" width="6" height="10" fill="#ffd66b"/>
-  <path d="M176 72c-3-6-3-10 0-14h8c3 4 3 8 0 14z" fill="#7ad3c6"/><path d="M180 58c-5-6-8-6-10-12M180 58c3-6 8-8 12-10" stroke="#2e9a54" stroke-width="2" fill="none"/>
+  <g transform="translate(30 0)"><path d="M176 72c-3-6-3-10 0-14h8c3 4 3 8 0 14z" fill="#7ad3c6"/><path d="M180 58c-5-6-8-6-10-12M180 58c3-6 8-8 12-10" stroke="#2e9a54" stroke-width="2" fill="none"/></g>
   <rect x="226" y="62" width="16" height="10" rx="1" fill="#c9b6ff"/></g>`;
   const pos=[110,180,250],ped=pos.map((cx,i)=>{
     const ee=ex[i],nv=ee?nickVal(ee):null,P2=nv?PLATE[nv.t]:null,g=P2?P2[1]:'#8791c9',gl=P2?P2[0]:'#c9d0f5';
-    let o=`<g><ellipse cx="${cx+3}" cy="214" rx="38" ry="6" fill="#000" opacity=".38"/>
+    let o=`<g><polygon points="${cx-28},212 ${cx+34},207 ${cx+48},212 ${cx+42},219 ${cx-26},220" fill="#000" opacity=".4" filter="url(#bl${u})"/>
     <polygon points="${cx-27},191 ${cx-20},186 ${cx+33},186 ${cx+27},191" fill="#fbfbff"/>
     <polygon points="${cx+27},191 ${cx+33},186 ${cx+33},208 ${cx+27},213" fill="#9d9db0"/>
     <rect x="${cx-27}" y="191" width="54" height="22" fill="url(#pv${u})"/><rect x="${cx-27}" y="196" width="54" height="1.6" fill="#e6c067"/><rect x="${cx-27}" y="206" width="54" height="1" fill="#000" opacity=".12"/>
@@ -1954,13 +1994,15 @@ function hallSvg(cfg,ex,u){
   else if(l==='l_cold'){fx=`<rect width="360" height="240" fill="#bfe0ff" opacity=".14"/><rect x="90" y="34" width="180" height="5" rx="2" fill="#f2f9ff"/><rect x="90" y="34" width="180" height="5" rx="2" fill="#dff0ff" filter="url(#bl${u})"/>`}
   else if(l==='l_neon'){fx=`<rect width="360" height="240" fill="#2442ff" opacity=".2"/><path d="M0 0L70 40H290L360 0M70 40V150M290 40V150" stroke="#3b7bff" stroke-width="3" fill="none" filter="url(#bl${u})"/><path d="M70 40H290M70 150H290" stroke="#9fc4ff" stroke-width="1.6" fill="none"/>`}
   else{fx=pos.map(cx=>`<polygon points="${cx-6},36 ${cx+6},36 ${cx+30},205 ${cx-30},205" fill="url(#cn${u})" opacity=".5"/><circle cx="${cx}" cy="36" r="5" fill="#fff6c8"/>`).join('')+`<rect x="70" y="30" width="220" height="5" fill="#1b1b22"/>`}
-  const decor=frame(84,64)+frame(250,64);
-  return `<svg class="hallsvg" viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Зал в музее">${defs}${hallFloor(cfg.f,u)}${walls}${decor}${shelf}${ped}<rect width="360" height="240" fill="url(#gl${u})"/>${fx}<rect width="360" height="240" fill="url(#vg${u})"/></svg>`;
+  const wallD=(dec.a?hdPic(dec.a,77,58):'')+(dec.b?hdPic(dec.b,257,58):'')+(dec.c?hdClock(180,55):'');
+  const backD=(dec.p?hdPlant(dec.p,62,170):'')+(dec.s?hdStatue(dec.s,298,170):'');
+  const frontD=(dec.n?hdBench():'')+(dec.e?hdRope():'')+(dec.g?hdRobot(34,238):'')+(dec.t?hdTrophy(328,238):'');
+  return `<svg class="hallsvg" viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Зал в музее">${defs}${hallFloor(cfg.f,u)}${dec.r?hdRug():''}${walls}${wallD}${shelf}${backD}${ped}${frontD}<rect width="360" height="240" fill="url(#gl${u})"/>${fx}<rect width="360" height="240" fill="url(#vg${u})"/></svg>`;
 }
 function hallExNames(){try{return muMine().map(x=>x.name).slice(0,3)}catch(e){return[]}}
 function hallPlate(){
   const cfg=hallCfg(),own=!!S.hall;
-  return `<div class="pcard hallpl">${hallSvg(own?cfg:{f:'f_concrete',w:'w_concrete',l:'l_bulb'},own?hallExNames():[],'pl')}
+  return `<div class="pcard hallpl">${hallSvg(own?cfg:{f:'f_concrete',w:'w_concrete',l:'l_bulb'},own?hallExNames():[],'pl',own?hallDec():{})}
   <div class="hallrow"><div><b>${own?'Мой зал':'Свой зал в музее'}</b><small>${own?'Интерьер, свет и твои экспонаты':'Нужен, чтобы ставить ники в музей и получать доход'}</small></div>
   <button class="btn main" id="hall-go">${own?'Мой зал':'Купить · '+fmt(HALL_PRICE)+' 🪙'}</button></div></div>`;
 }
@@ -1971,21 +2013,24 @@ function hallSheet(close){
     sh.onclick=e=>{
       if(e.target.closest('[data-hx]'))return hallSheet(true);
       const o=e.target.closest('[data-ho]');if(o){const id=o.dataset.ho;hs[id[0]]=id;sfx('tick');return hallSheet()}
+      const dd=e.target.closest('[data-hd]');if(dd){const [k,id]=dd.dataset.hd.split(':');hs.d[k]=id||'';sfx('tick');return hallSheet()}
       if(e.target.closest('#hall-ok')){
-        const ids=[hs.f,hs.w,hs.l],need=ids.filter(id=>!hallOwn(id)),cost=need.reduce((a,id)=>a+hallItem(id)[2],0);
+        const ids=[...new Set([hs.f,hs.w,hs.l,...Object.values(hs.d).filter(Boolean)])],need=ids.filter(id=>!hallOwn(id)),cost=need.reduce((a,id)=>a+hallItem(id)[2],0);
         if(S.coins<cost)return toast('Не хватает монет');
         if(!Array.isArray(S.hown))S.hown=[];
-        S.coins-=cost;need.forEach(id=>S.hown.push(id));S.hf=hs.f;S.hw=hs.w;S.hl=hs.l;save();render();sfx(cost?'coins':'tap');
-        toast(cost?'Интерьер куплен и применён':'Интерьер применён');renderMuseum();return hallSheet()}
+        S.coins-=cost;need.forEach(id=>S.hown.push(id));S.hf=hs.f;S.hw=hs.w;S.hl=hs.l;S.hd={...hs.d};save();render();sfx(cost?'coins':'tap');
+        toast(cost?'Куплено и применено':'Применено');renderMuseum();return hallSheet()}
     }}
   const oldBox=sh.querySelector('.sbox'),keep=oldBox?oldBox.scrollTop:0;
   const eh=x=>String(x);
   const sec=(t,list,k)=>`<div class="hsec"><b>${t}</b><div class="hopts">${list.map(([id,n,pr])=>{const own=hallOwn(id);return `<button class="hopt${hs[k]===id?' on':''}" data-ho="${id}"><b>${n}</b><small>${pr===0?'бесплатно':own?'куплено ✓':fmt(pr)+' 🪙'}</small></button>`}).join('')}</div></div>`;
-  const ids=[hs.f,hs.w,hs.l],need=ids.filter(id=>!hallOwn(id)),cost=need.reduce((a,id)=>a+hallItem(id)[2],0),cur=hallCfg();
-  const same=hs.f===cur.f&&hs.w===cur.w&&hs.l===cur.l;
+  const ids=[...new Set([hs.f,hs.w,hs.l,...Object.values(hs.d).filter(Boolean)])],need=ids.filter(id=>!hallOwn(id)),cost=need.reduce((a,id)=>a+hallItem(id)[2],0),cur=hallCfg(),cd=hallDec();
+  const same=hs.f===cur.f&&hs.w===cur.w&&hs.l===cur.l&&HDS.every(([k])=>(hs.d[k]||'')===cd[k]);
+  const dsec=HDS.map(([k,t,list])=>`<div class="hsec"><b>${t}</b><div class="hopts"><button class="hopt${!hs.d[k]?' on':''}" data-hd="${k}:"><b>Нет</b><small>пусто</small></button>${list.map(id=>{const it=hdItem(id),own=hallOwn(id);return `<button class="hopt${hs.d[k]===id?' on':''}" data-hd="${k}:${id}"><b>${it[1]}</b><small>${own?'куплено ✓':fmt(it[2])+' 🪙'} · +${it[3]}%</small></button>`}).join('')}</div></div>`).join('');
   sh.innerHTML=`<div class="sbg" data-hx="1"></div><div class="sbox casebox hallbox"><div class="shead"><b>🏛️ Мой зал</b><button class="btn sm" data-hx="1">✕</button></div>
-  <div class="hallprev">${hallSvg({f:hs.f,w:hs.w,l:hs.l},hallExNames(),'sh')}</div>
-  ${sec('Пол',HF,'f')}${sec('Стены',HW,'w')}${sec('Свет',HL,'l')}
+  <div class="hallprev">${hallSvg({f:hs.f,w:hs.w,l:hs.l},hallExNames(),'sh',hs.d)}<small class="hbon">Бонус к доходу музея от декора: +${hallBonus(hs.d)}%</small></div>
+  <div class="htitle">Интерьер</div>${sec('Пол',HF,'f')}${sec('Стены',HW,'w')}${sec('Свет',HL,'l')}
+  <div class="htitle">Декорации</div>${dsec}
   <button class="btn main" id="hall-ok"${same||S.coins<cost?' disabled':''}>${same?'Так и стоит':S.coins<cost?'Не хватает '+fmt(cost-S.coins)+' 🪙':cost?`Купить и применить · ${fmt(cost)} 🪙`:'Применить'}</button></div>`;
   const nb=sh.querySelector('.sbox');if(nb&&keep)nb.scrollTop=keep;
 }
@@ -1993,7 +2038,7 @@ function hallBuy(){
   if(S.hall)return;if(S.coins<HALL_PRICE)return toast('Не хватает '+fmt(HALL_PRICE-S.coins)+' 🪙');
   S.coins-=HALL_PRICE;S.hall=1;save();render();sfx('ach');hap('n','success');toast('🏛️ Зал куплен!');renderMuseum();
 }
-document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#hall-go')){if(S.hall){const c=hallCfg();hs.f=c.f;hs.w=c.w;hs.l=c.l;hallSheet()}else hallBuy()}});
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#hall-go')){if(S.hall){const c=hallCfg();hs.f=c.f;hs.w=c.w;hs.l=c.l;hs.d={...hallDec()};hallSheet()}else hallBuy()}});
 
 function renderMuseum(){
   const el=$('#tab-museum');if(!el)return;
