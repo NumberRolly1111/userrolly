@@ -4,7 +4,7 @@ addEventListener('unhandledrejection',e=>{try{console.error(e.reason)}catch(x){}
 const $=s=>document.querySelector(s),tg=window.Telegram&&Telegram.WebApp;
 try{if(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.start_param==='admin'&&!document.body.dataset.page&&!sessionStorage.getItem('nr_adm')){sessionStorage.setItem('nr_adm','1');location.replace('winvhfufkfdnditgv/')}}catch(e){}
 // если на хостинге лежит старый html без новых разделов (файлы загрузили не все) — создаём недостающие, чтобы игра не падала
-['ach','show','top','clan','market','museum','shop','help'].forEach(k=>{if(!$('#tab-'+k)){const s=document.createElement('section');s.id='tab-'+k;s.className='list';s.hidden=true;($('#tab-bon')||document.body).after(s)}});
+['ach','show','top','clan','market','museum','shop','auction','help'].forEach(k=>{if(!$('#tab-'+k)){const s=document.createElement('section');s.id='tab-'+k;s.className='list';s.hidden=true;($('#tab-bon')||document.body).after(s)}});
 // отступ сверху под системную панель Telegram («Закрыть», «…»): берём из SDK, иначе запасной
 function safeTop(){
   let t=0;try{t=((tg.safeAreaInset||{}).top||0)+((tg.contentSafeAreaInset||{}).top||0)}catch(e){}
@@ -744,12 +744,13 @@ function renderHelp(){
   pl('id="top-open"','Рейтинг','Топ игроков по капиталу и лучшему нику','🏆')+
   pl('id="clan-open"','Кланы','Вступи в клан или создай свой','🛡️')+
   pl('id="ach-open"','Достижения',`${ACH.filter(achOk).length} из ${ACH.length}`,'🎖️')+
+  pl('id="auc-open"','Аукцион','Лоты игроков, ставки и история','🔨')+
   showPlate()+
   pl('id="cos-open"','Косметика','Ники, титулы и рамки','✨');
 }
 function showPlate(){
   const r=showReady(),d=S.show.length;
-  return `<button class="pcard achbtn" id="show-open" style="margin-bottom:16px"><div><b>Витрины</b><small>Собрано ${d} из ${SHOW.length}${r?` · наград к получению: ${r}`:''}</small></div><span class="mini" style="--p:${d/SHOW.length*100}"><i>${d}</i></span></button>`+`<button class="pcard achbtn" id="market-open" style="margin-bottom:16px"><div><b>Рынок игроков</b><small>Покупай и продавай ники за монеты</small></div><span class="trophy">🛒</span></button>`+`<button class="pcard achbtn" id="shop-open" style="margin-bottom:16px"><div><b>Магазин</b><small>Аукцион ников и эксклюзивный @ceo</small></div><span class="trophy">🏷️</span></button>`+`<button class="pcard achbtn" id="museum-open" style="margin-bottom:16px"><div><b>Музей</b><small>Навсегда поставь ник на витрину славы</small></div><span class="trophy">🏛️</span></button>`+`<button class="pcard achbtn" data-craft="1" style="margin-bottom:16px"><div><b>Крафт</b><small>Три любых ника → один новый, шансы зависят от выбранных</small></div><span class="trophy">⚗️</span></button>`;
+  return `<button class="pcard achbtn" id="show-open" style="margin-bottom:16px"><div><b>Витрины</b><small>Собрано ${d} из ${SHOW.length}${r?` · наград к получению: ${r}`:''}</small></div><span class="mini" style="--p:${d/SHOW.length*100}"><i>${d}</i></span></button>`+`<button class="pcard achbtn" id="market-open" style="margin-bottom:16px"><div><b>Рынок игроков</b><small>Покупай и продавай ники за монеты</small></div><span class="trophy">🛒</span></button>`+`<button class="pcard achbtn" id="shop-open" style="margin-bottom:16px"><div><b>Магазин</b><small>Значки, услуги и эксклюзивный @ceo</small></div><span class="trophy">🏷️</span></button>`+`<button class="pcard achbtn" id="museum-open" style="margin-bottom:16px"><div><b>Музей</b><small>Навсегда поставь ник на витрину славы</small></div><span class="trophy">🏛️</span></button>`+`<button class="pcard achbtn" data-craft="1" style="margin-bottom:16px"><div><b>Крафт</b><small>Три любых ника → один новый, шансы зависят от выбранных</small></div><span class="trophy">⚗️</span></button>`;
 }
 function renderShow(){
   setHtml($('#tab-show'),`<div class="ahead"><button class="btn sm" id="show-back">‹ Помощь</button><h2>Витрины</h2></div><p class="sum">Собери набор из ников коллекции и забери награду. Ники не тратятся, награда выдаётся один раз.</p>`+showHtml());
@@ -848,6 +849,7 @@ $('#tab-help').onclick=e=>{
   if(x.closest('#show-open'))return tab('show');
   if(x.closest('#market-open'))return tab('market');
   if(x.closest('#shop-open'))return tab('shop');
+  if(x.closest('#auc-open'))return tab('auction');
   if(x.closest('#museum-open'))return tab('museum');
 };
 $('#tab-col').onclick=e=>{
@@ -1183,7 +1185,7 @@ function renderProf(){
     <button class="ptile" id="clan-open"><span class="pti">🛡️</span><b>Кланы</b><small>${cl.me&&cl.me.clan?escH('['+(cl.me.clan.tag||'')+'] '+(cl.me.clan.name||'')):'Вступи или создай'}</small></button>
     <button class="ptile" id="ach-open"><span class="pti">🎖️</span><b>Достижения</b><small>${ACH.filter(achOk).length} из ${ACH.length}${achReady().length?' · наград: '+achReady().length:''}</small><span class="ptbar"><i style="width:${ACH.filter(achOk).length/ACH.length*100}%"></i></span></button>
     <button class="ptile" id="cos-open"><span class="pti">✨</span><b>Косметика</b><small>куплено ${S.cown.length} из ${NSTY.length+TTL.length+FRM.length}</small></button>
-    <button class="ptile" data-shopgo="1"><span class="pti">🏷️</span><div><b>Магазин</b><small>Аукцион и значки</small></div></button>
+    <button class="ptile" data-shopgo="1"><span class="pti">🏷️</span><div><b>Магазин</b><small>Значки и эксклюзив</small></div></button>
     <button class="ptile wide" data-craft="1"><span class="pti">⚗️</span><div><b>Крафт</b><small>Три любых ника → один новый, шансы зависят от выбранных</small></div></button>
   </div>
   <div class="pcard inv invx"><div><b>Позвать друзей</b><small>За каждого друга: +${fmt(REF_C)} 🪙 и +${REF_E} ⚡ · приглашено ${S.refc} из ${REF_MAX}</small></div><div class="invb">${lb.refn>0?`<button class="btn main" id="ref-claim">Забрать +${fmt(lb.refn*REF_C)} 🪙</button>`:''}<button class="btn${lb.refn>0?'':' main'}" id="invite">Позвать</button></div></div>
@@ -1242,7 +1244,7 @@ $('#tab-ach').onclick=e=>{if(e.target.closest('#ach-back'))return tab('prof');co
 $('#prof-btn').onclick=()=>tab($('#tab-prof').hidden?'prof':'game');
 
 // Страницы: index.html (игра), rating.html (рейтинг), achievements.html (достижения). Состояние общее — в localStorage и облаке Telegram.
-const PAGE=document.body.dataset.page||'main',PAGES={top:'rating.html',ach:'achievements.html',clan:'clans.html',market:'market.html',museum:'museum.html',shop:'shop.html'};
+const PAGE=document.body.dataset.page||'main',PAGES={top:'rating.html',ach:'achievements.html',clan:'clans.html',market:'market.html',museum:'museum.html',shop:'shop.html',auction:'auction.html'};
 function tab(n){
   const here=PAGE==='main'?['game','col','up','prof','bon','show','help']:[PAGE];
   if(here.includes(n))return tabIn(n);
@@ -1250,8 +1252,8 @@ function tab(n){
   location.href=(PAGES[n]||'index.html')+(PAGES[n]||n==='game'?'':'#'+n);
 }
 function tabIn(n){
-  {const nn=['show','market','museum','top','clan','ach','help'].includes(n)?'help':n;document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===nn))}
-  ['game','col','up','prof','bon','ach','show','top','clan','market','museum','shop','help'].forEach(k=>{const e=$('#tab-'+k);if(!e)return;
+  {const nn=['show','market','museum','top','clan','ach','help','auction'].includes(n)?'help':n;document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===nn))}
+  ['game','col','up','prof','bon','ach','show','top','clan','market','museum','shop','auction','help'].forEach(k=>{const e=$('#tab-'+k);if(!e)return;
     if(k===n){if(e.hidden){e.hidden=false;e.classList.remove('tabin');void e.offsetWidth;e.classList.add('tabin');clearTimeout(e._ti);e._ti=setTimeout(()=>e.classList.remove('tabin'),900)}}else e.hidden=true});
   $('#prof-btn').setAttribute('aria-pressed',n==='prof');
   $('#bon-btn').setAttribute('aria-pressed',n==='bon');
@@ -1266,7 +1268,7 @@ function tabIn(n){
   if(n==='clan')openClan();
   if(n==='market')openMarket();
   if(n==='museum')openMuseum();
-  if(n==='shop')openShop();
+  if(n==='shop'||n==='auction')openShop();
   if(n==='help')renderHelp();
   scrollTo(0,0);
 }
@@ -2272,7 +2274,8 @@ $('#tab-bon').onclick=e=>{
 $('#bon-btn').onclick=()=>tab($('#tab-bon').hidden?'bon':'game');
 // ---------- Магазин: эксклюзив и аукцион ников ----------
 // Аукцион хранит сервер (rating-worker). Ставка списывается сразу, при перебитии возвращается; победитель и продавец получают своё автоматически.
-const sh={tab:'ex',lots:null,my:null,hist:null,ex:null,off:0,lot:null,sort:'end',q:'',sheet:false,sel:'',price:'',hours:24,bid:'',busy:false,err:'',load:false,fin:0};
+const shEl=()=>$('#tab-'+(PAGE==='auction'?'auction':'shop')),AUCP=PAGE==='auction';
+const sh={tab:AUCP?'auc':'ex',lots:null,my:null,hist:null,ex:null,off:0,lot:null,sort:'end',q:'',sheet:false,sel:'',price:'',hours:24,bid:'',busy:false,err:'',load:false,fin:0};
 const SHE={sync:'Подожди пару секунд: профиль ещё не отправлен на сервер',gone:'Аукцион уже закончился или лот снят',own:'Это твой лот',lead:'Твоя ставка и так лидирует',low:'Ставка ниже минимальной',changed:'Ставка изменилась, попробуй ещё раз',poor:'Не хватает монет (по данным сервера)',sold:'Этот ник уже купили',toomany:'Не больше 5 лотов одновременно',price:'Цена от 10 🪙',flag:'Данные не прошли проверку'};
 const sherr=e=>{const m=String(e&&e.message||e).replace(/^e:/,'');return SHE[m]||merr(e)};
 const shNow=()=>Date.now()+sh.off;
@@ -2293,7 +2296,7 @@ async function openShop(){
   renderShop();if(!API||!tg||!tg.initData)return;
   sh.load=true;sh.err='';renderShop();
   try{await lbPush(true);await auClaim();await gAuto();await shLoad()}catch(e){sh.err=sherr(e)}
-  sh.load=false;if(!$('#tab-shop').hidden)renderShop();
+  sh.load=false;if(!shEl().hidden)renderShop();
 }
 async function shAct(path,body,fn){
   if(sh.busy)return false;sh.busy=true;
@@ -2339,7 +2342,7 @@ function shSheet(){
   <button class="btn main" id="sh-ok"${sel&&pr>=10?'':' disabled'}>Начать аукцион</button></div></div>`;
 }
 function renderShop(){
-  const el=$('#tab-shop');if(!el)return;
+  const el=shEl();if(!el)return;
   const keepBid=document.activeElement&&document.activeElement.id==='sh-bid',keepQ=document.activeElement&&document.activeElement.id==='sh-q';
   let body;
   const lot=sh.lot!=null&&sh.lots&&sh.lots.concat(sh.my&&sh.my.lots?sh.my.lots.map(x=>({...x,min:x.bids?Math.max(x.cur+1,Math.ceil(x.cur*1.05)):x.start,mine:1,lead:0,seller:'Ты'})):[]).find(x=>x.id===sh.lot);
@@ -2377,8 +2380,8 @@ function renderShop(){
     `<small class="sum">Комиссия аукциона ${Math.round(m.fee*100)}% берётся с продавца. Выручка и выигранные ники приходят сами.</small>`;
   }
   else body=!sh.hist?'<div class="pcard lbmsg"><small>Загружаю…</small></div>':(sh.hist.length?sh.hist.map(h=>{const n=nickVal(h.name),sold=h.kind==='sold',won=h.kind==='won';return `<div class="mlot hrow2" style="--tc:${T[n.t].c}"><div class="mi"><b>${sold?'💰 Продано':won?'🏆 Выиграно':'↩ Без ставок'} · @${escH(h.name)}</b><small>${T[n.t].n}${h.kind==='unsold'?'':` · ${sold?'покупатель':'продавец'}: ${escH(h.who)}`}</small><small>${fmtDate(h.ts)}</small></div><div class="mpr">${h.kind==='unsold'?'<small>ник вернулся</small>':`<b class="${sold?'hplus':'hminus'}">${sold?'+':'−'}${fmt(sold?h.get:h.price)} 🪙</b>${sold?`<small>цена ${fmt(h.price)}</small>`:''}`}</div></div>`}).join(''):'<div class="pcard lbmsg"><small>Завершённых аукционов пока нет.</small></div>');
-  el.innerHTML=`<div class="ahead"><button class="btn sm" id="sh-back">‹ Помощь</button><h2>Магазин</h2></div>
-  <div class="seg four"><button data-shtab="ex" aria-pressed="${sh.tab==='ex'}">Товары</button><button data-shtab="auc" aria-pressed="${sh.tab==='auc'}">Аукцион</button><button data-shtab="my" aria-pressed="${sh.tab==='my'}">Мои${sh.my&&sh.my.lead&&sh.my.lead.length?' •':''}</button><button data-shtab="hist" aria-pressed="${sh.tab==='hist'}">История</button></div>${body}${shSheet()}`;
+  el.innerHTML=`<div class="ahead"><button class="btn sm" id="sh-back">‹ Помощь</button><h2>${AUCP?'Аукцион':'Магазин'}</h2></div>
+  ${AUCP?`<div class="seg three"><button data-shtab="auc" aria-pressed="${sh.tab==='auc'}">Лоты</button><button data-shtab="my" aria-pressed="${sh.tab==='my'}">Мои${sh.my&&sh.my.lead&&sh.my.lead.length?' •':''}</button><button data-shtab="hist" aria-pressed="${sh.tab==='hist'}">История</button></div>`:''}${body}${shSheet()}`;
   shAfter(keepBid,keepQ);
 }
 function shAfter(kb,kq){
@@ -2386,14 +2389,14 @@ function shAfter(kb,kq){
   if(kq){const i=$('#sh-q');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}}
 }
 let shQ=0;
-if($('#tab-shop')){
-  $('#tab-shop').oninput=e=>{
+if(shEl()){
+  shEl().oninput=e=>{
     if(e.target.id==='sh-q'){sh.q=e.target.value;clearTimeout(shQ);shQ=setTimeout(async()=>{try{await shLoad()}catch(x){}renderShop()},350)}
     if(e.target.id==='sh-price'){sh.price=e.target.value.replace(/[^\d]/g,'');const ok=$('#sh-ok');if(ok)ok.disabled=!(sh.sel&&+sh.price>=10)}
     if(e.target.id==='sh-bid'){sh.bid=e.target.value.replace(/[^\d]/g,'');const l=sh.lots&&sh.lots.find(x=>x.id===sh.lot),b=$('#sh-do');if(l&&b){const v=+sh.bid||0;b.disabled=!(v>=l.min&&v<=S.coins&&!l.lead&&l.end>shNow())}}
   };
-  $('#tab-shop').onchange=e=>{const s=e.target.closest('[data-shsel]');if(!s)return;sh.sel=s.dataset.shsel;const it=S.items.find(i=>i.id===sh.sel);sh.price=it?String(val(it.t,it.p,it.n)):'';renderShop()};
-  $('#tab-shop').onclick=async e=>{
+  shEl().onchange=e=>{const s=e.target.closest('[data-shsel]');if(!s)return;sh.sel=s.dataset.shsel;const it=S.items.find(i=>i.id===sh.sel);sh.price=it?String(val(it.t,it.p,it.n)):'';renderShop()};
+  shEl().onclick=async e=>{
     const t=e.target;
     if(t.closest('#sh-back'))return tab('help');
     if(t.closest('#sh-retry'))return openShop();
@@ -2436,16 +2439,16 @@ if($('#tab-shop')){
     }
   };
   setInterval(()=>{
-    if(PAGE!=='shop')return;let over=0;
-    document.querySelectorAll('#tab-shop [data-end]').forEach(s=>{const e=+s.dataset.end;if(e<=shNow()){s.textContent='Завершён';over=1}else s.textContent=shLeft(e)});
-    if(over&&!sh.fin&&!sh.busy){sh.fin=1;(async()=>{try{await auClaim();await gAuto();await shLoad()}catch(e){}sh.fin=0;if(!$('#tab-shop').hidden){if(sh.lots&&sh.lot!=null&&!sh.lots.some(x=>x.id===sh.lot))sh.lot=null;renderShop()}})()}
+    if(PAGE!=='shop'&&PAGE!=='auction')return;let over=0;
+    document.querySelectorAll('#tab-shop [data-end],#tab-auction [data-end]').forEach(s=>{const e=+s.dataset.end;if(e<=shNow()){s.textContent='Завершён';over=1}else s.textContent=shLeft(e)});
+    if(over&&!sh.fin&&!sh.busy){sh.fin=1;(async()=>{try{await auClaim();await gAuto();await shLoad()}catch(e){}sh.fin=0;if(!shEl().hidden){if(sh.lots&&sh.lot!=null&&!sh.lots.some(x=>x.id===sh.lot))sh.lot=null;renderShop()}})()}
   },1000);
 }
 
 renderUp();
 if(PAGE!=='main')tabIn(PAGE);
 else{const h=location.hash.slice(1);if(['col','up','prof','bon','show','help'].includes(h))tabIn(h)}
-try{if(PAGE!=='main'&&tg&&tg.BackButton){tg.BackButton.show();tg.BackButton.onClick(()=>{location.href=PAGE==='clan'?'rating.html':(PAGE==='market'||PAGE==='museum'||PAGE==='shop'||PAGE==='top')?'index.html#help':'index.html'})}}catch(e){}
+try{if(PAGE!=='main'&&tg&&tg.BackButton){tg.BackButton.show();tg.BackButton.onClick(()=>{location.href=PAGE==='clan'?'rating.html':(PAGE==='market'||PAGE==='museum'||PAGE==='shop'||PAGE==='auction'||PAGE==='top')?'index.html#help':'index.html'})}}catch(e){}
 refInit();
 cloudLoad();
 try{window.bootDone&&bootDone()}catch(e){}   // игра готова: убираем загрузочный экран
