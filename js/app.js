@@ -1560,53 +1560,61 @@ function plDraw(){
 }
 
 // ---------- Мини игра «Угадай юзернейм» ----------
-var GSC=50000,GSM=[0,2.2,5,11,24,50,110],gs={run:false,streak:0,r:null,pick:-1};
+var GSC=50000,GSM=[0,2,4.5,10,22,48,100],GST=12,gs={run:false,streak:0,r:null,pick:-1,q:'max',ans:0,tm:0};
+var GSQ={max:'Какой ник ДОРОЖЕ всех?',min:'Какой ник ДЕШЕВЛЕ всех?',mid:'Какой ник ВТОРОЙ по дороговизне?'};
 function gsRound(){
-  const hard=gs.streak>=3,pool=[];
-  let tiers;
-  if(hard){const b=R(4);tiers=[b,b+1,b+2]}else{const a=[0,1,2,3,4,5];tiers=[];while(tiers.length<3){const t=a.splice(R(a.length),1)[0];tiers.push(t)}}
-  for(let k=0;k<30;k++){
-    const c=tiers.map(t=>P(poolOf(t))).filter(Boolean);
-    if(c.length<3)continue;
-    const v=c.map(x=>x.price).sort((a,b)=>b-a);
-    if(new Set(c.map(x=>x.name)).size===3&&v[0]>=v[1]*1.25){gs.r=c.sort(()=>Math.random()-.5);gs.pick=-1;return}
+  clearTimeout(gs.tm);
+  const qs=gs.streak===0?['max']:['max','min','mid','min'];gs.q=P(qs);
+  for(let k=0;k<60;k++){
+    const b=R(5),tiers=[0,1,2,3].map(()=>b+R(3)),c=tiers.map(t=>P(poolOf(t))).filter(Boolean);
+    if(c.length<4||new Set(c.map(x=>x.name)).size<4)continue;
+    const v=c.map(x=>x.price).sort((x,y)=>x-y);let ok=true;for(let i=1;i<4;i++)if(v[i]<v[i-1]*1.12)ok=false;
+    if(!ok)continue;
+    gs.r=c.sort(()=>Math.random()-.5);gs.pick=-1;gsAns();return;
   }
-  gs.r=tiers.map(t=>P(poolOf(t)));gs.pick=-1;
+  gs.r=[0,1,2,3].map(i=>P(poolOf(i+1)));gs.pick=-1;gsAns();
 }
+function gsAns(){const o=gs.r.map((x,i)=>[x.price,i]).sort((a,b)=>a[0]-b[0]);gs.ans=gs.q==='max'?o[3][1]:gs.q==='min'?o[0][1]:o[2][1];gs.t0=Date.now()}
 function gsPrize(){return Math.round(GSC*GSM[Math.min(gs.streak,GSM.length-1)])}
+function gsAnswer(i){
+  if(!gs.run||gs.pick>=0&&i!==-2)return;clearTimeout(gs.tm);gs.pick=i;
+  if(i===gs.ans){gs.streak++;if(gs.streak>(S.gbest|0))S.gbest=gs.streak;sfx('upwin');addXp(4)}else{gs.run=false;gs.lost=true;gs.late=i<0;sfx('lose')}
+  if(gs.run&&gs.streak>=GSM.length-1){S.coins=Math.min(CAP,S.coins+gsPrize());gs.run=false;gs.maxed=true;toast('🏆 Максимальная серия: +'+fmt(gsPrize())+' 🪙');sfx('coins')}
+  save();render();gsSheet();
+}
 function gsSheet(close){
   let sh=document.getElementById('gssh');
-  if(close){if(sh)sh.remove();return}
+  if(close){clearTimeout(gs.tm);if(sh)sh.remove();return}
   if(!sh){sh=document.createElement('div');sh.id='gssh';sh.className='usheet';document.body.append(sh);
     sh.onclick=e=>{
       if(e.target.closest('[data-gsx]'))return gsSheet(true);
-      if(e.target.closest('#gs-start')){if(S.coins<GSC)return;S.coins-=GSC;gs.run=true;gs.streak=0;gsRound();save();render();sfx('tap');return gsSheet()}
+      if(e.target.closest('#gs-start')){if(S.coins<GSC)return;S.coins-=GSC;gs.run=true;gs.streak=0;gs.lost=gs.taken=gs.maxed=false;gsRound();save();render();sfx('tap');return gsSheet()}
       const pk=e.target.closest('[data-gsp]');
-      if(pk&&gs.run&&gs.pick<0){gs.pick=+pk.dataset.gsp;const mx=Math.max(...gs.r.map(x=>x.price)),ok=gs.r[gs.pick].price===mx;
-        if(ok){gs.streak++;if(gs.streak>(S.gbest|0))S.gbest=gs.streak;sfx('upwin');addXp(4)}else{gs.run=false;sfx('lose');gs.lost=true}
-        if(gs.run&&gs.streak>=GSM.length-1){S.coins=Math.min(CAP,S.coins+gsPrize());gs.run=false;gs.maxed=true;toast('🏆 Максимальная серия: +'+fmt(gsPrize())+' 🪙');sfx('coins')}
-        save();render();return gsSheet()}
-      if(e.target.closest('#gs-next')){gs.streak=gs.streak;gsRound();return gsSheet()}
+      if(pk)return gsAnswer(+pk.dataset.gsp);
+      if(e.target.closest('#gs-next')){gsRound();return gsSheet()}
       if(e.target.closest('#gs-take')){const p=gsPrize();S.coins=Math.min(CAP,S.coins+p);gs.run=false;gs.taken=p;sfx('coins');toast('Забрано: +'+fmt(p)+' 🪙');save();render();return gsSheet()}
     }}
   const eh=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const lad=GSM.slice(1).map((m,i)=>`<span class="gsl${gs.run&&gs.streak===i+1?' on':''}${gs.streak>i+1?' dn':''}"><b>${i+1}</b><small>×${m}</small></span>`).join('');
+  const card=(x,i,rev)=>{const cl=rev?(i===gs.ans?' ok':(i===gs.pick?' bad':'')):'';
+    return `<button class="gso${cl}" data-gsp="${i}"${rev?' disabled':''}><b>@${eh(x.name)}</b>${rev?`<small style="color:${T[x.t].c}">${T[x.t].n} · ${fmt(x.price)} 🪙</small>`:''}</button>`};
   let main;
   if(gs.run&&gs.r){
-    const rev=gs.pick>=0,mx=Math.max(...gs.r.map(x=>x.price));
-    main=`<p class="cdesc3">Какой из трёх ников дороже всех? Серия: <b>${gs.streak}</b> · сейчас в банке <b>${fmt(gsPrize())} 🪙</b></p>
-    <div class="gsc">${gs.r.map((x,i)=>`<button class="gso${rev?(x.price===mx?' ok':(i===gs.pick?' bad':'')):''}" data-gsp="${i}"${rev?' disabled':''}><b>@${eh(x.name)}</b>${rev?`<small style="color:${T[x.t].c}">${T[x.t].n} · ${fmt(x.price)} 🪙</small>`:''}</button>`).join('')}</div>
-    ${rev&&gs.run?`<button class="btn main" id="gs-next">Дальше</button><button class="btn cwide" id="gs-take">Забрать ${fmt(gsPrize())} 🪙</button>`:''}`;
+    const rev=gs.pick>=0,left=Math.max(0.2,GST-(Date.now()-gs.t0)/1000);
+    main=`<div class="gsq ${gs.q}"><b>${GSQ[gs.q]}</b><small>Серия ${gs.streak} · в банке ${fmt(gsPrize())} 🪙</small></div>
+    ${rev?'':`<div class="gstm"><i style="animation-duration:${left}s"></i></div>`}
+    <div class="gsc">${gs.r.map((x,i)=>card(x,i,rev)).join('')}</div>
+    ${rev?`<button class="btn main" id="gs-next">Дальше</button><button class="btn cwide" id="gs-take">Забрать ${fmt(gsPrize())} 🪙</button>`:''}`;
+    if(!rev){clearTimeout(gs.tm);gs.tm=setTimeout(()=>{if(gs.run&&gs.pick<0&&document.getElementById('gssh'))gsAnswer(-1)},left*1000)}
   }else{
-    const end=gs.lost?`<div class="pcard lbmsg warn"><b>Не угадал — серия сгорела</b><small>Ставка ${fmt(GSC)} 🪙 потеряна.</small></div>`:gs.taken?`<div class="pcard lbmsg"><b>Забрано +${fmt(gs.taken)} 🪙</b></div>`:gs.maxed?`<div class="pcard lbmsg"><b>Серия из ${GSM.length-1} — максимум!</b></div>`:'';
-    main=`${end}${gs.lost&&gs.r?`<div class="gsc">${gs.r.map((x,i)=>`<div class="gso${x.price===Math.max(...gs.r.map(y=>y.price))?' ok':(i===gs.pick?' bad':'')}"><b>@${eh(x.name)}</b><small style="color:${T[x.t].c}">${fmt(x.price)} 🪙</small></div>`).join('')}</div>`:''}
-    <p class="cdesc3">Показываем три ника — выбери самый дорогой. Каждый верный ответ увеличивает приз, забрать можно после любого. Ошибка — ставка сгорает. Рекорд серии: <b>${S.gbest|0}</b>.</p>
+    const end=gs.lost?`<div class="pcard lbmsg warn"><b>${gs.late?'Время вышло':'Не угадал'} — серия сгорела</b><small>Ставка ${fmt(GSC)} 🪙 потеряна. ${GSQ[gs.q]}</small></div>`:gs.taken?`<div class="pcard lbmsg"><b>Забрано +${fmt(gs.taken)} 🪙</b></div>`:gs.maxed?`<div class="pcard lbmsg"><b>Серия из ${GSM.length-1} — максимум!</b></div>`:'';
+    main=`${end}${gs.lost&&gs.r?`<div class="gsc">${gs.r.map((x,i)=>card(x,i,true)).join('')}</div>`:''}
+    <p class="cdesc3">Четыре ника и вопрос: то «самый дорогой», то «самый дешёвый», то «второй по цене». Цены близкие, а на ответ ${GST} секунд. Каждый верный ответ увеличивает приз, забрать можно после любого. Ошибка или таймер — ставка сгорает. Рекорд серии: <b>${S.gbest|0}</b>.</p>
     <button class="btn main" id="gs-start"${S.coins<GSC?' disabled':''}>${S.coins<GSC?'Не хватает '+fmt(GSC-S.coins)+' 🪙':'Играть за '+fmt(GSC)+' 🪙'}</button>`;
   }
   sh.innerHTML=`<div class="sbg" data-gsx="1"></div><div class="sbox casebox"><div class="shead"><b>🔎 Угадай юзернейм</b><button class="btn sm" data-gsx="1">✕</button></div><div class="gsl-row">${lad}</div>${main}</div>`;
-  if(!gs.run){gs.lost=gs.lost&&!gs.run;}
 }
-document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#gs-open')){gs.run=false;gs.lost=gs.taken=gs.maxed=false;gs.r=null;gsSheet()}});
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#gs-open')){if(!gs.run){gs.lost=gs.taken=gs.maxed=false;gs.r=null}gsSheet()}});
 
 // ---------- Моментальная лотерея: три одинаковых символа — приз ----------
 var LOTP=100000,LOT=[{s:'🍒',v:200000,p:.07},{s:'🍋',v:300000,p:.035},{s:'🔔',v:600000,p:.018},{s:'⭐',v:1500000,p:.006},{s:'💎',v:5000000,p:.0012},{s:'👑',v:25000000,p:.0001},{s:'🔮',nick:1,p:.0002}],lt={t:null,done:false};
@@ -1908,7 +1916,7 @@ function renderBon(){
       `<div class="qbot"><small>${q.p} / ${q.n}</small>${q.got?'<em>Получено ✓</em>':ok?`<button class="btn main sm" data-b="quest" data-i="${i}">Забрать</button>`:''}</div></div>`}).join('')+`</div>`;
   try{h+=`<div class="bcases">${casesHtml()}</div>`}catch(e){}
   try{h+=promoCard()}catch(e){}
-  try{h+=`<div class="bcases bmini"><div class="cshd"><b>Мини игры</b><small>2 из 4</small></div><div class="csgrid"><button class="cscard${S.coins<LOTP?' poor':''}" id="lot-open" style="--cc:#FFC933"><span class="csi">🎟️</span><b>Лотерея</b><small>Найди три одинаковых из девяти</small><span class="csp">${fmt(LOTP)} 🪙</span></button><button class="cscard${S.coins<GSC?' poor':''}" id="gs-open" style="--cc:#27D9BD"><span class="csi">🔎</span><b>Угадай юзернейм</b><small>Выбери самый дорогой из трёх</small><span class="csp">${fmt(GSC)} 🪙</span></button>`+[1,2].map(()=>`<div class="cscard soon" style="--cc:#7A7F9A"><span class="csi">🔒</span><b>Скоро…</b><small>Новая мини игра</small><span class="csp">В разработке</span></div>`).join('')+`</div></div>`}catch(e){}
+  try{h+=`<div class="bcases bmini"><div class="cshd"><b>Мини игры</b><small>2 из 4</small></div><div class="csgrid"><button class="cscard${S.coins<LOTP?' poor':''}" id="lot-open" style="--cc:#FFC933"><span class="csi">🎟️</span><b>Лотерея</b><small>Найди три одинаковых из девяти</small><span class="csp">${fmt(LOTP)} 🪙</span></button><button class="cscard${S.coins<GSC?' poor':''}" id="gs-open" style="--cc:#27D9BD"><span class="csi">🔎</span><b>Угадай юзернейм</b><small>Дороже, дешевле или второй? Успей за 12 секунд</small><span class="csp">${fmt(GSC)} 🪙</span></button>`+[1,2].map(()=>`<div class="cscard soon" style="--cc:#7A7F9A"><span class="csi">🔒</span><b>Скоро…</b><small>Новая мини игра</small><span class="csp">В разработке</span></div>`).join('')+`</div></div>`}catch(e){}
   if(el._h!==h){
     el.innerHTML=h;el._h=h;
     const fr=bon.fresh;bon.fresh=false;
