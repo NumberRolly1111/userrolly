@@ -963,3 +963,11 @@ nav [aria-selected=true]::before{content:"";position:absolute;top:-7px;left:50%;
 .li b{color:var(--fg)}.li em{font-style:normal;font-weight:800}.li small{font-size:11px}
 @keyframes livemv{to{transform:translateX(-50%)}}
 .liveempty{flex:1;min-width:0;font-size:12px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* карточки-уведомления */
+.ncards{scroll-padding-left:16px;display:flex;gap:10px;margin:0 -16px 12px;padding:2px 16px 4px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.ncards::-webkit-scrollbar{display:none}
+.ncard{position:relative;flex:0 0 66%;max-width:260px;scroll-snap-align:start;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;text-align:left;background:linear-gradient(135deg,color-mix(in srgb,var(--nc) 20%,var(--paper)),var(--paper));border:1px solid color-mix(in srgb,var(--nc) 35%,transparent);color:var(--fg)}
+.nci{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:color-mix(in srgb,var(--nc) 22%,transparent);color:var(--nc)}
+.nct{display:grid;gap:2px;min-width:0}.nct b{font:800 14px var(--head);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nct small{font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ndot{position:absolute;top:10px;right:10px;width:9px;height:9px;border-radius:50%;background:#ff3b52;box-shadow:0 0 0 2px var(--paper)}
+.ncard:active{transform:scale(.98)}
