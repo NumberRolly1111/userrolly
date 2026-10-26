@@ -18,6 +18,8 @@ async function migrate(db) {   // добавляем новые столбцы �
   for (const [c, d] of [['flag', 'INTEGER NOT NULL DEFAULT 0'], ['cos', "TEXT NOT NULL DEFAULT ''"], ['allow', 'INTEGER NOT NULL DEFAULT 0']]) {
     if (!have.includes(c)) await db.prepare(`ALTER TABLE players ADD COLUMN ${c} ${d}`).run();
   }
+  await db.prepare('CREATE TABLE IF NOT EXISTS grants (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, amount INTEGER NOT NULL, claimed INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_grants_uid ON grants(uid, claimed)').run();
   migrated = true;
 }
 const enc = new TextEncoder();
@@ -60,15 +62,45 @@ async function handle(req, env) {
   {
     const cors = {
       'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
-      'Access-Control-Allow-Headers': 'Content-Type, X-Init-Data',
+      'Access-Control-Allow-Headers': 'Content-Type, X-Init-Data, X-Admin-Key',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     };
     const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'Content-Type': 'application/json' } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
 
+    const url = new URL(req.url);
+    // ---- админка: выдача монет по ID (пароль ADMIN_KEY или Telegram-владелец) ----
+    if (url.pathname.startsWith('/admin/')) {
+      const key = req.headers.get('X-Admin-Key') || '';
+      let ok = !!(env.ADMIN_KEY && key && key === env.ADMIN_KEY);
+      if (!ok) { const au = await auth(req.headers.get('X-Init-Data'), env.BOT_TOKEN); ok = !!(au && isAdmin(au, env)); }
+      if (!ok) return json({ error: 'auth' }, 401);
+      await migrate(env.DB);
+      const find = async (id) => (await env.DB.prepare('SELECT uid,name,net,lvl FROM players WHERE uid=?1 OR (CAST(uid AS INTEGER) % 999999) + 1 = CAST(?1 AS INTEGER) LIMIT 5').bind(id).all()).results;
+      if (url.pathname === '/admin/find' && req.method === 'GET') {
+        const id = (url.searchParams.get('id') || '').replace(/\D/g, '');
+        if (!id) return json({ error: 'id' }, 400);
+        return json({ players: await find(id) });
+      }
+      if (url.pathname === '/admin/grant' && req.method === 'POST') {
+        let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
+        const id = String(b.id || '').replace(/\D/g, ''), amount = Math.trunc(Number(b.amount));
+        if (!id || !Number.isFinite(amount) || amount === 0 || Math.abs(amount) > 1e12) return json({ error: 'bad' }, 400);
+        let rows = await find(id);
+        if (b.uid) rows = rows.filter((r) => r.uid === String(b.uid));
+        if (!rows.length) return json({ error: 'nouser' }, 404);
+        if (rows.length > 1) return json({ error: 'many', players: rows }, 409);
+        await env.DB.prepare('INSERT INTO grants(uid,amount,claimed,ts) VALUES(?,?,0,?)').bind(rows[0].uid, amount, Date.now()).run();
+        return json({ ok: true, name: rows[0].name, uid: rows[0].uid, amount });
+      }
+      if (url.pathname === '/admin/log' && req.method === 'GET') {
+        const r = (await env.DB.prepare('SELECT g.id,g.amount,g.claimed,g.ts,p.name FROM grants g LEFT JOIN players p ON p.uid=g.uid ORDER BY g.id DESC LIMIT 20').all()).results;
+        return json({ log: r });
+      }
+      return json({ error: 'not found' }, 404);
+    }
     const uid = await auth(req.headers.get('X-Init-Data'), env.BOT_TOKEN);
     if (!uid) return json({ error: 'auth' }, 401);
-    const url = new URL(req.url);
     await migrate(env.DB);
     if (req.method === 'POST' && url.pathname !== '/sync' && !url.pathname.startsWith('/ref') && !isAdmin(uid, env)) {
       const f = await env.DB.prepare('SELECT flag FROM players WHERE uid=?').bind(uid).first();
@@ -82,7 +114,7 @@ async function handle(req, env) {
       const now = Date.now();
       const old = await env.DB.prepare('SELECT net,best,upd,flag,allow FROM players WHERE uid=?').bind(uid).first();
       if (old && now - old.upd < MIN_GAP_MS) return json({ error: 'wait' }, 429);
-      const cos = String(b.cos || '').match(/^[a-z0-9_]{0,16}\|[a-z0-9_]{0,16}$/) ? String(b.cos) : '';
+      const cos = String(b.cos || '').match(/^[a-z0-9_]{0,16}\|[a-z0-9_]{0,16}(\|[a-z0-9_]{0,16})?$/) ? String(b.cos) : '';
       if (!isAdmin(uid, env)) {
         const el = old ? Math.min(MAX_ELAPSED_S, Math.max(0, (now - old.upd) / 1000)) : 0;
         const limit = old ? old.net + BURST + RATE * el + (old.allow || 0) : FIRST_NET;
@@ -101,14 +133,34 @@ async function handle(req, env) {
 
     if (url.pathname === '/top' && req.method === 'GET') {
       const col = url.searchParams.get('by') === 'best' ? 'best' : 'net';
-      const rows = (await env.DB.prepare(`SELECT uid,name,${col} AS v,bestn,lvl,cos FROM players WHERE hide=0 AND flag=0 AND ${col}>0 ORDER BY ${col} DESC, upd ASC LIMIT 50`).all()).results;
+      const rows = (await env.DB.prepare(`SELECT p.uid,p.name,p.${col} AS v,p.bestn,p.lvl,p.cos,(SELECT c.tag FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=p.uid) AS tag FROM players p WHERE p.hide=0 AND p.flag=0 AND p.${col}>0 ORDER BY p.${col} DESC, p.upd ASC LIMIT 50`).all()).results;
       const mine = await env.DB.prepare(`SELECT ${col} AS v, hide, flag FROM players WHERE uid=?`).bind(uid).first();
       let me = null;
       if (mine && !mine.hide && !mine.flag) {
         const c = await env.DB.prepare(`SELECT COUNT(*) AS n FROM players WHERE hide=0 AND flag=0 AND ${col}>?`).bind(mine.v).first();
         me = { rank: c.n + 1, v: mine.v };
       }
-      return json({ top: rows.map((r) => ({ name: r.name, v: r.v, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', me: r.uid === uid })), me });
+      return json({ top: rows.map((r) => ({ name: r.name, v: r.v, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', tag: r.tag || '', me: r.uid === uid })), me });
+    }
+    // ---- профиль другого игрока: по месту в таблице (uid наружу не отдаём) ----
+    if (url.pathname === '/player' && req.method === 'GET') {
+      const col = url.searchParams.get('by') === 'best' ? 'best' : 'net';
+      const i = Math.floor(Number(url.searchParams.get('i')));
+      if (!(i >= 0 && i < 50)) return json({ error: 'bad' }, 400);
+      const r = await env.DB.prepare(`SELECT p.uid,p.name,p.net,p.best,p.bestn,p.lvl,p.cos,(SELECT c.tag FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=p.uid) AS tag,(SELECT c.name FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=p.uid) AS cname FROM players p WHERE p.hide=0 AND p.flag=0 AND p.${col}>0 ORDER BY p.${col} DESC, p.upd ASC LIMIT 1 OFFSET ?`).bind(i).first();
+      if (!r) return json({ error: 'none' }, 404);
+      return json({ rank: i + 1, name: r.name, net: r.net, best: r.best, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', tag: r.tag || '', cname: r.cname || '', me: r.uid === uid });
+    }
+    // ---- подарки от админа: игрок забирает сам ----
+    if (url.pathname === '/grants/claim' && req.method === 'POST') {
+      const rows = (await env.DB.prepare('SELECT id,amount FROM grants WHERE uid=? AND claimed=0 LIMIT 50').bind(uid).all()).results;
+      let sum = 0;
+      for (const r of rows) {
+        const u = await env.DB.prepare('UPDATE grants SET claimed=1 WHERE id=? AND claimed=0').bind(r.id).run();
+        if (u.meta.changes) sum += r.amount;
+      }
+      if (sum > 0) await env.DB.prepare('UPDATE players SET allow = allow + ? WHERE uid=?').bind(sum, uid).run();
+      return json({ sum });
     }
     // ---- друзья ----
     const REF_MAX = 20;
@@ -396,7 +448,8 @@ async function museumRoutes(url, req, env, uid, json) {
     const rows = (await db.prepare('SELECT m.name,m.v,m.owner,m.ts,p.name AS oname,p.hide FROM museum m LEFT JOIN players p ON p.uid=m.owner ORDER BY m.v DESC, m.ts ASC LIMIT ?').bind(MUSEUM_SHOW).all()).results;
     const total = await db.prepare('SELECT COUNT(*) AS n FROM museum').first();
     const mine = await db.prepare('SELECT COUNT(*) AS n FROM museum WHERE owner=?').bind(uid).first();
-    return json({ items: rows.map((r) => ({ name: r.name, v: r.v, ts: r.ts, owner: r.hide ? 'Игрок' : (r.oname || 'Игрок'), mine: r.owner === uid ? 1 : 0 })), total: total.n, mine: mine.n, max: MUSEUM_PER_PLAYER });
+    const my = (await db.prepare('SELECT name,v,ts FROM museum WHERE owner=? ORDER BY ts ASC LIMIT ?').bind(uid, MUSEUM_PER_PLAYER).all()).results;
+    return json({ items: rows.map((r) => ({ name: r.name, v: r.v, ts: r.ts, owner: r.hide ? 'Игрок' : (r.oname || 'Игрок'), mine: r.owner === uid ? 1 : 0 })), my: my.map((r) => ({ name: r.name, v: r.v, ts: r.ts })), total: total.n, mine: mine.n, max: MUSEUM_PER_PLAYER });
   }
   if (p === '/museum/add' && req.method === 'POST') {
     let b; try { b = await req.json(); } catch { b = {}; }
