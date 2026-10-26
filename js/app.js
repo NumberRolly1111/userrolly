@@ -1240,7 +1240,10 @@ function tab(n){
   const here=PAGE==='main'?['game','col','up','prof','bon','show','help']:[PAGE];
   if(here.includes(n))return tabIn(n);
   save();try{if(cloudDone)cloudPush()}catch(e){}
-  location.href=(PAGES[n]||'index.html')+(PAGES[n]||n==='game'?'':'#'+n);
+  const go=(PAGES[n]||'index.html')+(PAGES[n]||n==='game'?'':'#'+n);
+  try{sessionStorage.setItem('nr_nav','1')}catch(e){}
+  document.documentElement.classList.add('navout');
+  setTimeout(()=>{location.href=go},reduce?0:170);
 }
 function tabIn(n){
   {const nn=['show','market','museum','top','clan','ach','help','auction'].includes(n)?'help':n;document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===nn))}
@@ -1252,7 +1255,7 @@ function tabIn(n){
   if(n==='col')renderCol();else updSelbar();
   if(n==='up')renderUp();
   if(n==='prof')renderProf();
-  if(n==='bon'){renderBon();try{if(sessionStorage.getItem('nr_gw')){sessionStorage.removeItem('nr_gw');setTimeout(()=>{const w=$('#wheel');if(w)w.scrollIntoView({behavior:'smooth',block:'center'})},450)}}catch(e){}}
+  if(n==='bon'){renderBon();try{const gw=sessionStorage.getItem('nr_gw');if(gw){sessionStorage.removeItem('nr_gw');setTimeout(()=>{const w=gw==='games'?document.querySelector('.bmini'):$('#wheel');if(w)w.scrollIntoView({behavior:'smooth',block:'center'})},450)}}catch(e){}}
   if(n==='ach')renderAch();
   if(n==='show')renderShow();
   if(n==='top')openTop();
@@ -2454,7 +2457,8 @@ var liveD=[];
 function feedPush(name,t){try{if(API&&tg&&tg.initData)lbReq('/feed',{name,tier:t}).then(()=>setTimeout(feedLoad,1200)).catch(()=>{})}catch(e){}}
 async function feedLoad(){
   if(!API||!tg||!tg.initData||document.hidden)return;
-  try{const r=await lbReq('/feed');liveD=(r.items||[]).filter(x=>x&&x.name);renderLive()}catch(e){}
+  try{const r=await lbReq('/feed');liveD=(r.items||[]).filter(x=>x&&x.name)}catch(e){}
+  renderLive();
 }
 function renderLive(){
   const el=document.getElementById('live');if(!el)return;
@@ -2463,7 +2467,7 @@ function renderLive(){
   if(!it){el.innerHTML='<span class="livepill"><i></i>LIVE</span><span class="liveempty">Пока тихо. Выбей Эпический ник или выше, и о тебе узнают все</span>';return}
   el.innerHTML=`<span class="livepill"><i></i>LIVE</span><div class="livewin"><div class="livetrk" style="animation-duration:${Math.max(18,liveD.length*7)}s">${it}${it}</div></div>`;
 }
-setTimeout(feedLoad,2500);setInterval(()=>{try{if(PAGE==='main'&&!document.getElementById('tab-game').hidden)feedLoad()}catch(e){}},40000);
+try{renderLive()}catch(e){}setTimeout(feedLoad,2500);setInterval(()=>{try{if(PAGE==='main'&&!document.getElementById('tab-game').hidden)feedLoad()}catch(e){}},40000);
 
 // ---------- Карточки-уведомления над рулеткой (листаются) ----------
 var nt={au:null,top:null,sig:''};
@@ -2491,7 +2495,7 @@ async function notesLoad(){
 }
 (function(){const el=document.getElementById('notes');if(!el)return;
   el.onclick=e=>{const b=e.target.closest('[data-n]');if(!b)return;const k=b.dataset.n;
-    if(k==='games')return tab('bon');
+    if(k==='games'){try{sessionStorage.setItem('nr_gw','games')}catch(x){}return tab('bon')}
     if(k==='wheel'){try{sessionStorage.setItem('nr_gw','1')}catch(x){}return tab('bon')}
     if(k==='auction')return tab('auction');
     if(k==='top')return tab('top')};
