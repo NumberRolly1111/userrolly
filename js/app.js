@@ -795,7 +795,7 @@ function render(){
   $('#st-spins').textContent=`Круток: ${fmt(S.spins)}`;
   $('#st-best').innerHTML=`Лучший: <b class="chip" style="background:${T[S.best].c}">${S.spins?T[S.best].n:'—'}</b>`;
   renderCol();
-  if(!$('#tab-prof').hidden)renderProf();
+  if(!$('#tab-prof').hidden)renderProf();try{if(!$('#tab-museum').hidden)renderMuseum()}catch(x){};
   if(!$('#tab-bon').hidden)renderBon();
   if(!$('#tab-ach').hidden)renderAch();
   if(!$('#tab-show').hidden)renderShow();
@@ -1099,7 +1099,7 @@ function cosSheet(){
           if(S.coins<it.price)return toast('Не хватает монет');
           S.coins-=it.price;S.cown.push(id);S[fld]=id;sfx('ach');hap('n','success');toast('Куплено: '+it.n);
         }
-        save();render();lb.sent='';lbPush();cosSheet();if(!$('#tab-prof').hidden)renderProf()}
+        save();render();lb.sent='';lbPush();cosSheet();if(!$('#tab-prof').hidden)renderProf();try{if(!$('#tab-museum').hidden)renderMuseum()}catch(x){}}
     }}
   const u=tgUser(),nm=u.first_name||'Игрок';
   const row=(it,kind)=>{const own=cosOwn(it.id),on=kind===1?S.cn===it.id:kind===2?S.ct===it.id:S.cf===it.id,poor=!own&&S.coins<it.price;
@@ -1144,7 +1144,6 @@ function renderProf(){
   <div class="tri"><div><small>Капитал</small><b>${S.coins>=1e9?short(S.coins):fmtC(S.coins)} 🪙</b></div><div><small>Коллекция</small><b>${S.items.length} из ${S.slots}</b></div><div><small>Витрины</small><b>${doneV} из ${SHOW.length}</b></div></div></div>
   <div class="pcard sndrow"><div><b>Звуки</b><small>Эффекты рулетки, наград и колеса</small></div><button class="sw${S.snd?' on':''}" id="snd-tg" role="switch" aria-checked="${S.snd}" aria-label="Звуки"><i></i></button></div>
   ${(()=>{try{return albumCard()}catch(e){return ''}})()}
-  ${workPlate()}
   <div class="pcard"><h3>Тема оформления</h3><div class="themes">${THEMES.map(t=>`<button class="thm" data-theme="${t.id}" aria-pressed="${(S.theme||'')===t.id}" style="--tl:${t.a}"><i style="background:linear-gradient(135deg,${t.b} 55%,${t.a} 55%)"></i>${t.n}</button>`).join('')}</div></div>
   <div class="pcard inv invx"><div><b>Позвать друзей</b><small>За каждого друга: +${fmt(REF_C)} 🪙 и +${REF_E} ⚡ · приглашено ${S.refc} из ${REF_MAX}</small></div><div class="invb">${lb.refn>0?`<button class="btn main" id="ref-claim">Забрать +${fmt(lb.refn*REF_C)} 🪙</button>`:''}<button class="btn${lb.refn>0?'':' main'}" id="invite">Позвать</button></div></div>
   <div class="pcard"><h3>Статистика</h3>
@@ -1427,7 +1426,7 @@ const dClaimed=()=>S.dcase===todayK();
 function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${S.coins<c.price?' poor':''}${c.daily&&dClaimed()?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.daily?(dClaimed()?'Через '+leftT(msToDay()):'Бесплатно · раз в сутки'):fmt(c.price)+' 🪙'}</span></button>`).join('')+'</div>'}
 function renderCases(){
   let el=$('#cases');if(!el){const st=document.querySelector('#tab-game .stats');if(!st)return;el=document.createElement('div');el.id='cases';st.after(el)}
-  setHtml(el,workPlate());
+  setHtml(el,'');
   if(!$('#tab-bon').hidden)try{renderBon()}catch(e){}
 }
 function caseSheet(){
@@ -1472,13 +1471,13 @@ async function openCase(){
   const t2=$('#crt'),r2=$('#crl');if(t2&&r2){r2.classList.add('on');t2.innerHTML=tiles.join('');t2.style.transition='none';t2.style.transform=`translateX(${r2.clientWidth/2-(WIN*pitch+tw/2+off)}px)`;const ww=t2.children[WIN];if(ww)ww.classList.add('win')}
 }
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-case]');if(!b||cs.busy)return;cs.id=b.dataset.case;cs.res=null;caseSheet()});
-// ---------- Ники на работе: пассивный доход ----------
+// ---------- Зал в музее: пассивный доход ----------
 var WORKMAX=3,WORKCAP=8*3600e3,WORKRATE=.0025,wkPick=false,wkTm=0;   // до 3 ников; 0,25% цены ника в час; копится до 8 часов
 function workList(){S.work=S.work.filter(w=>S.items.some(i=>i.id===w.id));return S.work}
 function workRate(it){return Math.max(1,Math.round(val(it.t,it.p,it.n)*WORKRATE))}
 function workAcc(w,it){return Math.floor(workRate(it)*Math.min(WORKCAP,Math.max(0,Date.now()-w.t))/3600e3)}
 function workTotal(){return workList().reduce((s,w)=>{const it=S.items.find(i=>i.id===w.id);return s+(it?workAcc(w,it):0)},0)}
-function workPlate(){const n=workList().length,t=workTotal();return `<div class="cshd wkhd"><b>Пассивный заработок</b></div><button class="pcard achbtn" data-work="1" style="margin-bottom:12px"><div><b>Ники на работе</b><small>${n} из ${WORKMAX}${t>0?' · накоплено '+fmtC(t)+' 🪙':' · приносят монеты, пока ты не играешь'}</small></div><span class="trophy">⛏️</span></button>`}
+function workPlate(){const n=workList().length,t=workTotal();return `<div class="cshd wkhd"><b>Пассивный заработок</b></div><button class="pcard achbtn" data-work="1" style="margin-bottom:12px"><div><b>Мой зал в музее</b><small>${n} из ${WORKMAX} на показе${t>0?' · накоплено '+fmtC(t)+' 🪙':' · посетители платят за просмотр'}</small></div><span class="trophy">🖼️</span></button>`}
 function workSheet(close){
   let o=document.getElementById('worksh');
   if(close){if(o)o.remove();clearInterval(wkTm);wkPick=false;return}
@@ -1488,28 +1487,28 @@ function workSheet(close){
       if(e.target.closest('[data-wx]')){if(wkPick){wkPick=false;return workSheet()}return workSheet(true)}
       const add=e.target.closest('[data-wadd]');if(add){wkPick=true;return workSheet()}
       const pk=e.target.closest('[data-wpick]');
-      if(pk){if(S.work.length<WORKMAX&&S.items.some(i=>i.id===pk.dataset.wpick)&&!S.work.some(w=>w.id===pk.dataset.wpick)){S.work.push({id:pk.dataset.wpick,t:Date.now()});save();sfx('tap')}wkPick=false;try{renderCases()}catch(x){}if(!$('#tab-prof').hidden)renderProf();return workSheet()}
+      if(pk){if(S.work.length<WORKMAX&&S.items.some(i=>i.id===pk.dataset.wpick)&&!S.work.some(w=>w.id===pk.dataset.wpick)){S.work.push({id:pk.dataset.wpick,t:Date.now()});save();sfx('tap')}wkPick=false;try{renderCases()}catch(x){}if(!$('#tab-prof').hidden)renderProf();try{if(!$('#tab-museum').hidden)renderMuseum()}catch(x){};return workSheet()}
       const rm=e.target.closest('[data-wrm]');
-      if(rm){const w=S.work.find(x=>x.id===rm.dataset.wrm),it=w&&S.items.find(i=>i.id===w.id);if(w&&it){const g=workAcc(w,it);if(g>0)S.coins+=g}S.work=S.work.filter(x=>x.id!==rm.dataset.wrm);save();render();try{renderCases()}catch(x){}if(!$('#tab-prof').hidden)renderProf();return workSheet()}
+      if(rm){const w=S.work.find(x=>x.id===rm.dataset.wrm),it=w&&S.items.find(i=>i.id===w.id);if(w&&it){const g=workAcc(w,it);if(g>0)S.coins+=g}S.work=S.work.filter(x=>x.id!==rm.dataset.wrm);save();render();try{renderCases()}catch(x){}if(!$('#tab-prof').hidden)renderProf();try{if(!$('#tab-museum').hidden)renderMuseum()}catch(x){};return workSheet()}
       if(e.target.closest('[data-wclaim]')){
         let sum=0;workList().forEach(w=>{const it=S.items.find(i=>i.id===w.id);if(it){sum+=workAcc(w,it);w.t=Date.now()}});
-        if(sum>0){S.coins+=sum;save();render();sfx('coins');hap('n','success');toast(`Заработано: +${fmt(sum)} 🪙`);try{renderCases()}catch(x){}if(!$('#tab-prof').hidden)renderProf()}
+        if(sum>0){S.coins+=sum;save();render();sfx('coins');hap('n','success');toast(`Заработано: +${fmt(sum)} 🪙`);try{renderCases()}catch(x){}if(!$('#tab-prof').hidden)renderProf();try{if(!$('#tab-museum').hidden)renderMuseum()}catch(x){}}
         return workSheet()}
     }}
   const list=workList();
   if(wkPick){
     const its=S.items.filter(i=>!list.some(w=>w.id===i.id)).sort((a,b)=>val(b.t,b.p,b.n)-val(a.t,a.p,a.n));
-    o.innerHTML=`<div class="sbg" data-wx="1"></div><div class="sbox casebox"><div class="shead"><b>Кого отправить работать?</b><button class="btn sm" data-wx="1">‹</button></div>`+
-      (its.length?its.map(x=>`<button class="item wpk" data-wpick="${x.id}" style="--tc:${T[x.t].c}"><div><b>@${escH(x.n)}</b><small>${T[x.t].n}</small></div><span>+${fmt(workRate(x))} 🪙/ч</span></button>`).join(''):'<div class="pcard lbmsg"><small>Все ники уже работают или коллекция пуста.</small></div>')+`</div>`;
+    o.innerHTML=`<div class="sbg" data-wx="1"></div><div class="sbox casebox"><div class="shead"><b>Кого выставить в зале?</b><button class="btn sm" data-wx="1">‹</button></div>`+
+      (its.length?its.map(x=>`<button class="item wpk" data-wpick="${x.id}" style="--tc:${T[x.t].c}"><div><b>@${escH(x.n)}</b><small>${T[x.t].n}</small></div><span>+${fmt(workRate(x))} 🪙/ч</span></button>`).join(''):'<div class="pcard lbmsg"><small>Все ники уже на показе или коллекция пуста.</small></div>')+`</div>`;
     return;
   }
   const tot=workTotal();
-  const slot=i=>{const w=list[i];if(!w)return `<button class="wslot empty" data-wadd="1"><b>＋ Поставить ник</b><small>Свободное место ${i+1} из ${WORKMAX}</small></button>`;
+  const slot=i=>{const w=list[i];if(!w)return `<button class="wslot empty" data-wadd="1"><b>＋ Выставить ник</b><small>Свободное место ${i+1} из ${WORKMAX}</small></button>`;
     const it=S.items.find(x=>x.id===w.id),rate=workRate(it),acc=workAcc(w,it),full=Date.now()-w.t>=WORKCAP;
-    return `<div class="wslot" style="--tc:${T[it.t].c}"><div class="wtop"><div><b>@${escH(it.n)}</b><small>${T[it.t].n} · +${fmt(rate)} 🪙/ч</small></div><button class="btn sm" data-wrm="${it.id}">Снять</button></div>
+    return `<div class="wslot" style="--tc:${T[it.t].c}"><div class="wtop"><div><b>@${escH(it.n)}</b><small>${T[it.t].n} · +${fmt(rate)} 🪙/ч</small></div><button class="btn sm" data-wrm="${it.id}">Убрать</button></div>
     <div class="wbar"><i style="width:${Math.min(100,(Date.now()-w.t)/WORKCAP*100)}%"></i></div><small class="wacc">${full?'Склад полон — забери монеты':'Накоплено'}: <b>${fmt(acc)} 🪙</b></small></div>`};
-  o.innerHTML=`<div class="sbg" data-wx="1"></div><div class="sbox casebox"><div class="shead"><b>⛏️ Ники на работе</b><button class="btn sm" data-wx="1">✕</button></div>
-    <p class="cdesc3">Каждый ник приносит 0,25% своей цены в час. Копится до 8 часов, потом нужно зайти и забрать.</p>
+  o.innerHTML=`<div class="sbg" data-wx="1"></div><div class="sbox casebox"><div class="shead"><b>🖼️ Мой зал в музее</b><button class="btn sm" data-wx="1">✕</button></div>
+    <p class="cdesc3">Выставленный ник остаётся у тебя в коллекции, а посетители музея платят за просмотр: 0,25% цены ника в час. Копится до 8 часов, потом нужно зайти и забрать.</p>
     ${[0,1,2].map(slot).join('')}
     <button class="btn main cwide" data-wclaim="1"${tot>0?'':' disabled'}>${tot>0?`Забрать всё · +${fmt(tot)} 🪙`:'Пока нечего забирать'}</button></div>`;
 }
@@ -1719,7 +1718,7 @@ function renderMuseum(){
     ${sel?`<div class="muprev">${plate(sel.n,sel.t)}<span>${fmt(val(sel.t,sel.p,sel.n))} 🪙</span></div>`:''}
     <small class="sum">Ник навсегда уйдёт из коллекции и станет экспонатом. Вернуть или продать его будет нельзя.</small>
     <button class="btn main${mu.armed?' danger':''}" id="mu-ok"${sel?'':' disabled'}>${mu.armed?'Точно поставить навсегда?':'Поставить в музей'}</button></div></div>`:'';
-  setHtml(el,`<div class="ahead"><button class="btn sm" id="mu-back">‹ Коллекция</button><h2>Музей</h2></div>${body}${sheet}`);
+  setHtml(el,`<div class="ahead"><button class="btn sm" id="mu-back">‹ Коллекция</button><h2>Музей</h2></div>${(()=>{try{return workPlate()}catch(e){return ''}})()}${body}${sheet}`);
 }
 $('#tab-museum').onchange=e=>{const s=e.target.closest('[data-musel]');if(!s)return;mu.sel=s.dataset.musel;mu.armed=false;renderMuseum()};
 $('#tab-museum').onclick=async e=>{
@@ -1755,7 +1754,7 @@ async function refInit(){
 }
 async function refPoll(){
   if(!API||!tg||!tg.initData)return;
-  try{const r=await lbReq('/refs');const n=Math.max(0,Math.min(r.n|0,REF_MAX-S.refc));if(n!==lb.refn){lb.refn=n;if(!$('#tab-prof').hidden)renderProf()}}catch(e){}
+  try{const r=await lbReq('/refs');const n=Math.max(0,Math.min(r.n|0,REF_MAX-S.refc));if(n!==lb.refn){lb.refn=n;if(!$('#tab-prof').hidden)renderProf();try{if(!$('#tab-museum').hidden)renderMuseum()}catch(x){}}}catch(e){}
 }
 async function claimRefs(){
   if(!lb.refn)return;
