@@ -2458,8 +2458,8 @@ async function feedLoad(){
 function renderLive(){
   const el=document.getElementById('live');if(!el)return;
   const it=liveD.map(x=>{const n=nickVal(x.name);return n.t>=3?`<span class="li"><b>${escH(x.who)}</b> выбил <em style="color:${T[n.t].c}">${escH(T[n.t].n.toUpperCase())}</em> @${escH(x.name)} <small>· ${fmtC(n.v)} 🪙</small></span>`:''}).join('');
-  if(!it){el.hidden=true;return}
   el.hidden=false;
+  if(!it){el.innerHTML='<span class="livepill"><i></i>LIVE</span><span class="liveempty">Пока тихо. Выбей Эпический ник или выше, и о тебе узнают все</span>';return}
   el.innerHTML=`<span class="livepill"><i></i>LIVE</span><div class="livewin"><div class="livetrk" style="animation-duration:${Math.max(18,liveD.length*7)}s">${it}${it}</div></div>`;
 }
 setTimeout(feedLoad,2500);setInterval(()=>{try{if(PAGE==='main'&&!document.getElementById('tab-game').hidden)feedLoad()}catch(e){}},40000);
