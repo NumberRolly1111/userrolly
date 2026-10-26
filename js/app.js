@@ -628,7 +628,7 @@ async function spin(){
   else if(S.coins<cost){toast('Не хватает монет. Продай ники в коллекции или загляни в бонусы.');return}
   flushPrev();sfx('whoosh');addXp(10*count);busy=true;if(free){if(S.en>=EN_CAP)S.enT=Date.now();S.en-=cost}else S.coins-=cost;S.spins+=count;if(count>1)S.tri++;addQuest('spins',count);
   cur=Array.from({length:count},()=>roll(m));
-  cur.forEach(c=>{S.cnt[c.t]++;S.best=Math.max(S.best,c.t);noteBest(val(c.t,c.p,c.name),c.name)});
+  cur.forEach(c=>{if(c.t>=3&&c.t<=6)feedPush(c.name,c.t);S.cnt[c.t]++;S.best=Math.max(S.best,c.t);noteBest(val(c.t,c.p,c.name),c.name)});
   S.pend=cur.map(({name,t,p})=>({name,t,p}));save();
   // одна общая анимация: крутится лучший ник из выпавших, остальные видны в переключателе после неё
   sel=cur.reduce((b,c,i)=>c.t>cur[b].t||(c.t===cur[b].t&&c.p>cur[b].p)?i:b,0);
@@ -1483,7 +1483,7 @@ async function openCase(){
   const c=CASES.find(x=>x.id===cs.id);const fr=S.cfree&&S.cfree[c&&c.id]>0;if(!c||cs.busy||(!fr&&S.coins<c.price)||(c.daily&&dClaimed()))return;
   cs.busy=true;xbusy=1;cs.res=null;
   const tier=rollTier(c),pr=P(poolOf(tier));
-  if(fr)S.cfree[c.id]--;else S.coins-=c.price;if(c.daily)S.dcase=todayK();S.casen++;S.cnt[pr.t]++;S.best=Math.max(S.best,pr.t);noteBest(pr.price,pr.name);addXp(8+pr.t*6);
+  if(fr)S.cfree[c.id]--;else S.coins-=c.price;if(c.daily)S.dcase=todayK();S.casen++;if(pr.t>=3&&pr.t<=6)feedPush(pr.name,pr.t);S.cnt[pr.t]++;S.best=Math.max(S.best,pr.t);noteBest(pr.price,pr.name);addXp(8+pr.t*6);
   const msg=stashAll([{name:pr.name,t:pr.t,p:pr.p}]);save();render();   // приз выдан сразу: закрытие приложения его не отменит
   caseSheet();
   const trk=$('#crt'),rl=$('#crl'),N=46,WIN=36,tw=96,gap=8,pitch=tw+gap;
@@ -2447,3 +2447,19 @@ async function gAuto(){
 setTimeout(()=>{gAuto();auClaim()},6000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(gAuto,800)});
 
 ;setTimeout(()=>{try{if(API&&tg&&tg.initData)lbReq('/market/my').then(m=>{mk.my=m;return mAuto()}).catch(()=>{})}catch(e){}},5000);
+
+// ---------- LIVE: лента крупных выпадений ----------
+var liveD=[];
+function feedPush(name,t){try{if(API&&tg&&tg.initData)lbReq('/feed',{name,tier:t}).then(()=>setTimeout(feedLoad,1200)).catch(()=>{})}catch(e){}}
+async function feedLoad(){
+  if(!API||!tg||!tg.initData||document.hidden)return;
+  try{const r=await lbReq('/feed');liveD=(r.items||[]).filter(x=>x&&x.name);renderLive()}catch(e){}
+}
+function renderLive(){
+  const el=document.getElementById('live');if(!el)return;
+  const it=liveD.map(x=>{const n=nickVal(x.name);return n.t>=3?`<span class="li"><b>${escH(x.who)}</b> выбил <em style="color:${T[n.t].c}">${escH(T[n.t].n.toUpperCase())}</em> @${escH(x.name)} <small>· ${fmtC(n.v)} 🪙</small></span>`:''}).join('');
+  if(!it){el.hidden=true;return}
+  el.hidden=false;
+  el.innerHTML=`<span class="livepill"><i></i>LIVE</span><div class="livewin"><div class="livetrk" style="animation-duration:${Math.max(18,liveD.length*7)}s">${it}${it}</div></div>`;
+}
+setTimeout(feedLoad,2500);setInterval(()=>{try{if(PAGE==='main'&&!document.getElementById('tab-game').hidden)feedLoad()}catch(e){}},40000);
