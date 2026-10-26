@@ -1753,8 +1753,16 @@ const nickVal=n=>{const s=score(n);return {t:s.t,p:s.p,v:val(s.t,s.p,n)}};
 async function openMarket(){
   renderMarket();if(!API||!tg||!tg.initData)return;
   mk.load=true;mk.err='';renderMarket();
-  try{await lbPush(true);await mLoad()}catch(e){mk.err=merr(e)}
+  try{await lbPush(true);await mLoad();await mAuto()}catch(e){mk.err=merr(e)}
   mk.load=false;if(!$('#tab-market').hidden)renderMarket();
+}
+// выручка с проданных лотов зачисляется сама (без кнопки)
+async function mAuto(){
+  if(!API||!tg||!tg.initData||mk.busy)return;
+  if(!mk.my||!mk.my.sold||!mk.my.sold.length)return;
+  const r=await lbReq('/market/claim',{});
+  if(r&&r.sum>0){S.coins+=r.sum;save();render();try{sfx('coins')}catch(e){}toast(`Продано: +${fmt(r.sum)} 🪙`)}
+  try{await mLoad()}catch(e){}
 }
 async function mLoad(){
   const [l,m]=await Promise.all([lbReq(`/market?sort=${mk.sort}&q=${encodeURIComponent(mk.q)}`),lbReq('/market/my')]);mk.lots=l.lots;mk.my=m;
@@ -2223,3 +2231,13 @@ try{if(PAGE!=='main'&&tg&&tg.BackButton){tg.BackButton.show();tg.BackButton.onCl
 refInit();
 cloudLoad();
 try{window.bootDone&&bootDone()}catch(e){}   // игра готова: убираем загрузочный экран
+
+// подарки от админа
+async function gAuto(){
+  if(!API||!tg||!tg.initData)return;
+  try{const r=await lbReq('/grants/claim',{});
+    if(r&&r.sum){S.coins=Math.max(0,S.coins+r.sum);save();render();try{sfx('coins')}catch(e){}toast(r.sum>0?`Подарок: +${fmt(r.sum)} 🪙`:`Списано: ${fmt(-r.sum)} 🪙`)}}catch(e){}
+}
+setTimeout(gAuto,6000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(gAuto,800)});
+
+;setTimeout(()=>{try{if(API&&tg&&tg.initData)lbReq('/market/my').then(m=>{mk.my=m;return mAuto()}).catch(()=>{})}catch(e){}},5000);
