@@ -1752,7 +1752,7 @@ function lotSheet(close){
         if(S.lotp){const m=claimLot();if(m)toast('Приз лотереи: '+m)}
         const r=lotRoll();S.coins-=LOTP;S.lotn++;
         r.nm=P(SECRETS);S.lotp=r.w?(r.w.nick?{k:'n',name:r.nm}:{k:'c',v:r.w.v}):null;   // приз записан сразу: закрытие приложения его не отменит
-        save();render();lt.t=r;lt.done=false;sfx('upstart');lotSheet();
+        save();render();lt.t=r;lt.done=false;lotSheet();
       }}}
   const t=lt.t,poor=S.coins<LOTP;
   const symsHtml=t?t.cells.map((x,i)=>`<span class="lsy${lt.done&&t.hit.includes(i)?' hit':''}">${x}</span>`).join(''):'';
