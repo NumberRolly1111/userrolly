@@ -1064,3 +1064,6 @@ body.shopen nav{visibility:hidden}
 .szt b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.szt span{font-weight:800}
 .szt.me{border:2px solid #8B7CFF}
 .szprz{display:block;margin-top:10px;line-height:1.4}
+
+#cnt.seg.two{grid-template-columns:repeat(3,1fr)}
+#cnt small{font-size:10px}
