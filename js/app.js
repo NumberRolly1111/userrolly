@@ -2,7 +2,6 @@
 addEventListener('error',e=>{try{if(e.message==='Script error.'&&!e.filename&&!e.lineno){console.warn('Script error (чужой скрипт, например Telegram SDK)');return}let b=document.getElementById('errbar');if(!b){b=document.createElement('div');b.id='errbar';b.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:99;background:#B3261E;color:#fff;font:12px/1.35 monospace;padding:8px 10px;border-radius:10px;word-break:break-all';b.onclick=()=>b.remove();document.body.append(b)}b.textContent='Ошибка: '+e.message+' ('+String(e.filename||'').split('/').pop()+':'+e.lineno+') · нажми, чтобы скрыть'}catch(x){}});
 addEventListener('unhandledrejection',e=>{try{console.error(e.reason)}catch(x){}});
 const $=s=>document.querySelector(s),tg=window.Telegram&&Telegram.WebApp;
-try{if(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.start_param==='admin'&&!document.body.dataset.page&&!sessionStorage.getItem('nr_adm')){sessionStorage.setItem('nr_adm','1');location.replace('winvhfufkfdnditgv/')}}catch(e){}
 // если на хостинге лежит старый html без новых разделов (файлы загрузили не все) — создаём недостающие, чтобы игра не падала
 ['ach','show','top','clan','market','museum','shop','auction','help','guide'].forEach(k=>{if(!$('#tab-'+k)){const s=document.createElement('section');s.id='tab-'+k;s.className='list';s.hidden=true;($('#tab-bon')||document.body).after(s)}});
 // отступ сверху под системную панель Telegram («Закрыть», «…»): берём из SDK, иначе запасной
@@ -295,26 +294,9 @@ function fixState(){
   if(S.ach!==null&&!Array.isArray(S.ach))S.ach=null;
   if(S.pend!=null){const arr=Array.isArray(S.pend)?S.pend:[S.pend];S.pend=arr.filter(c=>c&&typeof c.name==='string'&&Number.isInteger(c.t)&&c.t>=0&&c.t<=7).map(c=>({name:c.name,t:c.t,p:+c.p||0}))}
 }
-// 10 быстрых нажатий на заголовок «Нейм-рулетка» открывают админ-страницу (доступ проверяет сама страница)
-(function(){const h=document.querySelector('header h1');if(!h)return;let n=0,tm=0;
-  h.addEventListener('click',()=>{n++;clearTimeout(tm);tm=setTimeout(()=>{n=0},2000);if(n>=10){n=0;try{save()}catch(e){}location.href='winvhfufkfdnditgv/'}});})();
-// Команда с админ-страницы (/winvhfufkfdnditgv/): страница кладёт её в localStorage, игра применяет при запуске
-function applyAdmin(){
-  let raw=null;try{raw=localStorage.getItem('nr_admin');if(raw)localStorage.removeItem('nr_admin')}catch(e){}
-  if(!raw)return;let c;try{c=JSON.parse(raw)}catch(e){return}
-  if(!c||typeof c!=='object'||Date.now()-(+c.ts||0)>600000)return;   // команда живёт 10 минут
-  const msg=[];
-  if(c.c&&isFinite(+c.c.v)&&+c.c.v>=0){const v=Math.floor(+c.c.v);S.coins=Math.max(0,c.c.m==='add'?S.coins+v:v);msg.push('баланс '+fmt(S.coins))}
-  const names=Array.isArray(c.n)?c.n.filter(x=>typeof x==='string'&&/^[^\s@]{1,32}$/.test(x)).slice(0,30):[];
-  let ok=0;
-  names.forEach(n=>{if(S.items.length>=30)return;if(S.items.length>=S.slots)S.slots=Math.min(30,S.items.length+1);MAX=S.slots;const r=score(n);addItem(n,r.t,r.p);ok++});
-  if(names.length)msg.push('ников: '+ok+(ok<names.length?' из '+names.length+' (нет места)':''));
-  if(!msg.length)return;
-  save();try{shownCoins=S.coins}catch(e){}try{render()}catch(e){}try{toast('Админ: '+msg.join(', '))}catch(e){}
-}
 function cloudLoad(){
-  if(!CS){applyAdmin();return}
-  const done=()=>{applyAdmin();cloudDone=true;cloudPush();dkPush()};
+  if(!CS){return}
+  const done=()=>{cloudDone=true;cloudPush();dkPush()};
   try{CS.getItem(DK,(e0,dv)=>{if(!e0&&dkMerge(dv)){try{localStorage.setItem('nameroulette',JSON.stringify(S))}catch(x){}try{renderCases()}catch(x){}try{render()}catch(x){}}});}catch(e){}
   try{CS.getItem('nr_n',(e,n)=>{
     n=+n;if(e||!n){done();return}
