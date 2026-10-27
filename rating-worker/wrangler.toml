@@ -6,3 +6,6 @@ compatibility_date = "2024-11-01"
 binding = "DB"
 database_name = "nr-rating"
 database_id = "e5d2750f-ca32-4b3e-9bc7-a23cc4fdd25e"
+
+[triggers]
+crons = ["*/5 * * * *"]   # аукционы и напоминания бота
