@@ -15,6 +15,7 @@ const hap=(k,v)=>{try{tg&&tg.HapticFeedback&&(k==='n'?tg.HapticFeedback.notifica
 const T=[{n:'Обычный',c:'#9AA5DB',v:390},{n:'Необычный',c:'#27D9BD',v:1470},{n:'Редкий',c:'#9B7BFF',v:4800},{n:'Эпический',c:'#FF5FA2',v:17700},{n:'Легендарный',c:'#FFC933',v:72000},{n:'Мифический',c:'#FF4B3E',v:378000},{n:'Секретный',c:'#EAF1FF',v:1000000},{n:'Эксклюзивный',c:'#B455FF',v:25000000}]
 const BDGP={crown:10000000,dragon:7500000,unicorn:5000000,liberty:4000000,slot:3000000,fire:2000000,rose:1500000,coin:1000000,moai:1000000},TOPP=500000,MULTIP=300000,MULTIN=5;
 T.forEach((t,i)=>t.s=['Обычн.','Необыч.','Редкий','Эпик','Легенд.','Миф.','Секрет','Эксклюз.'][i]);;
+const MULTI5={l:'×5',min:4,cost:1000000};   // мульти-крутка: 5 ников, каждый не ниже легендарного, только за монеты
 const MODES=[{l:'Любой',min:0,cost:3000},{l:'Редкий+',min:2,cost:10500},{l:'Эпик+',min:3,cost:30000}];
 const WORDS=['storm','night','wolf9','cyber','pixel','ghost','nova7','lunar','ember','frost','raven','blaze','orbit','pulse','zenith','vortex','shadow','dragon','falcon','comet','atlas','magic','royal','alpha','omega','delta','sigma','ninja','panda','tiger','cobalt','cipher','quartz','rocket','silent','golden','crystal','phoenix','nexus','vector','matrix','legend','hunter','pirate','wizard','spirit','shiver','velvet','copper','jungle','sunset','thunder','galaxy','planet','meteor','aurora','eclipse','horizon','cosmos','stellar','nebula','quasar','photon','plasma','neutron','proton','carbon','silver','bronze','marble','granite','onyx','amber','jade','ruby','sapphire','opal','ivory','ebony','crimson','scarlet','violet','indigo','azure','emerald','cinder','smoke','steel','iron','titan','giant','knight','archer','viking','samurai','shogun','ronin','sensei','monk','sage','oracle','druid','shaman','rogue','bandit','outlaw','rebel','phantom','specter','wraith','demon','angel','mystic','arcane','cosmic','atomic','turbo','hyper','super','rapid','swift','stealth','blizzard','glacier','tundra','desert','canyon','island','ocean','river','forest','meadow','garden','harbor','castle','temple','tower','bridge','anchor','compass','lantern','candle','mirror','puzzle','riddle','secret','myth','fable','story','poem','melody','rhythm','echo','whisper','thunder','lightning','tornado','cyclone','volcano','crater','spark','flame','inferno','magma','cobra','viper','python','raptor','condor','eagle','hawk','owl','lynx','puma','jaguar','leopard','cheetah','panther','wolfpack','badger','otter','beaver','bison','moose','walrus','penguin','dolphin','octopus','kraken','hydra','griffin','pegasus','unicorn','goblin','ogre','troll','golem','zombie','vampire','captain','sailor','pilot','shuttle','module','sensor','signal','binary','kernel','socket','packet','buffer','cache','proxy','server','client','script','coder','hacker','gamer','streamer','player','winner','champion','master','expert','genius','sorcerer','alchemy','potion','gemstone','diamond','pearl','coral','reef','wave','tide','breeze','zephyr','mistral','monsoon'].filter(w=>/^[a-z]{5,}$/.test(w));
 const L='abcdefghijklmnopqrstuvwxyz',V='aeiouy',K='bcdfghjklmnprstvwxz',POOL=L+'0123456789_#$%@';
@@ -621,7 +622,7 @@ function showIdle(){const box=$('#reels');box.innerHTML='';const r=mkRow();box.a
 function roll(m){let best=null;for(let i=0;i<3000;i++){const s=gen(),r=score(s);if(r.t>6)continue;if(!best||r.t>best.t)best={name:s,...r};if(r.t>=m.min)break}return{...best,kept:false,res:''}}
 function flushPrev(){const left=cur.filter(c=>!c.kept);cur.forEach(c=>c.kept=true);S.pend=null;if(left.length)toast('Прошлые ники: '+stashAll(left))}
 async function spin(){
-  if(busy)return;tickEn();const free=S.src==='free',m=free?MODES[0]:MODES[mode],cost=free?count:m.cost*count;
+  if(busy)return;tickEn();const free=S.src==='free'&&count!==5,m=count===5?MULTI5:free?MODES[0]:MODES[mode],cost=count===5?MULTI5.cost:free?count:m.cost*count;
   if(free){if(S.en<cost){toast(`Не хватает энергии: нужно ${cost}, есть ${S.en}. Следующая через ${mmss(enLeft())}. Можно крутить за монеты.`);return}}
   else if(S.coins<cost){toast('Не хватает монет. Продай ники в коллекции или загляни в бонусы.');return}
   flushPrev();sfx('whoosh');addXp(10*count);busy=true;if(free){if(S.en>=EN_CAP)S.enT=Date.now();S.en-=cost}else S.coins-=cost;S.spins+=count;if(count>1)S.tri++;addQuest('spins',count);try{spAdd(3*count)}catch(e){}
@@ -822,14 +823,14 @@ function render(){
   try{renderNotes()}catch(e){}
   setCoins();
   ensureQuests();updBonDot();checkAch();try{renderCases()}catch(e){}   // кейсы объявлены ниже: на первом проходе их ещё нет
-  tickEn();const free=S.src==='free',m=free?MODES[0]:MODES[mode],seg=$('#seg'),cn=$('#cnt'),sr=$('#src');
+  tickEn();const free=S.src==='free'&&count!==5,m=free?MODES[0]:MODES[mode],seg=$('#seg'),cn=$('#cnt'),sr=$('#src');
   if(!sr.firstChild)sr.innerHTML='<button aria-pressed="false" data-s="free">⚡ Бесплатно</button><button aria-pressed="false" data-s="coin">🪙 За монеты</button>';
-  [...sr.children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===S.src));seg.hidden=free;$('#en').hidden=!free;updEn();
+  [...sr.children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===S.src));seg.hidden=free||count===5;$('#en').hidden=!free;updEn();
   if(!seg.firstChild)seg.innerHTML=MODES.map((x,i)=>`<button aria-pressed="false" data-m="${i}">${x.l}<small>${fmt(x.cost)} 🪙</small></button>`).join('');
-  if(!cn.firstChild)cn.innerHTML=[1,3].map(n=>`<button aria-pressed="false" data-n="${n}">×${n}<small>${n===1?'один ник':'три ника'}</small></button>`).join('');
+  if(!cn.firstChild)cn.innerHTML=[1,3,5].map(n=>`<button aria-pressed="false" data-n="${n}">×${n}<small>${n===1?'один ник':n===3?'три ника':'5 легенд.+'}</small></button>`).join('');
   [...seg.children].forEach((b,i)=>b.setAttribute('aria-pressed',i===mode));
   [...cn.children].forEach(b=>b.setAttribute('aria-pressed',+b.dataset.n===count));
-  const sp=$('#spin');sp.textContent=`Крутить${count>1?' ×'+count:''} · ${free?count+' ⚡':fmt(m.cost*count)+' 🪙'}`;sp.disabled=busy;
+  const sp=$('#spin');sp.textContent=`Крутить${count>1?' ×'+count:''} · ${free?count+' ⚡':fmt(count===5?MULTI5.cost:m.cost*count)+' 🪙'}`;sp.disabled=busy;
   $('#st-spins').textContent=`Круток: ${fmt(S.spins)}`;
   $('#st-best').innerHTML=`Лучший: <b class="chip" style="background:${T[S.best].c}">${S.spins?T[S.best].n:'—'}</b>`;
   renderCol();
@@ -846,9 +847,9 @@ $('#spin').onclick=spin;
   const upd=()=>{b.setAttribute('aria-pressed',S.fast?'true':'false');b.innerHTML='<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>Быстро'};
   upd();b.onclick=()=>{S.fast=S.fast?0:1;save();upd();toast(S.fast?'Быстрый режим включён':'Быстрый режим выключен')};
 })();
-$('#src').onclick=e=>{const b=e.target.closest('[data-s]');if(b&&!busy&&S.src!==b.dataset.s){S.src=b.dataset.s;save();render()}};
+$('#src').onclick=e=>{const b=e.target.closest('[data-s]');if(b&&!busy&&S.src!==b.dataset.s){S.src=b.dataset.s;if(S.src==='free'&&count===5){count=3;toast('×5 только за монеты, включил ×3')}save();render()}};
 $('#seg').onclick=e=>{const b=e.target.closest('[data-m]');if(b&&!busy){mode=+b.dataset.m;render()}};
-$('#cnt').onclick=e=>{const b=e.target.closest('[data-n]');if(b&&!busy){count=+b.dataset.n;render()}};
+$('#cnt').onclick=e=>{const b=e.target.closest('[data-n]');if(b&&!busy){count=+b.dataset.n;if(count===5&&S.src!=='coin'){S.src='coin';save();toast('×5 доступна только за монеты')}render()}};
 $('#reels').onclick=e=>{
   const pk=e.target.closest('[data-pk]');
   if(pk){if(!busy&&+pk.dataset.pk!==sel)showSel(+pk.dataset.pk,false);return}
