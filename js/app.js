@@ -13,9 +13,8 @@ function safeTop(){
 if(tg){tg.ready();tg.expand();safeTop();['safeAreaChanged','contentSafeAreaChanged','fullscreenChanged','viewportChanged'].forEach(ev=>{try{tg.onEvent(ev,safeTop)}catch(e){}});try{tg.setHeaderColor('#0D0B1A');tg.setBackgroundColor('#0D0B1A')}catch(e){}}
 const hap=(k,v)=>{try{tg&&tg.HapticFeedback&&(k==='n'?tg.HapticFeedback.notificationOccurred(v):tg.HapticFeedback.impactOccurred(v))}catch(e){}};
 const T=[{n:'Обычный',c:'#9AA5DB',v:390},{n:'Необычный',c:'#27D9BD',v:1470},{n:'Редкий',c:'#9B7BFF',v:4800},{n:'Эпический',c:'#FF5FA2',v:17700},{n:'Легендарный',c:'#FFC933',v:72000},{n:'Мифический',c:'#FF4B3E',v:378000},{n:'Секретный',c:'#EAF1FF',v:1000000},{n:'Эксклюзивный',c:'#B455FF',v:25000000}]
-const BDGP={crown:10000000,dragon:7500000,unicorn:5000000,liberty:4000000,slot:3000000,fire:2000000,rose:1500000,coin:1000000,moai:1000000},TOPP=500000,MULTIP=300000,MULTIN=5;
+const BDGP={crown:10000000,dragon:7500000,unicorn:5000000,liberty:4000000,slot:3000000,fire:2000000,rose:1500000,coin:1000000,moai:1000000},TOPP=500000,MULTIP=1000000,MULTIN=5;
 T.forEach((t,i)=>t.s=['Обычн.','Необыч.','Редкий','Эпик','Легенд.','Миф.','Секрет','Эксклюз.'][i]);;
-const MULTI5={l:'×5',min:4,cost:1000000};   // мульти-крутка: 5 ников, каждый не ниже легендарного, только за монеты
 const MODES=[{l:'Любой',min:0,cost:3000},{l:'Редкий+',min:2,cost:10500},{l:'Эпик+',min:3,cost:30000}];
 const WORDS=['storm','night','wolf9','cyber','pixel','ghost','nova7','lunar','ember','frost','raven','blaze','orbit','pulse','zenith','vortex','shadow','dragon','falcon','comet','atlas','magic','royal','alpha','omega','delta','sigma','ninja','panda','tiger','cobalt','cipher','quartz','rocket','silent','golden','crystal','phoenix','nexus','vector','matrix','legend','hunter','pirate','wizard','spirit','shiver','velvet','copper','jungle','sunset','thunder','galaxy','planet','meteor','aurora','eclipse','horizon','cosmos','stellar','nebula','quasar','photon','plasma','neutron','proton','carbon','silver','bronze','marble','granite','onyx','amber','jade','ruby','sapphire','opal','ivory','ebony','crimson','scarlet','violet','indigo','azure','emerald','cinder','smoke','steel','iron','titan','giant','knight','archer','viking','samurai','shogun','ronin','sensei','monk','sage','oracle','druid','shaman','rogue','bandit','outlaw','rebel','phantom','specter','wraith','demon','angel','mystic','arcane','cosmic','atomic','turbo','hyper','super','rapid','swift','stealth','blizzard','glacier','tundra','desert','canyon','island','ocean','river','forest','meadow','garden','harbor','castle','temple','tower','bridge','anchor','compass','lantern','candle','mirror','puzzle','riddle','secret','myth','fable','story','poem','melody','rhythm','echo','whisper','thunder','lightning','tornado','cyclone','volcano','crater','spark','flame','inferno','magma','cobra','viper','python','raptor','condor','eagle','hawk','owl','lynx','puma','jaguar','leopard','cheetah','panther','wolfpack','badger','otter','beaver','bison','moose','walrus','penguin','dolphin','octopus','kraken','hydra','griffin','pegasus','unicorn','goblin','ogre','troll','golem','zombie','vampire','captain','sailor','pilot','shuttle','module','sensor','signal','binary','kernel','socket','packet','buffer','cache','proxy','server','client','script','coder','hacker','gamer','streamer','player','winner','champion','master','expert','genius','sorcerer','alchemy','potion','gemstone','diamond','pearl','coral','reef','wave','tide','breeze','zephyr','mistral','monsoon'].filter(w=>/^[a-z]{5,}$/.test(w));
 const L='abcdefghijklmnopqrstuvwxyz',V='aeiouy',K='bcdfghjklmnprstvwxz',POOL=L+'0123456789_#$%@';
@@ -622,7 +621,7 @@ function showIdle(){const box=$('#reels');box.innerHTML='';const r=mkRow();box.a
 function roll(m){let best=null;for(let i=0;i<3000;i++){const s=gen(),r=score(s);if(r.t>6)continue;if(!best||r.t>best.t)best={name:s,...r};if(r.t>=m.min)break}return{...best,kept:false,res:''}}
 function flushPrev(){const left=cur.filter(c=>!c.kept);cur.forEach(c=>c.kept=true);S.pend=null;if(left.length)toast('Прошлые ники: '+stashAll(left))}
 async function spin(){
-  if(busy)return;tickEn();const free=S.src==='free'&&count!==5,m=count===5?MULTI5:free?MODES[0]:MODES[mode],cost=count===5?MULTI5.cost:free?count:m.cost*count;
+  if(busy)return;tickEn();const free=S.src==='free',m=free?MODES[0]:MODES[mode],cost=free?count:m.cost*count;
   if(free){if(S.en<cost){toast(`Не хватает энергии: нужно ${cost}, есть ${S.en}. Следующая через ${mmss(enLeft())}. Можно крутить за монеты.`);return}}
   else if(S.coins<cost){toast('Не хватает монет. Продай ники в коллекции или загляни в бонусы.');return}
   flushPrev();sfx('whoosh');addXp(10*count);busy=true;if(free){if(S.en>=EN_CAP)S.enT=Date.now();S.en-=cost}else S.coins-=cost;S.spins+=count;if(count>1)S.tri++;addQuest('spins',count);try{spAdd(3*count)}catch(e){}
@@ -823,14 +822,14 @@ function render(){
   try{renderNotes()}catch(e){}
   setCoins();
   ensureQuests();updBonDot();checkAch();try{renderCases()}catch(e){}   // кейсы объявлены ниже: на первом проходе их ещё нет
-  tickEn();const free=S.src==='free'&&count!==5,m=free?MODES[0]:MODES[mode],seg=$('#seg'),cn=$('#cnt'),sr=$('#src');
+  tickEn();const free=S.src==='free',m=free?MODES[0]:MODES[mode],seg=$('#seg'),cn=$('#cnt'),sr=$('#src');
   if(!sr.firstChild)sr.innerHTML='<button aria-pressed="false" data-s="free">⚡ Бесплатно</button><button aria-pressed="false" data-s="coin">🪙 За монеты</button>';
-  [...sr.children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===S.src));seg.hidden=free||count===5;$('#en').hidden=!free;updEn();
+  [...sr.children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===S.src));seg.hidden=free;$('#en').hidden=!free;updEn();
   if(!seg.firstChild)seg.innerHTML=MODES.map((x,i)=>`<button aria-pressed="false" data-m="${i}">${x.l}<small>${fmt(x.cost)} 🪙</small></button>`).join('');
-  if(!cn.firstChild)cn.innerHTML=[1,3,5].map(n=>`<button aria-pressed="false" data-n="${n}">×${n}<small>${n===1?'один ник':n===3?'три ника':'5 легенд.+'}</small></button>`).join('');
+  if(!cn.firstChild)cn.innerHTML=[1,3].map(n=>`<button aria-pressed="false" data-n="${n}">×${n}<small>${n===1?'один ник':'три ника'}</small></button>`).join('');
   [...seg.children].forEach((b,i)=>b.setAttribute('aria-pressed',i===mode));
   [...cn.children].forEach(b=>b.setAttribute('aria-pressed',+b.dataset.n===count));
-  const sp=$('#spin');sp.textContent=`Крутить${count>1?' ×'+count:''} · ${free?count+' ⚡':fmt(count===5?MULTI5.cost:m.cost*count)+' 🪙'}`;sp.disabled=busy;
+  const sp=$('#spin');sp.textContent=`Крутить${count>1?' ×'+count:''} · ${free?count+' ⚡':fmt(m.cost*count)+' 🪙'}`;sp.disabled=busy;
   $('#st-spins').textContent=`Круток: ${fmt(S.spins)}`;
   $('#st-best').innerHTML=`Лучший: <b class="chip" style="background:${T[S.best].c}">${S.spins?T[S.best].n:'—'}</b>`;
   renderCol();
@@ -847,9 +846,9 @@ $('#spin').onclick=spin;
   const upd=()=>{b.setAttribute('aria-pressed',S.fast?'true':'false');b.innerHTML='<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>Быстро'};
   upd();b.onclick=()=>{S.fast=S.fast?0:1;save();upd();toast(S.fast?'Быстрый режим включён':'Быстрый режим выключен')};
 })();
-$('#src').onclick=e=>{const b=e.target.closest('[data-s]');if(b&&!busy&&S.src!==b.dataset.s){S.src=b.dataset.s;if(S.src==='free'&&count===5){count=3;toast('×5 только за монеты, включил ×3')}save();render()}};
+$('#src').onclick=e=>{const b=e.target.closest('[data-s]');if(b&&!busy&&S.src!==b.dataset.s){S.src=b.dataset.s;save();render()}};
 $('#seg').onclick=e=>{const b=e.target.closest('[data-m]');if(b&&!busy){mode=+b.dataset.m;render()}};
-$('#cnt').onclick=e=>{const b=e.target.closest('[data-n]');if(b&&!busy){count=+b.dataset.n;if(count===5&&S.src!=='coin'){S.src='coin';save();toast('×5 доступна только за монеты')}render()}};
+$('#cnt').onclick=e=>{const b=e.target.closest('[data-n]');if(b&&!busy){count=+b.dataset.n;render()}};
 $('#reels').onclick=e=>{
   const pk=e.target.closest('[data-pk]');
   if(pk){if(!busy&&+pk.dataset.pk!==sel)showSel(+pk.dataset.pk,false);return}
@@ -2056,14 +2055,14 @@ function hallSvg(cfg,ex,u,dec){
     let o=`<g><polygon points="${cx-28},212 ${cx+34},207 ${cx+48},212 ${cx+42},219 ${cx-26},220" fill="#000" opacity=".4" filter="url(#bl${u})"/>
     <polygon points="${cx-27},191 ${cx-20},186 ${cx+33},186 ${cx+27},191" fill="#fbfbff"/>
     <polygon points="${cx+27},191 ${cx+33},186 ${cx+33},208 ${cx+27},213" fill="#9d9db0"/>
-    <rect x="${cx-27}" y="191" width="54" height="22" fill="url(#pv${u})"/><rect x="${cx-27}" y="196" width="54" height="1.6" fill="#e6c067"/><rect x="${cx-27}" y="206" width="54" height="1" fill="#000" opacity=".12"/><path d="M${cx-22} 192q8 3 12 9t14 6M${cx+4} 191q6 5 4 10t12 8M${cx-24} 205q10-3 18 0" stroke="#8d93a8" stroke-width=".6" fill="none" opacity=".45"/><rect x="${cx-27}" y="191" width="54" height="1.2" fill="#fff" opacity=".7"/><rect x="${cx-13}" y="199" width="26" height="6.4" rx="1" fill="#caa44a" stroke="#7e5f17" stroke-width=".4"/><rect x="${cx-13}" y="199" width="26" height="1.6" rx="1" fill="#fff" opacity=".35"/><text x="${cx}" y="204" font-size="4.6" font-weight="800" text-anchor="middle" fill="#4a350d" font-family="Georgia,serif" letter-spacing=".4">EXHIBIT ${i+1}</text><rect x="${cx-27}" y="211" width="54" height="2" fill="#000" opacity=".18"/>
+    <rect x="${cx-27}" y="191" width="54" height="22" fill="url(#pv${u})"/><rect x="${cx-27}" y="196" width="54" height="1.6" fill="#e6c067"/><rect x="${cx-27}" y="206" width="54" height="1" fill="#000" opacity=".12"/><path d="M${cx-22} 192q8 3 12 9t14 6M${cx+4} 191q6 5 4 10t12 8M${cx-24} 205q10-3 18 0" stroke="#8d93a8" stroke-width=".6" fill="none" opacity=".45"/><rect x="${cx-27}" y="191" width="54" height="1.2" fill="#fff" opacity=".7"/><rect x="${cx-17}" y="198.6" width="34" height="7.2" rx="1.2" fill="#caa44a" stroke="#7e5f17" stroke-width=".4"/><rect x="${cx-17}" y="198.6" width="34" height="1.8" rx="1.2" fill="#fff" opacity=".35"/><text x="${cx}" y="203.8" font-size="4.4" font-weight="800" text-anchor="middle" fill="#4a350d" font-family="Georgia,serif" letter-spacing=".25">EXHIBIT ${i+1}</text><rect x="${cx-27}" y="211" width="54" height="2" fill="#000" opacity=".18"/>
     <polygon points="${cx-26},187 ${cx-21},150 ${cx+31},150 ${cx+32},187" fill="#cfe8ff" opacity=".09"/>`;
     if(ee){const nm=ee.length>6?ee.slice(0,5)+'…':ee,safe='@'+String(nm).replace(/[&<>]/g,'');
-      o+=`<ellipse cx="${cx+3}" cy="170" rx="30" ry="16" fill="${g}" opacity=".4" filter="url(#bl${u})"/>
-      <rect x="${cx-22}" y="163" width="50" height="18" rx="4" fill="url(#pq${u}${i})" stroke="#fff" stroke-width="1.4"/>
-      <rect x="${cx-21}" y="164" width="48" height="7" rx="3.2" fill="#fff" opacity=".28"/><text x="${cx+3}" y="175.5" font-size="9" font-weight="800" text-anchor="middle" fill="#14142a" font-family="system-ui,sans-serif">${safe}</text>
+      o+=`<ellipse cx="${cx}" cy="170" rx="30" ry="16" fill="${g}" opacity=".4" filter="url(#bl${u})"/>
+      <rect x="${cx-24}" y="163" width="48" height="18" rx="4" fill="url(#pq${u}${i})" stroke="#fff" stroke-width="1.4"/>
+      <rect x="${cx-23}" y="164" width="46" height="7" rx="3.2" fill="#fff" opacity=".28"/><text x="${cx}" y="175.4" font-size="${safe.length>6?8.2:9}" font-weight="800" text-anchor="middle" fill="#14142a" font-family="system-ui,sans-serif">${safe}</text>
       <defs><linearGradient id="pq${u}${i}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${gl}"/><stop offset="1" stop-color="${g}"/></linearGradient></defs>`}
-    else o+=`<text x="${cx+3}" y="174" font-size="13" text-anchor="middle" fill="#fff" fill-opacity=".4" font-family="system-ui,sans-serif">＋</text>`;
+    else o+=`<text x="${cx}" y="174" font-size="13" text-anchor="middle" fill="#fff" fill-opacity=".4" font-family="system-ui,sans-serif">＋</text>`;
     o+=`<rect x="${cx-26}" y="150" width="52" height="37" fill="#dff0ff" fill-opacity=".10" stroke="#fff" stroke-opacity=".6" stroke-width="1.2"/><polygon points="${cx+26},150 ${cx+32},146 ${cx+32},183 ${cx+26},187" fill="#bfe0ff" fill-opacity=".22" stroke="#fff" stroke-opacity=".4" stroke-width=".8"/><polygon points="${cx-26},150 ${cx-20},146 ${cx+32},146 ${cx+26},150" fill="#fff" fill-opacity=".3"/><polygon points="${cx-18},150 ${cx-8},150 ${cx-20},187 ${cx-26},187" fill="#fff" fill-opacity=".16"/><rect x="${cx-26}" y="150" width="52" height="37" fill="url(#cg${u})"/><path d="M${cx-26} 150V187M${cx+26} 150V187M${cx+32} 146V183" stroke="#e4ebf6" stroke-width="1.7" opacity=".9"/><path d="M${cx-26} 150H${cx+26}L${cx+32} 146" stroke="#e4ebf6" stroke-width="1.5" fill="none" opacity=".9"/><rect x="${cx-5}" y="141" width="10" height="4" rx="1.4" fill="#2b2b33"/><rect x="${cx-5}" y="141" width="10" height="1.2" fill="#fff" opacity=".35"/><ellipse cx="${cx}" cy="145.4" rx="3.2" ry="1" fill="#fff6c8"/><polygon points="${cx-3},146 ${cx+3},146 ${cx+16},166 ${cx-16},166" fill="#fff6c8" opacity=".06"/>`;
     return o+'</g>'}).join('');
   let fx='';
