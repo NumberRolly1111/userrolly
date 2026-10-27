@@ -5,12 +5,27 @@ const MAX_NET = 2e12, MAX_BEST = 6e6, MAX_LVL = 1000, MIN_GAP_MS = 8000, MAX_AGE
 // Разрешённый рост между двумя отправками = BURST + RATE × секунды с прошлой отправки + выручка с рынка (allow).
 // Первая отправка: до FIRST_NET. Если игрок превысил лимит, он помечается (flag=1): скрыт из рейтинга, рынок/кланы/музей для него закрыты,
 // а его прошлые данные остаются. Флаг снимается сам, когда отправленный капитал снова укладывается в лимит.
-const RATE = 5000, BURST = 40e6, FIRST_NET = 3e9, MAX_ELAPSED_S = 14 * 86400;
+const RATE = 5000, BURST = 100e6, FIRST_NET = 3e9, MAX_ELAPSED_S = 14 * 86400;
 const ADMIN_GAME_ID = 587503;   // владелец игры (ID из профиля): на него лимиты не действуют; можно добавить Telegram ID в переменную ADMIN_IDS через запятую
 const isAdmin = (uid, env) => {
   const n = Number(uid);
   return n === ADMIN_GAME_ID || (n % 999999) + 1 === ADMIN_GAME_ID || String((env && env.ADMIN_IDS) || '').split(',').map((x) => x.trim()).includes(String(uid));
 };
+
+// ---- сезоны и события (то же расписание, что в js/app.js: считается по времени, хранить ничего не нужно) ----
+const EV_ANCHOR = Date.UTC(2026, 9, 26), SEASON_MS = 21 * 864e5;
+const h32 = (n) => { n = Math.imul(n ^ 0x9E3779B9, 0x85EBCA6B); n ^= n >>> 13; n = Math.imul(n, 0xC2B2AE35); n ^= n >>> 16; return n >>> 0; };
+const seasonId = (t) => Math.floor((t - EV_ANCHOR) / SEASON_MS);
+const SZ_NAMES = ['Неоновая осень', 'Ледяной шторм', 'Золотая лихорадка', 'Космический рейс', 'Тёмный лес', 'Огненный вихрь'];
+function evOfDay(d) {
+  const h = h32(d * 7919 + 13); if (h % 100 >= 38) return null;
+  const start = d * 864e5 + (4 + (h >>> 8) % 14) * 36e5, dur = 36e5, r = (h >>> 18) % 100;
+  let m = r < 50 ? 2 : r < 72 ? 3 : r < 84 ? 4 : r < 92 ? 5 : r < 97 ? 7 : 10; const kind = ((h >>> 25) % 4 === 0) ? 'sp' : 'coins';
+  if (kind === 'sp') m = Math.min(m, 3);
+  return { d, start, end: start + dur, m, kind };
+}
+function evNow(t) { const d = Math.floor(t / 864e5); for (const x of [d, d - 1]) { const e = evOfDay(x); if (e && t >= e.start && t < e.end) return e; } return null; }
+const SZ_PRIZE = (rank) => rank === 1 ? 5e6 : rank === 2 ? 3e6 : rank === 3 ? 2e6 : rank <= 10 ? 1e6 : rank <= 25 ? 4e5 : 0;
 let migrated = false;
 async function migrate(db) {   // добавляем новые столбцы сами, SQL вручную выполнять не нужно
   if (migrated) return;
@@ -27,8 +42,15 @@ async function migrate(db) {   // добавляем новые столбцы �
   await db.prepare('CREATE TABLE IF NOT EXISTS feed (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, name TEXT NOT NULL, tier INTEGER NOT NULL, ts INTEGER NOT NULL)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS auctions (id INTEGER PRIMARY KEY AUTOINCREMENT, seller TEXT NOT NULL, name TEXT NOT NULL, start INTEGER NOT NULL, cur INTEGER NOT NULL, bidder TEXT, bids INTEGER NOT NULL DEFAULT 0, end_ts INTEGER NOT NULL, status INTEGER NOT NULL DEFAULT 0, done INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_au ON auctions(status, end_ts)').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS season (sid INTEGER NOT NULL, uid TEXT NOT NULL, sp INTEGER NOT NULL DEFAULT 0, upd INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (sid, uid))').run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_season ON season(sid, sp DESC)').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS season_prize (sid INTEGER NOT NULL, uid TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (sid, uid))').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS shop (item TEXT PRIMARY KEY, uid TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS ntf (uid TEXT PRIMARY KEY, mask INTEGER NOT NULL DEFAULT 0, wheel_at INTEGER NOT NULL DEFAULT 0, en_full INTEGER NOT NULL DEFAULT 0, tz INTEGER NOT NULL DEFAULT 0, seen INTEGER NOT NULL DEFAULT 0, nw INTEGER NOT NULL DEFAULT 0, ne INTEGER NOT NULL DEFAULT 0, nl INTEGER NOT NULL DEFAULT 0, nlast INTEGER NOT NULL DEFAULT 0, bad INTEGER NOT NULL DEFAULT 0, tst INTEGER NOT NULL DEFAULT 0)').run();
+  try {
+    const nh = (await db.prepare('PRAGMA table_info(ntf)').all()).results.map((r) => r.name);
+    if (nh.length && !nh.includes('nev')) await db.prepare("ALTER TABLE ntf ADD COLUMN nev TEXT NOT NULL DEFAULT ''").run();
+  } catch (e) {}
   migrated = true;
 }
 const enc = new TextEncoder();
@@ -103,6 +125,21 @@ async function cron(env) {
     await sendTo(r, '⚡ Энергия полная: можно крутить рулетку бесплатно.', 'ne', now);
   for (const r of (await db.prepare('SELECT * FROM ntf WHERE (mask & 16) AND seen>0 AND seen<?1 AND seen>?2 AND nl<seen AND nlast<?3 LIMIT ?4').bind(now - 3 * DAY, now - 30 * DAY, now - 4 * 3600000, LIM).all()).results)
     await sendTo(r, '👋 Давно не виделись! Тебя ждут бесплатное колесо и накопленная энергия.', 'nl', now);
+  // события и новый сезон: одно сообщение на событие каждому, у кого включён бит 32
+  const ev = evNow(now), sid = seasonId(now), sStart = EV_ANCHOR + sid * SEASON_MS;
+  const key = ev ? 'e' + ev.d : (now - sStart < 36 * 3600000 ? 's' + sid : '');
+  if (key) {
+    for (const r of (await db.prepare("SELECT * FROM ntf WHERE (mask & 32) AND nev<>?1 AND seen>?2 LIMIT 30").bind(key, now - 14 * DAY).all()).results) {
+      if (quiet(r)) continue;
+      let text;
+      if (ev) {
+        const t = new Date(ev.end + r.tz * 60000), hm = String(t.getUTCHours()).padStart(2, '0') + ':' + String(t.getUTCMinutes()).padStart(2, '0');
+        text = ev.kind === 'coins' ? `🎉 Событие: ×${ev.m} к монетным наградам (вход, колесо, задания, достижения)! Действует до ${hm}.` : `🎉 Событие: ×${ev.m} к очкам сезона! Действует до ${hm}.`;
+      } else text = `🏅 Начался сезон ${sid + 1}: «${SZ_NAMES[((sid % 6) + 6) % 6]}». Новая дорожка наград и рейтинг ждут!${sid > 0 ? ' Не забудь забрать приз за прошлый сезон.' : ''}`;
+      await db.prepare('UPDATE ntf SET nev=?, nlast=? WHERE uid=?').bind(key, now, r.uid).run();
+      await tgSend(env, r.uid, text);
+    }
+  }
 }
 
 export default {
@@ -167,7 +204,7 @@ async function handle(req, env) {
 
     if (url.pathname === '/notify/set' && req.method === 'POST') {
       let b; try { b = await req.json(); } catch { b = {}; }
-      const now = Date.now(), mask = int(b.mask, 31) || 0, wa = int(b.wheelAt, 4e12) || 0, ef = int(b.enFull, 4e12) || 0;
+      const now = Date.now(), mask = int(b.mask, 63) || 0, wa = int(b.wheelAt, 4e12) || 0, ef = int(b.enFull, 4e12) || 0;
       const tz = Math.max(-840, Math.min(840, Math.round(Number(b.tz) || 0)));
       const old = await env.DB.prepare('SELECT mask,bad FROM ntf WHERE uid=?').bind(uid).first();
       const blocked = !!(old && old.bad && !b.fresh && mask && now - old.bad < 7 * 86400000);
@@ -208,6 +245,51 @@ async function handle(req, env) {
          ON CONFLICT(uid) DO UPDATE SET name=excluded.name,net=excluded.net,best=excluded.best,bestn=excluded.bestn,lvl=excluded.lvl,hide=excluded.hide,upd=excluded.upd,flag=0,cos=excluded.cos,allow=0`
       ).bind(uid, clean(b.name, 24) || 'Игрок', net, best, clean(b.bestn, 32), lvl, b.hide ? 1 : 0, now, cos).run();
       return json({ ok: true });
+    }
+
+    // ---- сезон: очки, рейтинг, призы ----
+    if (url.pathname === '/season/sync' && req.method === 'POST') {
+      let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
+      const now = Date.now(), sid = seasonId(now);
+      if (Math.floor(Number(b.sid)) !== sid) return json({ ok: false, error: 'season' });
+      let sp = int(b.sp, 12000); if (sp === null) return json({ error: 'bad' }, 400);
+      const me = await env.DB.prepare('SELECT 1 AS x FROM players WHERE uid=?').bind(uid).first();
+      if (!me) return json({ ok: false, error: 'sync' });
+      const old = await env.DB.prepare('SELECT sp,upd FROM season WHERE sid=? AND uid=?').bind(sid, uid).first();
+      const el = old ? Math.min(86400, Math.max(0, (now - old.upd) / 1000)) : 0;
+      const lim = old ? old.sp + 500 + 2 * el : 3000;
+      sp = Math.max(old ? old.sp : 0, Math.min(sp, Math.floor(lim)));
+      await env.DB.prepare('INSERT INTO season(sid,uid,sp,upd) VALUES(?1,?2,?3,?4) ON CONFLICT(sid,uid) DO UPDATE SET sp=?3, upd=?4').bind(sid, uid, sp, now).run();
+      return json({ ok: true, sp });
+    }
+    if (url.pathname === '/season/top' && req.method === 'GET') {
+      const sid = seasonId(Date.now());
+      const rows = (await env.DB.prepare('SELECT s.uid,s.sp,p.name,p.hide FROM season s JOIN players p ON p.uid=s.uid WHERE s.sid=? AND p.flag=0 AND s.sp>0 ORDER BY s.sp DESC, s.upd ASC LIMIT 25').bind(sid).all()).results;
+      const mine = await env.DB.prepare('SELECT s.sp,s.upd FROM season s JOIN players p ON p.uid=s.uid WHERE s.sid=? AND s.uid=? AND p.flag=0').bind(sid, uid).first();
+      let me = null;
+      if (mine && mine.sp > 0) {
+        const c = await env.DB.prepare('SELECT COUNT(*) AS n FROM season s JOIN players p ON p.uid=s.uid WHERE s.sid=?1 AND p.flag=0 AND (s.sp>?2 OR (s.sp=?2 AND s.upd<?3))').bind(sid, mine.sp, mine.upd).first();
+        me = { rank: c.n + 1, sp: mine.sp };
+      }
+      return json({ sid, top: rows.map((r) => ({ name: r.hide ? 'Игрок' : r.name, sp: r.sp, me: r.uid === uid })), me });
+    }
+    if ((url.pathname === '/season/prize' && req.method === 'GET') || (url.pathname === '/season/prize/claim' && req.method === 'POST')) {
+      const cur = seasonId(Date.now()), claim = url.pathname.endsWith('/claim');
+      for (let sid = cur - 1; sid >= Math.max(0, cur - 2); sid--) {
+        const done = await env.DB.prepare('SELECT 1 AS x FROM season_prize WHERE sid=? AND uid=?').bind(sid, uid).first();
+        if (done) continue;
+        const mine = await env.DB.prepare('SELECT s.sp,s.upd FROM season s JOIN players p ON p.uid=s.uid WHERE s.sid=? AND s.uid=? AND p.flag=0').bind(sid, uid).first();
+        if (!mine || mine.sp < 300) continue;
+        const c = await env.DB.prepare('SELECT COUNT(*) AS n FROM season s JOIN players p ON p.uid=s.uid WHERE s.sid=?1 AND p.flag=0 AND (s.sp>?2 OR (s.sp=?2 AND s.upd<?3))').bind(sid, mine.sp, mine.upd).first();
+        const rank = c.n + 1, sum = SZ_PRIZE(rank);
+        if (!sum) continue;
+        if (!claim) return json({ sid, rank, sum });
+        const ins = await env.DB.prepare('INSERT OR IGNORE INTO season_prize(sid,uid,ts) VALUES(?,?,?)').bind(sid, uid, Date.now()).run();
+        if (!ins.meta.changes) return json({ sid, rank, sum: 0 });
+        await env.DB.prepare('UPDATE players SET allow = allow + ? WHERE uid=?').bind(sum, uid).run();
+        return json({ sid, rank, sum });
+      }
+      return json({ sum: 0 });
     }
 
     if (url.pathname === '/top' && req.method === 'GET') {
