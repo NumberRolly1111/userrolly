@@ -3,7 +3,7 @@ addEventListener('error',e=>{try{if(e.message==='Script error.'&&!e.filename&&!e
 addEventListener('unhandledrejection',e=>{try{console.error(e.reason)}catch(x){}});
 const $=s=>document.querySelector(s),tg=window.Telegram&&Telegram.WebApp;
 // если на хостинге лежит старый html без новых разделов (файлы загрузили не все) — создаём недостающие, чтобы игра не падала
-['ach','show','top','clan','market','museum','shop','auction','help','guide'].forEach(k=>{if(!$('#tab-'+k)){const s=document.createElement('section');s.id='tab-'+k;s.className='list';s.hidden=true;($('#tab-bon')||document.body).after(s)}});
+['ach','show','top','clan','market','museum','shop','auction','help','guide','season'].forEach(k=>{if(!$('#tab-'+k)){const s=document.createElement('section');s.id='tab-'+k;s.className='list';s.hidden=true;($('#tab-bon')||document.body).after(s)}});
 // отступ сверху под системную панель Telegram («Закрыть», «…»): берём из SDK, иначе запасной
 function safeTop(){
   let t=0;try{t=((tg.safeAreaInset||{}).top||0)+((tg.contentSafeAreaInset||{}).top||0)}catch(e){}
@@ -268,8 +268,8 @@ function fixState(){
   num('lotn',0);S.lotn=Math.max(0,Math.floor(S.lotn));S.cown=Array.isArray(S.cown)?[...new Set(S.cown.filter(x=>typeof x==='string'))]:[];if(typeof S.cn!=='string')S.cn='';if(typeof S.ct!=='string')S.ct='';
   num('casen',0);S.casen=Math.max(0,Math.floor(S.casen));
   num('upl',0);S.upl=Math.max(0,Math.floor(S.upl));S.uph=Array.isArray(S.uph)?S.uph.filter(x=>x&&typeof x==='object'&&typeof x.s==='string').slice(0,30):[];
-  S.ntfs=S.ntfs?1:0;S.ntfok=S.ntfok?1:0;if(!S.ntfs&&!S.ntf)S.ntf=31;   // по умолчанию включены все уведомления, пока игрок сам ничего не менял
-  num('ntf',0);S.ntf=Math.max(0,Math.min(31,Math.floor(S.ntf)));
+  S.ntfs=S.ntfs?1:0;S.ntfok=S.ntfok?1:0;if(!S.ntfs&&!S.ntf)S.ntf=63;if(!S.ntfv){S.ntfv=1;if(S.ntf===31)S.ntf=63}   // по умолчанию включены все уведомления, пока игрок сам ничего не менял
+  num('ntf',0);S.ntf=Math.max(0,Math.min(63,Math.floor(S.ntf)));
   num('uid',0);num('en',EN_CAP);S.en=Math.max(0,Math.min(999,Math.floor(S.en)));num('enT',0);if(S.src!=='free'&&S.src!=='coin')S.src='free';S.snd=S.snd!==false;num('lvl',1);S.lvl=Math.max(1,Math.floor(S.lvl));num('xp',0);S.xp=Math.max(0,Math.floor(S.xp));
   S.show=Array.isArray(S.show)?[...new Set(S.show.filter(n=>n===0||n===1||n===2))]:[];
   S.cnt=Array.isArray(S.cnt)?Array.from({length:8},(_,i)=>Math.max(0,+S.cnt[i]||0)):[0,0,0,0,0,0,0,0];
@@ -312,6 +312,20 @@ S.maxStreak=Math.max(S.maxStreak||0,S.login.n||0);
 
 // ---------- Бонусы: ядро (ежедневный вход, ежедневная рулетка, недельные задания) ----------
 // Награды за 7 дней входа подряд (после 7-го дня круг начинается заново)
+// ---------- Расписание сезонов и событий (одинаковое на клиенте и на сервере, считается по времени) ----------
+const EV_ANCHOR=Date.UTC(2026,9,26),SEASON_MS=21*864e5,WEEK_MS=7*864e5;   // сезон = 3 недели, отсчёт от понедельника 26.10.2026 (UTC)
+const h32=n=>{n=Math.imul(n^0x9E3779B9,0x85EBCA6B);n^=n>>>13;n=Math.imul(n,0xC2B2AE35);n^=n>>>16;return n>>>0};
+const seasonId=t=>Math.floor(((t||Date.now())-EV_ANCHOR)/SEASON_MS),weekId=t=>Math.floor(((t||Date.now())-EV_ANCHOR)/WEEK_MS);
+function evOfDay(d){   // случайное событие дня: примерно в 38% дней, время, длительность и множитель выбираются случайно (но одинаково у всех)
+  const h=h32(d*7919+13);if(h%100>=38)return null;
+  const start=d*864e5+(4+(h>>>8)%14)*36e5,dur=[4,6,8,12][(h>>>16)&3]*36e5,r=(h>>>18)%100;
+  let m=r<50?2:r<72?3:r<84?4:r<92?5:r<97?7:10;const kind=((h>>>25)%4===0)?'sp':'coins';   // coins: ×2…×10 к монетным наградам, sp: ×2…×3 к очкам сезона
+  if(kind==='sp')m=Math.min(m,3);
+  return {d,start,end:start+dur,m,kind};
+}
+function evNow(t){t=t||Date.now();const d=Math.floor(t/864e5);for(const x of [d,d-1]){const e=evOfDay(x);if(e&&t>=e.start&&t<e.end)return e}return null}
+function evNext(t){t=t||Date.now();const d=Math.floor(t/864e5);for(let x=d;x<d+6;x++){const e=evOfDay(x);if(e&&e.start>t)return e}return null}
+const evC=()=>{const e=evNow();return e&&e.kind==='coins'?e.m:1},evS=()=>{const e=evNow();return e&&e.kind==='sp'?e.m:1};
 const LOGIN=[30000,45000,60000,90000,120000,150000,225000];
 // Призы ежедневной рулетки; w = шанс в процентах (сумма 100). k:'c' монеты, k:'n' ник редкости t
 const WHEEL0=[{k:'c',v:150000,w:32},{k:'c',v:300000,w:22},{k:'c',v:600000,w:13},{k:'c',v:1000000,w:7},{k:'c',v:1500000,w:3.5},{k:'c',v:3000000,w:1},
@@ -403,7 +417,7 @@ const achReady=()=>ACH.map((x,i)=>i).filter(i=>achOk(ACH[i],i)&&!S.achGot.includ
 const achEarned=()=>S.achGot.reduce((s,i)=>s+(ACH[i]?ACH[i].r:0),0);
 function claimAch(i){   // i: номер или 'all'
   const ids=i==='all'?achReady():[+i].filter(n=>ACH[n]&&achOk(ACH[n],n)&&!S.achGot.includes(n));
-  if(!ids.length)return;const sum=ids.reduce((s,n)=>s+ACH[n].r,0);
+  if(!ids.length)return;const sum=ids.reduce((s,n)=>s+ACH[n].r,0)*evC();
   S.achGot.push(...ids);S.coins+=sum;addXp(60*ids.length);sfx(sum>=20000?'coins':'coin');save();hap('n','success');if(sum>=20000)boom('#FFC933',sum>=100000?5:4);
   toast(`Награда: +${fmt(sum)} 🪙`);render();
 }
@@ -610,7 +624,7 @@ async function spin(){
   if(busy)return;tickEn();const free=S.src==='free',m=free?MODES[0]:MODES[mode],cost=free?count:m.cost*count;
   if(free){if(S.en<cost){toast(`Не хватает энергии: нужно ${cost}, есть ${S.en}. Следующая через ${mmss(enLeft())}. Можно крутить за монеты.`);return}}
   else if(S.coins<cost){toast('Не хватает монет. Продай ники в коллекции или загляни в бонусы.');return}
-  flushPrev();sfx('whoosh');addXp(10*count);busy=true;if(free){if(S.en>=EN_CAP)S.enT=Date.now();S.en-=cost}else S.coins-=cost;S.spins+=count;if(count>1)S.tri++;addQuest('spins',count);
+  flushPrev();sfx('whoosh');addXp(10*count);busy=true;if(free){if(S.en>=EN_CAP)S.enT=Date.now();S.en-=cost}else S.coins-=cost;S.spins+=count;if(count>1)S.tri++;addQuest('spins',count);try{spAdd(3*count)}catch(e){}
   cur=Array.from({length:count},()=>roll(m));
   cur.forEach(c=>{if(c.t>=3&&c.t<=6)feedPush(c.name,c.t);S.cnt[c.t]++;S.best=Math.max(S.best,c.t);noteBest(val(c.t,c.p,c.name),c.name)});
   S.pend=cur.map(({name,t,p})=>({name,t,p}));save();
@@ -726,6 +740,7 @@ function renderHelp(){
   el.innerHTML=`<div class="ahead"><h2>Помощь</h2></div>
   <button class="ghero" id="guide-open"><span class="gh-in"><span class="gh-k">Новичку</span><b>Как играть</b><small>Видео за 1 минуту и 8 коротких шагов: от первой крутки до рынка</small><span class="gh-pill">▶ Смотреть · ${GUIDE.length} шагов</span></span><span class="gh-play"><i>▶</i></span></button>
   <h3 class="hsec">Все разделы</h3>`+
+  pl('data-season="1"','Сезон и пропуск наград','Дорожка наград, задания и рейтинг сезона','🏅')+
   pl('id="top-open"','Рейтинг','Топ игроков по капиталу и лучшему нику','🏆')+
   pl('id="clan-open"','Кланы','Вступи в клан или создай свой','🛡️')+
   pl('id="ach-open"','Достижения',`${ACH.filter(achOk).length} из ${ACH.length}`,'🎖️')+
@@ -1049,7 +1064,7 @@ async function doUp(){
   let keep=false;
   if(won){
     S.upl=0;S.items=S.items.filter(i=>!up.sel.has(i.id));
-    S.upw++;if(ch<=.1&&!pity)S.luck=1;S.cnt[pr.t]++;noteBest(pr.price,pr.name);addItem(pr.name,pr.t,pr.p);
+    S.upw++;try{spAdd(15)}catch(e){}if(ch<=.1&&!pity)S.luck=1;S.cnt[pr.t]++;noteBest(pr.price,pr.name);addItem(pr.name,pr.t,pr.p);
     up.res={name:pr.name,t:pr.t,p:pr.p};up.fresh=true;
     up.msg=`<div class="win" style="--tc:${T[pr.t].c}"><b>Успех!</b> ${pity?'Сработала защита от серий.':`Шанс был ${Math.round(ch*100)}%.`} Ник уже в коллекции.</div>`;
   }else{
@@ -1246,7 +1261,7 @@ $('#prof-btn').onclick=()=>tab($('#tab-prof').hidden?'prof':'game');
 // Страницы: index.html (игра), rating.html (рейтинг), achievements.html (достижения). Состояние общее — в localStorage и облаке Telegram.
 const PAGE=document.body.dataset.page||'main',PAGES={top:'rating.html',ach:'achievements.html',clan:'clans.html',market:'market.html',museum:'museum.html',shop:'shop.html',auction:'auction.html'};
 function tab(n){
-  const here=PAGE==='main'?['game','col','up','prof','bon','show','help','guide']:[PAGE];
+  const here=PAGE==='main'?['game','col','up','prof','bon','show','help','guide','season']:[PAGE];
   if(here.includes(n))return tabIn(n);
   save();try{if(cloudDone)cloudPush()}catch(e){}
   const go=(PAGES[n]||'index.html')+(PAGES[n]||n==='game'?'':'#'+n);
@@ -1254,8 +1269,8 @@ function tab(n){
   location.href=go;
 }
 function tabIn(n){
-  {const nn=['show','market','museum','top','clan','ach','help','auction','guide'].includes(n)?'help':n;document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===nn))}
-  ['game','col','up','prof','bon','ach','show','top','clan','market','museum','shop','auction','help','guide'].forEach(k=>{const e=$('#tab-'+k);if(!e)return;
+  {const nn=['show','market','museum','top','clan','ach','help','auction','guide'].includes(n)?'help':n==='season'?'bon':n;document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===nn))}
+  ['game','col','up','prof','bon','ach','show','top','clan','market','museum','shop','auction','help','guide','season'].forEach(k=>{const e=$('#tab-'+k);if(!e)return;
     if(k===n){if(e.hidden){e.hidden=false;e.classList.remove('tabin');void e.offsetWidth;e.classList.add('tabin');clearTimeout(e._ti);e._ti=setTimeout(()=>e.classList.remove('tabin'),900)}}else e.hidden=true});
   $('#prof-btn').setAttribute('aria-pressed',n==='prof');
   $('#bon-btn').setAttribute('aria-pressed',n==='bon');
@@ -1274,6 +1289,7 @@ function tabIn(n){
   if(n==='shop'||n==='auction')openShop();
   if(n==='help')renderHelp();
   if(n==='guide')renderGuide();
+  if(n==='season')try{renderSeason()}catch(e){}
   scrollTo(0,0);
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
@@ -1473,7 +1489,7 @@ const poolOf=t=>{if(!tierPool){tierPool=[[],[],[],[],[],[],[]];prizePool().forEa
 const pctw=w=>w%1?w.toFixed(1).replace('.',','):String(w);
 function rollTier(c){let r=Math.random()*c.w.reduce((s,x)=>s+x[1],0);for(const [t,w] of c.w){r-=w;if(r<0)return t}return c.w[c.w.length-1][0]}
 const dClaimed=()=>S.dcase===todayK();
-function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${S.coins<c.price?' poor':''}${c.daily&&dClaimed()?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.daily?(dClaimed()?'Через '+leftT(msToDay()):'Бесплатно · раз в сутки'):fmt(c.price)+' 🪙'}</span></button>`).join('')+'</div>'}
+function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${S.coins<c.price&&!(S.cfree&&S.cfree[c.id]>0)?' poor':''}${c.daily&&dClaimed()?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.daily?(dClaimed()?'Через '+leftT(msToDay()):'Бесплатно · раз в сутки'):(S.cfree&&S.cfree[c.id]>0?'Бесплатно · '+(c.id==='week'?'раз в неделю':'промокод'):fmt(c.price)+' 🪙')}</span></button>`).join('')+'</div>'}
 function renderCases(){
   let el=$('#cases');if(!el){const st=document.querySelector('#tab-game .stats');if(!st)return;el=document.createElement('div');el.id='cases';st.after(el)}
   setHtml(el,'');
@@ -1490,14 +1506,14 @@ function caseSheet(){
   <div class="codds">${c.w.map(([t,w])=>`<span style="--tc:${T[t].c}"><i></i>${T[t].n} <b>${pctw(w)}%</b></span>`).join('')}</div>
   <div class="crl" id="crl"><i class="cptr"></i><div class="crt" id="crt"></div></div>
   <div id="cres">${rs?`<div class="cresc" style="--tc:${T[rs.t].c}"><small>${T[rs.t].n}</small><b>@${escH(rs.name)}</b><span>${fmt(rs.price)} 🪙</span><em>${escH(rs.msg)}</em></div>`:''}</div>
-  <button class="btn main" id="cs-open"${cs.busy||need>0||dd?' disabled':''}>${cs.busy?'Открываем…':c.daily?(dd?'Следующий через '+leftT(msToDay()):'Открыть бесплатно'):need>0?`Не хватает ${fmt(need)} 🪙`:(fr>0?`Открыть бесплатно (промокод ×${fr})`:(rs?'Открыть ещё · ':'Открыть за ')+fmt(c.price)+' 🪙')}</button></div>`;
+  <button class="btn main" id="cs-open"${cs.busy||need>0||dd?' disabled':''}>${cs.busy?'Открываем…':c.daily?(dd?'Следующий через '+leftT(msToDay()):'Открыть бесплатно'):need>0?`Не хватает ${fmt(need)} 🪙`:(fr>0?`Открыть бесплатно (${c.id==='week'?'раз в неделю':'промокод ×'+fr})`:(rs?'Открыть ещё · ':'Открыть за ')+fmt(c.price)+' 🪙')}</button></div>`;
 }
 function caseTile(t,name){return `<b class="ct" style="--tc:${T[t].c}"><i>${escH(name)}</i><small>${T[t].s}</small></b>`}
 async function openCase(){
   const c=CASES.find(x=>x.id===cs.id);const fr=S.cfree&&S.cfree[c&&c.id]>0;if(!c||cs.busy||(!fr&&S.coins<c.price)||(c.daily&&dClaimed()))return;
   cs.busy=true;xbusy=1;cs.res=null;
   const tier=rollTier(c),pr=P(poolOf(tier));
-  if(fr)S.cfree[c.id]--;else S.coins-=c.price;if(c.daily)S.dcase=todayK();S.casen++;if(pr.t>=3&&pr.t<=6)feedPush(pr.name,pr.t);S.cnt[pr.t]++;S.best=Math.max(S.best,pr.t);noteBest(pr.price,pr.name);addXp(8+pr.t*6);
+  if(fr)S.cfree[c.id]--;else S.coins-=c.price;if(c.daily)S.dcase=todayK();S.casen++;try{spAdd(12)}catch(e){}if(pr.t>=3&&pr.t<=6)feedPush(pr.name,pr.t);S.cnt[pr.t]++;S.best=Math.max(S.best,pr.t);noteBest(pr.price,pr.name);addXp(8+pr.t*6);
   const msg=stashAll([{name:pr.name,t:pr.t,p:pr.p}]);save();render();   // приз выдан сразу: закрытие приложения его не отменит
   caseSheet();
   const trk=$('#crt'),rl=$('#crl'),N=46,WIN=36,tw=96,gap=8,pitch=tw+gap;
@@ -2201,12 +2217,12 @@ function renderBon(){
   if(bon.busy)return;
   ensureQuests();
   const li=loginInfo(),can=S.wheel!==todayK(),el=$('#tab-bon');
-  let h=`<h2>Бонусы</h2>`;
+  let h=`<h2>Бонусы</h2>`+(()=>{try{return seasonCard()}catch(e){return ''}})();
   h+=`<div class="pcard"><div class="bhead"><h3>Ежедневный вход</h3><span class="bsub">Серия: ${li.n} ${dw(li.n)}</span></div><div class="lgrid">`+
     LOGIN.map((r,i)=>{const st=(li.done?i<=li.idx:i<li.idx)?'done':(!li.done&&i===li.idx)?'now':'';
       return `<div class="lcell ${st}${i===6?' big':''}"><small>День ${i+1}</small><b>${kfmt(r)}</b>${st==='done'?'<i>✓</i>':''}</div>`}).join('')+`</div>`+
     (li.done?`<button class="btn" disabled>Получено · следующая через <span data-t="day"></span></button>`
-      :`<button class="btn main" data-b="login">Забрать день ${li.idx+1}: ${fmt(LOGIN[li.idx])} 🪙</button>`)+
+      :`<button class="btn main" data-b="login">Забрать день ${li.idx+1}: ${fmt(LOGIN[li.idx]*evC())} 🪙${evC()>1?' ×'+evC():''}</button>`)+
     (!li.done&&!li.alive&&S.login.n>0?`<p class="sum">Серия прервалась, награды идут с первого дня.</p>`:'')+`</div>`;
   h+=`<div class="pcard"><div class="bhead"><h3>Ежедневная рулетка</h3><span class="bsub">${S.wheelx?`1 в сутки + ${S.wheelx} докупленных`:'1 попытка в сутки'}</span></div>
     ${wheelHtml()}<p class="sum" hidden>${fmt(Math.min(...WHEEL.filter(p=>p.k==='c').map(p=>p.v)))} до ${fmt(Math.max(...WHEEL.filter(p=>p.k==='c').map(p=>p.v)))} 🪙 и ники от «${T[Math.min(...WHEEL.filter(p=>p.k==='n').map(p=>p.t))].n}» до «${T[Math.max(...WHEEL.filter(p=>p.k==='n').map(p=>p.t))].n}».</p>`+
@@ -2229,12 +2245,12 @@ function renderBon(){
 }
 function claimLogin(){
   const i=loginInfo();if(i.done)return;
-  const r=LOGIN[i.idx];S.login={n:i.n+1,last:todayK()};S.maxStreak=Math.max(S.maxStreak,S.login.n);S.coins+=r;S.en+=5;addXp(30);sfx(r>=10000?'coins':'coin');save();
+  const r=LOGIN[i.idx]*evC();S.login={n:i.n+1,last:todayK()};S.maxStreak=Math.max(S.maxStreak,S.login.n);S.coins+=r;S.en+=5;addXp(30);sfx(r>=10000?'coins':'coin');save();
   toast(`День ${i.idx+1}: +${fmt(r)} 🪙 и +5 ⚡`);hap('n','success');if(r>=20000)boom('#FFC933',4);render();
 }
 function claimQuest(i){
   const q=S.q.list[i];if(!q||q.got||q.p<q.n)return;
-  const r=QDEF[q.id].r;q.got=true;S.qn++;S.coins+=r;S.en+=3;addXp(80);sfx('coin');save();toast(`Задание выполнено: +${fmt(r)} 🪙 и +3 ⚡`);hap('n','success');render();
+  const r=QDEF[q.id].r*evC();q.got=true;S.qn++;S.coins+=r;S.en+=3;addXp(80);sfx('coin');save();toast(`Задание выполнено: +${fmt(r)} 🪙 и +3 ⚡`);hap('n','success');render();
 }
 async function doWheel(){
   if(bon.busy||(S.wheel===todayK()&&!S.wheelx))return;
@@ -2242,7 +2258,7 @@ async function doWheel(){
   // приз выдаём сразу (чтобы закрытие приложения не отменило крутку), показываем после анимации
   if(S.wheel===todayK())S.wheelx=Math.max(0,S.wheelx-1);else S.wheel=todayK();S.wheelN++;addQuest('wheel',1);addXp(25);ntSoon();
   let res;
-  if(win.k==='c'){S.coins+=win.v;res={k:'c',v:win.v}}
+  if(win.k==='c'){const wv=win.v*evC();S.coins+=wv;res={k:'c',v:wv}}
   else{
     S.cnt[pick.t]++;noteBest(pick.price,pick.name);
     if(S.items.length<MAX){addItem(pick.name,pick.t,pick.p);res={k:'n',name:pick.name,t:pick.t,p:pick.p,saved:true}}
@@ -2445,7 +2461,7 @@ if(shEl()){
 }
 
 // ---- уведомления от бота ----
-const NTF=[[1,'🔨','Аукцион','ставку перебили, лот продан или выигран'],[2,'💰','Рынок','твой ник купили'],[4,'🎡','Бесплатное колесо','когда оно снова доступно'],[8,'⚡','Полная энергия','можно крутить бесплатно'],[16,'👋','Давно не заходил','напомнит через 3 дня']];
+const NTF=[[1,'🔨','Аукцион','ставку перебили, лот продан или выигран'],[2,'💰','Рынок','твой ник купили'],[4,'🎡','Бесплатное колесо','когда оно снова доступно'],[8,'⚡','Полная энергия','можно крутить бесплатно'],[16,'👋','Давно не заходил','напомнит через 3 дня'],[32,'🎉','События и сезоны','×2…×10 к наградам и новый сезон']];
 function ntfCard(){
   if(!tg||!tg.initData)return '';
   return `<div class="pcard ntfc"><div class="ntfh"><b>Уведомления от бота</b><small>Бот пришлёт сообщение в Telegram, даже когда игра закрыта. Ночью (22–10) не пишет.</small></div>
@@ -2486,7 +2502,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)ntSync()});
 setTimeout(()=>ntSync(),7000);
 renderUp();
 if(PAGE!=='main')tabIn(PAGE);
-else{const h=location.hash.slice(1);if(['col','up','prof','bon','show','help','guide'].includes(h))tabIn(h)}
+else{const h=location.hash.slice(1);if(['col','up','prof','bon','show','help','guide','season'].includes(h))tabIn(h)}
 try{if(PAGE!=='main'&&tg&&tg.BackButton){tg.BackButton.show();tg.BackButton.onClick(()=>{location.href=PAGE==='clan'?'rating.html':(PAGE==='market'||PAGE==='museum'||PAGE==='shop'||PAGE==='auction'||PAGE==='top')?'index.html#help':'index.html'})}}catch(e){}
 refInit();
 cloudLoad();
