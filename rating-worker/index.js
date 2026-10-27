@@ -28,6 +28,7 @@ async function migrate(db) {   // добавляем новые столбцы �
   await db.prepare('CREATE TABLE IF NOT EXISTS auctions (id INTEGER PRIMARY KEY AUTOINCREMENT, seller TEXT NOT NULL, name TEXT NOT NULL, start INTEGER NOT NULL, cur INTEGER NOT NULL, bidder TEXT, bids INTEGER NOT NULL DEFAULT 0, end_ts INTEGER NOT NULL, status INTEGER NOT NULL DEFAULT 0, done INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_au ON auctions(status, end_ts)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS shop (item TEXT PRIMARY KEY, uid TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0)').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS ntf (uid TEXT PRIMARY KEY, mask INTEGER NOT NULL DEFAULT 0, wheel_at INTEGER NOT NULL DEFAULT 0, en_full INTEGER NOT NULL DEFAULT 0, tz INTEGER NOT NULL DEFAULT 0, seen INTEGER NOT NULL DEFAULT 0, nw INTEGER NOT NULL DEFAULT 0, ne INTEGER NOT NULL DEFAULT 0, nl INTEGER NOT NULL DEFAULT 0, nlast INTEGER NOT NULL DEFAULT 0, bad INTEGER NOT NULL DEFAULT 0, tst INTEGER NOT NULL DEFAULT 0)').run();
   migrated = true;
 }
 const enc = new TextEncoder();
@@ -57,8 +58,57 @@ async function auth(initData, token) {
 const clean = (s, n) => String(s ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n);
 const int = (v, max) => { v = Math.round(Number(v)); return Number.isFinite(v) && v >= 0 ? Math.min(v, max) : null; };
 
+// ---- уведомления от бота ----
+// Биты mask: 1 аукцион, 2 рынок, 4 бесплатное колесо, 8 полная энергия, 16 «давно не заходил».
+// Бот может написать только тому, кто разрешил это в игре (requestWriteAccess) или нажимал «Старт».
+const NT = { AUC: 1, MKT: 2, WHEEL: 4, EN: 8, AWAY: 16 };
+const nf = (n) => Math.floor(Number(n) || 0).toLocaleString('ru-RU');
+let CTX = null;
+const bg = (p) => { try { if (CTX) CTX.waitUntil(p); } catch (e) {} return p; };
+async function tgSend(env, uid, text) {
+  if (!env.BOT_TOKEN) return false;
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: uid, text, reply_markup: { inline_keyboard: [[{ text: '🎮 Открыть игру', url: env.APP_LINK || 'https://t.me/NumberRollyBot' }]] } }),
+    });
+    if (r.status === 403 || r.status === 400) {   // бот заблокирован или чат не начат: больше не пишем, пока игрок сам не включит заново
+      await env.DB.prepare('UPDATE ntf SET mask=0, bad=? WHERE uid=?').bind(Date.now(), uid).run();
+      return false;
+    }
+    return r.ok;
+  } catch (e) { return false; }
+}
+async function notifyEvent(env, uid, bit, text) {
+  try {
+    if (!uid) return;
+    const r = await env.DB.prepare('SELECT mask FROM ntf WHERE uid=?').bind(String(uid)).first();
+    if (r && (r.mask & bit)) await tgSend(env, String(uid), text);
+  } catch (e) {}
+}
+// раз в 5 минут (Cron Trigger): завершает аукционы и шлёт напоминания. Не больше одного напоминания игроку за 12 часов, ночью (22–10 по его времени) не пишем
+async function cron(env) {
+  await migrate(env.DB);
+  const db = env.DB, now = Date.now(), LIM = 8, DAY = 86400000;
+  await auSettle(db, env);
+  const quiet = (r) => { const h = new Date(now + r.tz * 60000).getUTCHours(); return h < 10 || h >= 22; };
+  const sendTo = async (r, text, col, val) => {
+    if (quiet(r)) return;
+    await db.prepare(`UPDATE ntf SET ${col}=?, nlast=? WHERE uid=?`).bind(val, now, r.uid).run();
+    await tgSend(env, r.uid, text);
+  };
+  for (const r of (await db.prepare('SELECT * FROM ntf WHERE (mask & 4) AND wheel_at<=?1 AND nw<?2 AND seen>?3 AND nlast<?4 LIMIT ?5').bind(now, now - 20 * 3600000, now - 3 * DAY, now - 4 * 3600000, LIM).all()).results)
+    await sendTo(r, '🎡 Бесплатное колесо готово: загляни и забери приз дня.', 'nw', now);
+  for (const r of (await db.prepare('SELECT * FROM ntf WHERE (mask & 8) AND en_full>0 AND en_full<=?1 AND ne<en_full AND seen>?2 AND nlast<?3 LIMIT ?4').bind(now, now - 7 * DAY, now - 4 * 3600000, LIM).all()).results)
+    await sendTo(r, '⚡ Энергия полная: можно крутить рулетку бесплатно.', 'ne', now);
+  for (const r of (await db.prepare('SELECT * FROM ntf WHERE (mask & 16) AND seen>0 AND seen<?1 AND seen>?2 AND nl<seen AND nlast<?3 LIMIT ?4').bind(now - 3 * DAY, now - 30 * DAY, now - 4 * 3600000, LIM).all()).results)
+    await sendTo(r, '👋 Давно не виделись! Тебя ждут бесплатное колесо и накопленная энергия.', 'nl', now);
+}
+
 export default {
-  async fetch(req, env) {
+  async scheduled(ev, env, ctx) { CTX = ctx; ctx.waitUntil(cron(env).catch(() => {})); },
+  async fetch(req, env, ctx) {
+    CTX = ctx || null;
     try { return await handle(req, env); }
     catch (e) {
       return new Response(JSON.stringify({ error: 'server', detail: String(e && e.message || e) }), { status: 500, headers: { 'Access-Control-Allow-Origin': (env && env.ALLOWED_ORIGIN) || '*', 'Content-Type': 'application/json' } });
@@ -113,6 +163,27 @@ async function handle(req, env) {
     if (req.method === 'POST' && url.pathname !== '/sync' && !url.pathname.startsWith('/ref') && !isAdmin(uid, env)) {
       const f = await env.DB.prepare('SELECT flag FROM players WHERE uid=?').bind(uid).first();
       if (f && f.flag) return json({ error: 'flag' }, 403);
+    }
+
+    if (url.pathname === '/notify/set' && req.method === 'POST') {
+      let b; try { b = await req.json(); } catch { b = {}; }
+      const now = Date.now(), mask = int(b.mask, 31) || 0, wa = int(b.wheelAt, 4e12) || 0, ef = int(b.enFull, 4e12) || 0;
+      const tz = Math.max(-840, Math.min(840, Math.round(Number(b.tz) || 0)));
+      const old = await env.DB.prepare('SELECT mask,bad FROM ntf WHERE uid=?').bind(uid).first();
+      const blocked = !!(old && old.bad && !b.fresh && mask && now - old.bad < 7 * 86400000);
+      const m = blocked ? 0 : mask;
+      await env.DB.prepare(`INSERT INTO ntf(uid,mask,wheel_at,en_full,tz,seen,bad) VALUES(?1,?2,?3,?4,?5,?6,0)
+        ON CONFLICT(uid) DO UPDATE SET mask=?2,wheel_at=?3,en_full=?4,tz=?5,seen=?6,bad=CASE WHEN ?7 THEN 0 ELSE bad END`).bind(uid, m, wa, ef, tz, now, b.fresh ? 1 : 0).run();
+      return json({ ok: true, blocked: blocked ? 1 : 0 });
+    }
+    if (url.pathname === '/notify/test' && req.method === 'POST') {
+      const now = Date.now();
+      await env.DB.prepare('INSERT OR IGNORE INTO ntf(uid) VALUES(?)').bind(uid).run();
+      const r = await env.DB.prepare('UPDATE ntf SET tst=? WHERE uid=? AND tst<?').bind(now, uid, now - 30000).run();
+      if (!r.meta.changes) return json({ error: 'wait' }, 429);
+      const ok = await tgSend(env, uid, '✅ Уведомления работают. Сюда будут приходить новости аукциона, рынка и напоминания.');
+      if (ok) await env.DB.prepare('UPDATE ntf SET bad=0 WHERE uid=?').bind(uid).run();
+      return json({ ok });
     }
 
     if (url.pathname === '/sync' && req.method === 'POST') {
@@ -459,6 +530,7 @@ async function marketRoutes(url, req, env, uid, json) {
     // атомарно: лот достаётся только тому, кто первым сменил статус
     const r = await db.prepare('UPDATE market SET status=1,buyer=?,sold_ts=? WHERE id=? AND status=0').bind(uid, Date.now(), id).run();
     if (!r.meta.changes) return json({ error: 'gone' }, 404);
+    bg(notifyEvent(env, lot.seller, NT.MKT, `💰 Твой ник @${lot.name} купили на рынке за ${nf(lot.price)} 🪙. Выручка (минус ${Math.round(MARKET_FEE * 100)}%) придёт в игре.`));
     return json({ ok: true, name: lot.name, price: lot.price });
   }
 
@@ -515,15 +587,22 @@ const AU_FEE = 0.05, AU_MAX_LOTS = 5, AU_MIN = 10, AU_MAX = 1_000_000_000_000, A
 const EXCL = { ceo: 25_000_000 };   // эксклюзивные ники магазина
 const EXCL_STOCK = { ceo: 3 };      // сколько экземпляров каждого на весь сервер (первый уже куплен)
 const auMin = (l) => (l.bids === 0 ? l.start : Math.max(l.cur + 1, Math.ceil(l.cur * 1.05)));
-async function auSettle(db) {
+async function auSettle(db, env) {
   const now = Date.now();
-  const rows = (await db.prepare('SELECT id,seller,cur,bidder FROM auctions WHERE status=0 AND end_ts<=? LIMIT 100').bind(now).all()).results;
+  const rows = (await db.prepare('SELECT id,seller,name,cur,bidder FROM auctions WHERE status=0 AND end_ts<=? LIMIT 100').bind(now).all()).results;
   for (const r of rows) {
     if (r.bidder) {
       const u = await db.prepare('UPDATE auctions SET status=1 WHERE id=? AND status=0').bind(r.id).run();
-      if (u.meta.changes) await db.prepare('INSERT INTO grants(uid,amount,claimed,ts) VALUES(?,?,0,?)').bind(r.seller, Math.floor(r.cur * (1 - AU_FEE)), now).run();
+      if (u.meta.changes) {
+        await db.prepare('INSERT INTO grants(uid,amount,claimed,ts) VALUES(?,?,0,?)').bind(r.seller, Math.floor(r.cur * (1 - AU_FEE)), now).run();
+        if (env) {
+          bg(notifyEvent(env, r.bidder, NT.AUC, `🏆 Ты выиграл аукцион: @${r.name} за ${nf(r.cur)} 🪙. Ник уже ждёт в игре.`));
+          bg(notifyEvent(env, r.seller, NT.AUC, `💰 Лот @${r.name} продан за ${nf(r.cur)} 🪙. Тебе придёт ${nf(r.cur * (1 - AU_FEE))} 🪙.`));
+        }
+      }
     } else {
-      await db.prepare('UPDATE auctions SET status=2 WHERE id=? AND status=0').bind(r.id).run();
+      const u = await db.prepare('UPDATE auctions SET status=2 WHERE id=? AND status=0').bind(r.id).run();
+      if (u.meta.changes && env) bg(notifyEvent(env, r.seller, NT.AUC, `⌛ Лот @${r.name} не продан. Ник вернётся в коллекцию, когда откроешь игру.`));
     }
   }
 }
@@ -554,7 +633,7 @@ async function auctionRoutes(url, req, env, uid, json) {
     return json({ error: 'sold' }, 409);
   }
   if (!p.startsWith('/auction')) return null;
-  await auSettle(db);
+  await auSettle(db, env);
   const now = Date.now();
   if (p === '/auction' && req.method === 'GET') {
     const sort = url.searchParams.get('sort'), q = (url.searchParams.get('q') || '').toLowerCase().replace(/[^a-z0-9_а-яё]/g, '').slice(0, 32);
@@ -599,7 +678,10 @@ async function auctionRoutes(url, req, env, uid, json) {
     const end = lot.end_ts - now < AU_SNIPE ? now + AU_SNIPE : lot.end_ts;
     const r = await db.prepare('UPDATE auctions SET cur=?,bidder=?,bids=bids+1,end_ts=? WHERE id=? AND status=0 AND cur=? AND bids=? AND end_ts>?').bind(amount, uid, end, id, lot.cur, lot.bids, now).run();
     if (!r.meta.changes) return json({ error: 'changed' }, 409);
-    if (lot.bidder) await db.prepare('INSERT INTO grants(uid,amount,claimed,ts) VALUES(?,?,0,?)').bind(lot.bidder, lot.cur, now).run();
+    if (lot.bidder) {
+      await db.prepare('INSERT INTO grants(uid,amount,claimed,ts) VALUES(?,?,0,?)').bind(lot.bidder, lot.cur, now).run();
+      bg(notifyEvent(env, lot.bidder, NT.AUC, `⚠️ Твою ставку на @${lot.name} перебили: теперь ${nf(amount)} 🪙. Деньги вернутся, можно поставить выше.`));
+    }
     return json({ ok: true, name: lot.name, amount, end });
   }
   if (p === '/auction/cancel') {
