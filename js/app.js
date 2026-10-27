@@ -741,8 +741,9 @@ const showReady=()=>SHOW.filter((v,i)=>!S.show.includes(i)&&vMatch(v.slots,S.ite
 function renderHelp(){
   const el=$('#tab-help');if(!el)return;
   const pl=(id,t,d,ic,x='')=>`<button class="pcard achbtn" ${id} style="margin-bottom:16px"><div><b>${t}</b><small>${d}</small></div>${x||`<span class="trophy">${ic}</span>`}</button>`;
-  el.innerHTML=`<div class="ahead"><h2>Помощь</h2></div><p class="sum">Все разделы игры в одном месте.</p>`+
-  pl('id="guide-open"','Как играть','Туториал по шагам и видео','📖')+
+  el.innerHTML=`<div class="ahead"><h2>Помощь</h2></div>
+  <button class="ghero" id="guide-open"><span class="gh-in"><span class="gh-k">Новичку</span><b>Как играть</b><small>Видео за 1 минуту и 8 коротких шагов: от первой крутки до рынка</small><span class="gh-pill">▶ Смотреть · ${GUIDE.length} шагов</span></span><span class="gh-play"><i>▶</i></span></button>
+  <h3 class="hsec">Все разделы</h3>`+
   pl('id="top-open"','Рейтинг','Топ игроков по капиталу и лучшему нику','🏆')+
   pl('id="clan-open"','Кланы','Вступи в клан или создай свой','🛡️')+
   pl('id="ach-open"','Достижения',`${ACH.filter(achOk).length} из ${ACH.length}`,'🎖️')+
