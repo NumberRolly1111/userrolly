@@ -318,7 +318,7 @@ const h32=n=>{n=Math.imul(n^0x9E3779B9,0x85EBCA6B);n^=n>>>13;n=Math.imul(n,0xC2B
 const seasonId=t=>Math.floor(((t||Date.now())-EV_ANCHOR)/SEASON_MS),weekId=t=>Math.floor(((t||Date.now())-EV_ANCHOR)/WEEK_MS);
 function evOfDay(d){   // случайное событие дня: примерно в 38% дней, время, длительность и множитель выбираются случайно (но одинаково у всех)
   const h=h32(d*7919+13);if(h%100>=38)return null;
-  const start=d*864e5+(4+(h>>>8)%14)*36e5,dur=[4,6,8,12][(h>>>16)&3]*36e5,r=(h>>>18)%100;
+  const start=d*864e5+(4+(h>>>8)%14)*36e5,dur=36e5,r=(h>>>18)%100;
   let m=r<50?2:r<72?3:r<84?4:r<92?5:r<97?7:10;const kind=((h>>>25)%4===0)?'sp':'coins';   // coins: ×2…×10 к монетным наградам, sp: ×2…×3 к очкам сезона
   if(kind==='sp')m=Math.min(m,3);
   return {d,start,end:start+dur,m,kind};
