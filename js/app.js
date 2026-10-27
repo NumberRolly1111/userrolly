@@ -1018,6 +1018,7 @@ function renderRes(){
 }
 function renderSheet(){
   const sh=$('#usheet');if(!sh)return;
+  document.body.classList.toggle('shopen',!!up.sheet);   // пока открыт список, прячем нижнее меню, чтобы оно не закрывало кнопку «Готово»
   if(!up.sheet){sh.hidden=true;sh.innerHTML='';return}
   sh.hidden=false;
   if(up.sheet==='pick'){
@@ -1276,6 +1277,7 @@ function tabIn(n){
     if(k===n){if(e.hidden){e.hidden=false;e.classList.remove('tabin');void e.offsetWidth;e.classList.add('tabin');clearTimeout(e._ti);e._ti=setTimeout(()=>e.classList.remove('tabin'),900)}}else e.hidden=true});
   $('#prof-btn').setAttribute('aria-pressed',n==='prof');
   $('#bon-btn').setAttribute('aria-pressed',n==='bon');
+  if(n!=='up')document.body.classList.remove('shopen');
   if(n!=='col')colSel=null;
   if(n==='col')renderCol();else updSelbar();
   if(n==='up')renderUp();
