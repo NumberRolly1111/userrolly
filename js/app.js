@@ -269,6 +269,7 @@ function fixState(){
   num('lotn',0);S.lotn=Math.max(0,Math.floor(S.lotn));S.cown=Array.isArray(S.cown)?[...new Set(S.cown.filter(x=>typeof x==='string'))]:[];if(typeof S.cn!=='string')S.cn='';if(typeof S.ct!=='string')S.ct='';
   num('casen',0);S.casen=Math.max(0,Math.floor(S.casen));
   num('upl',0);S.upl=Math.max(0,Math.floor(S.upl));S.uph=Array.isArray(S.uph)?S.uph.filter(x=>x&&typeof x==='object'&&typeof x.s==='string').slice(0,30):[];
+  num('ntf',0);S.ntf=Math.max(0,Math.min(31,Math.floor(S.ntf)));S.ntfs=S.ntfs?1:0;S.ntfok=S.ntfok?1:0;
   num('uid',0);num('en',EN_CAP);S.en=Math.max(0,Math.min(999,Math.floor(S.en)));num('enT',0);if(S.src!=='free'&&S.src!=='coin')S.src='free';S.snd=S.snd!==false;num('lvl',1);S.lvl=Math.max(1,Math.floor(S.lvl));num('xp',0);S.xp=Math.max(0,Math.floor(S.xp));
   S.show=Array.isArray(S.show)?[...new Set(S.show.filter(n=>n===0||n===1||n===2))]:[];
   S.cnt=Array.isArray(S.cnt)?Array.from({length:8},(_,i)=>Math.max(0,+S.cnt[i]||0)):[0,0,0,0,0,0,0,0];
@@ -773,6 +774,7 @@ function renderCol(){
   const col=$('#tab-col'),its=[...S.items].sort((a,b)=>b.t-a.t);
   if(colSel)colSel=new Set([...colSel].filter(id=>S.items.some(i=>i.id===id)));
   let h=colPanel();
+  h+=`<button class="pcard achbtn" id="museum-open" style="margin-bottom:16px"><div><b>Музей</b><small>Навсегда поставь ник на витрину славы</small></div><span class="trophy">🏛️</span></button>`;
   if(!its.length){colSel=null;h+=`<div class="empty">Коллекция пуста.<br>Крути рулетку и забирай понравившиеся ники.<br><button class="btn" data-go="game">К рулетке</button></div>`}
   else h+=`<div class="chead"><div><h2>Мои ники</h2></div>`+
     (colSel?`<div class="cbtns"><button class="btn sm" data-a="all">Все</button><button class="btn sm" data-a="cancel">Отмена</button></div>`:`<button class="btn sm" data-a="selmode">Выбрать</button>`)+`</div>`+
@@ -1187,7 +1189,7 @@ function renderProf(){
     <div class="pt"><small>В игре за всё время</small><b id="tm-all">${fmtT(S.time)}</b></div><div class="pt"><small>В игре сегодня</small><b id="tm-day">${fmtT(todaySec())}</b></div></div>
     <div class="pgrid tiers">${T.map((t,i)=>`<div class="pt${i===99?' last':''}" style="--tc:${t.c}"><small>${TN[i]}</small><b>${fmt(S.cnt[i])}</b></div>`).join('')}</div></div>
   <div class="pcard"><h3>Тема оформления</h3><div class="themes">${THEMES.map(t=>`<button class="thm" data-theme="${t.id}" aria-pressed="${(S.theme||'')===t.id}" style="--tl:${t.a}"><i style="background:linear-gradient(135deg,${t.b} 55%,${t.a} 55%)"></i>${t.n}</button>`).join('')}</div></div>
-  <div class="pcard sndrow"><div><b>Звуки</b><small>Эффекты рулетки, наград и колеса</small></div><button class="sw${S.snd?' on':''}" id="snd-tg" role="switch" aria-checked="${S.snd}" aria-label="Звуки"><i></i></button></div>`;
+  <div class="pcard sndrow"><div><b>Звуки</b><small>Эффекты рулетки, наград и колеса</small></div><button class="sw${S.snd?' on':''}" id="snd-tg" role="switch" aria-checked="${S.snd}" aria-label="Звуки"><i></i></button></div>${ntfCard()}`;
 }
 setInterval(()=>{
   if(document.hidden)return;
@@ -1208,6 +1210,8 @@ $('#tab-prof').onclick=e=>{
   if(e.target.closest('#dex-claim'))return dexClaim();
   if(e.target.closest('#cos-open'))return cosSheet();
   {const th=e.target.closest('[data-theme]');if(th){S.theme=th.dataset.theme;applyTheme();save();renderProf();return}}
+  {const nb=e.target.closest('[data-nt]');if(nb)return ntToggle(+nb.dataset.nt)}
+  if(e.target.closest('#nt-test'))return ntTest();
   if(e.target.closest('#snd-tg')){S.snd=!S.snd;save();renderProf();if(S.snd){sfx('ach')}return}
   if(e.target.closest('#idcopy')){(async()=>{try{await navigator.clipboard.writeText(String(S.uid).padStart(6,'0'));toast('ID скопирован')}catch(x){toast('Не удалось скопировать ID')}})();return}
   if(e.target.closest('#ref-claim'))return claimRefs();
@@ -2229,7 +2233,7 @@ async function doWheel(){
   if(bon.busy||(S.wheel===todayK()&&!S.wheelx))return;
   const win=wpick(),k=WHEEL.indexOf(win),pick=win.k==='n'?P(prizePool().filter(x=>x.t===win.t)):null;
   // приз выдаём сразу (чтобы закрытие приложения не отменило крутку), показываем после анимации
-  if(S.wheel===todayK())S.wheelx=Math.max(0,S.wheelx-1);else S.wheel=todayK();S.wheelN++;addQuest('wheel',1);addXp(25);
+  if(S.wheel===todayK())S.wheelx=Math.max(0,S.wheelx-1);else S.wheel=todayK();S.wheelN++;addQuest('wheel',1);addXp(25);ntSoon();
   let res;
   if(win.k==='c'){S.coins+=win.v;res={k:'c',v:win.v}}
   else{
@@ -2433,6 +2437,46 @@ if(shEl()){
   },1000);
 }
 
+// ---- уведомления от бота ----
+const NTF=[[1,'🔨','Аукцион','ставку перебили, лот продан или выигран'],[2,'💰','Рынок','твой ник купили'],[4,'🎡','Бесплатное колесо','когда оно снова доступно'],[8,'⚡','Полная энергия','можно крутить бесплатно'],[16,'👋','Давно не заходил','напомнит через 3 дня']];
+function ntfCard(){
+  if(!tg||!tg.initData)return '';
+  return `<div class="pcard ntfc"><div class="ntfh"><b>Уведомления от бота</b><small>Бот пришлёт сообщение в Telegram, даже когда игра закрыта. Ночью (22–10) не пишет.</small></div>
+  ${NTF.map(([b,ic,n,d])=>`<div class="ntfr"><span class="ntfi">${ic}</span><div><b>${n}</b><small>${d}</small></div><button class="sw${S.ntf&b?' on':''}" data-nt="${b}" role="switch" aria-checked="${!!(S.ntf&b)}" aria-label="${n}"><i></i></button></div>`).join('')}
+  <button class="btn sm ntft" id="nt-test">Отправить тестовое сообщение</button></div>`;
+}
+function ntAccess(cb){
+  if(S.ntfok||!tg||typeof tg.requestWriteAccess!=='function')return cb(true);
+  try{tg.requestWriteAccess(ok=>{if(ok)S.ntfok=1;cb(!!ok)})}catch(e){cb(true)}
+}
+let ntT=0;
+function ntSoon(){clearTimeout(ntT);ntT=setTimeout(()=>ntSync(),2500)}
+async function ntSync(fresh){
+  clearTimeout(ntT);
+  if(!API||!tg||!tg.initData||(!S.ntf&&!S.ntfs))return;
+  const now=Date.now(),d=new Date();d.setHours(24,0,0,0);
+  const wheelAt=S.wheel===todayK()?d.getTime():0,enFull=S.en>=EN_CAP?0:now+enLeft()+(EN_CAP-S.en-1)*EN_INT;
+  try{
+    const r=await lbReq('/notify/set',{mask:S.ntf,wheelAt,enFull,tz:-d.getTimezoneOffset(),fresh:fresh?1:0});
+    S.ntfs=S.ntf?1:S.ntfs;
+    if(r&&r.blocked&&S.ntf){S.ntf=0;save();toast('Бот не может тебе писать: открой чат с ботом и нажми «Старт»');if(!$('#tab-prof').hidden)renderProf()}
+  }catch(e){}
+}
+function ntToggle(bit){
+  const on=!(S.ntf&bit);
+  const go=()=>{S.ntf=on?(S.ntf|bit):(S.ntf&~bit);S.ntfs=1;save();sfx('tap');renderProf();ntSync(on)};
+  if(!on)return go();
+  ntAccess(ok=>{if(!ok){toast('Разреши боту писать тебе, иначе сообщения не придут');return}go()});
+}
+function ntTest(){
+  ntAccess(async ok=>{
+    if(!ok){toast('Разреши боту писать тебе');return}
+    try{const r=await lbReq('/notify/test',{});toast(r&&r.ok?'Тест отправлен: проверь чат с ботом':'Не вышло: открой чат с ботом и нажми «Старт»')}
+    catch(e){toast(String(e.message).includes('wait')?'Подожди полминуты':'Не удалось отправить')}
+  });
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)ntSync()});
+setTimeout(()=>ntSync(),7000);
 renderUp();
 if(PAGE!=='main')tabIn(PAGE);
 else{const h=location.hash.slice(1);if(['col','up','prof','bon','show','help'].includes(h))tabIn(h)}
