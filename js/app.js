@@ -1473,52 +1473,7 @@ const poolOf=t=>{if(!tierPool){tierPool=[[],[],[],[],[],[],[]];prizePool().forEa
 const pctw=w=>w%1?w.toFixed(1).replace('.',','):String(w);
 function rollTier(c){let r=Math.random()*c.w.reduce((s,x)=>s+x[1],0);for(const [t,w] of c.w){r-=w;if(r<0)return t}return c.w[c.w.length-1][0]}
 const dClaimed=()=>S.dcase===todayK();
-// ---------- Контейнеры кейсов (SVG, у крышки есть анимация открытия) ----------
-const CEM={daily:'gift',start:'box',rare:'gem',all:'dice',star:'comet',abyss:'hole'};
-const cMix=(h,t,a)=>{h=h.replace('#','');const v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16));return '#'+v.map(c=>Math.round(c+(t-c)*a).toString(16).padStart(2,'0')).join('')};
-const cLt=(h,a)=>cMix(h,255,a),cDk=(h,a)=>cMix(h,0,a);
-function cEmblem(k,c){
-  const L=cLt(c,.75),D=cDk(c,.55);
-  if(k==='gift')return `<rect x="-22" y="-14" width="44" height="32" rx="5" fill="${L}"/><rect x="-26" y="-22" width="52" height="12" rx="4" fill="#fff"/><rect x="-4" y="-22" width="8" height="40" fill="${c}"/><path d="M0-22C-14-42-30-28-14-22ZM0-22C14-42 30-28 14-22Z" fill="#fff" stroke="${c}" stroke-width="3"/>`;
-  if(k==='box')return `<path d="M0-26L26-13V13L0 26L-26 13V-13Z" fill="${L}"/><path d="M0-26L26-13L0 0L-26-13Z" fill="#fff"/><path d="M0 0V26L-26 13V-13Z" fill="${cLt(c,.45)}"/><path d="M0 0V26L26 13V-13Z" fill="${c}"/>`;
-  if(k==='gem')return `<path d="M-24-8L-12-24H12L24-8L0 26Z" fill="${L}"/><path d="M-24-8H24L0 26Z" fill="${cLt(c,.4)}"/><path d="M-12-24L-6-8L0 26L6-8L12-24" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>`;
-  if(k==='dice')return `<rect x="-26" y="-26" width="52" height="52" rx="12" fill="#fff"/>`+[[-12,-12],[12,-12],[0,0],[-12,12],[12,12]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="4.5" fill="${D}"/>`).join('');
-  if(k==='comet')return `<path d="M-30 26Q-6 18 8-8L20-20" stroke="${L}" stroke-width="12" stroke-linecap="round" fill="none" opacity=".55"/><path d="M-22 30Q2 20 14 0" stroke="#fff" stroke-width="6" stroke-linecap="round" fill="none" opacity=".8"/><circle cx="16" cy="-14" r="15" fill="#fff"/><circle cx="16" cy="-14" r="9" fill="${cLt(c,.6)}"/>`;
-  return `<circle r="15" fill="#05040d"/><circle r="15" fill="none" stroke="#fff" stroke-width="3"/>`+[[30,10,'#fff',3,.9],[24,8,L,3,.8],[36,13,L,2,.5]].map(([rx,ry,col,w,o])=>`<ellipse rx="${rx}" ry="${ry}" transform="rotate(-20)" fill="none" stroke="${col}" stroke-width="${w}" opacity="${o}"/>`).join('');
-}
-// big=true: большой контейнер с лучом и искрами, иначе компактная иконка для карточки
-function contSvg(c,u,big){
-  const k=CEM[c.id]||'box',col=c.c,L=cLt(col,.7),i=u+c.id;
-  const rib=[108,128,148,342,362,382].map(x=>`<rect x="${x}" y="196" width="10" height="180" rx="5" fill="#000" opacity=".28"/><rect x="${x+2}" y="196" width="3" height="180" rx="1.5" fill="#fff" opacity=".1"/>`).join('');
-  const sparks=big?[[170,40,0],[230,70,.15],[300,50,.3],[350,90,.1],[260,20,.4]].map(([x,d,dl])=>`<circle class="csp2" cx="${x}" cy="150" r="5" fill="#fff" style="--d:${d+90}px;animation-delay:${.3+dl}s"/>`).join(''):'';
-  return `<svg class="csvg" xmlns="http://www.w3.org/2000/svg" viewBox="${big?'0 40 512 400':'60 96 392 322'}" aria-hidden="true">
-<defs>
-<radialGradient id="g${i}" cx="50%" cy="48%" r="50%"><stop offset="0" stop-color="${col}" stop-opacity=".7"/><stop offset=".6" stop-color="${col}" stop-opacity=".16"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></radialGradient>
-<linearGradient id="m${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a5f78"/><stop offset=".5" stop-color="#383c52"/><stop offset="1" stop-color="#1c1e30"/></linearGradient>
-<linearGradient id="t${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b90ab"/><stop offset="1" stop-color="#4a4f69"/></linearGradient>
-<linearGradient id="n${i}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${cDk(col,.2)}"/><stop offset=".5" stop-color="${L}"/><stop offset="1" stop-color="${cDk(col,.2)}"/></linearGradient>
-<radialGradient id="in${i}" cx="50%" cy="100%" r="90%"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="${L}"/><stop offset="1" stop-color="${cDk(col,.4)}"/></radialGradient>
-<linearGradient id="bm${i}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset=".35" stop-color="${col}" stop-opacity=".5"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient>
-<filter id="b${i}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="7"/></filter>
-</defs>
-<circle cx="256" cy="250" r="250" fill="url(#g${i})"/>
-<ellipse cx="256" cy="408" rx="190" ry="18" fill="#000" opacity=".45"/>
-<path d="M110 140H402L428 196H84Z" fill="url(#in${i})" class="cin"/>
-<path class="cbeam" d="M120 150L30-90H482L392 150Z" fill="url(#bm${i})"/>
-<rect x="84" y="196" width="344" height="190" rx="14" fill="url(#m${i})" stroke="#15172a" stroke-width="6"/>
-${rib}
-<g fill="#20233a" stroke="${L}" stroke-opacity=".5" stroke-width="2"><path d="M84 196h34v10h-24v24h-10z"/><path d="M428 196h-34v10h24v24h10z"/><path d="M84 386h34v-10h-24v-24h-10z"/><path d="M428 386h-34v-10h24v-24h10z"/></g>
-<g filter="url(#b${i})" opacity=".9"><rect x="100" y="204" width="312" height="8" rx="4" fill="${col}"/><rect x="100" y="370" width="312" height="8" rx="4" fill="${col}"/></g>
-<rect x="100" y="204" width="312" height="8" rx="4" fill="url(#n${i})"/><rect x="100" y="370" width="312" height="8" rx="4" fill="url(#n${i})"/>
-<rect x="190" y="226" width="132" height="116" rx="16" fill="#0c0d1c" stroke="${col}" stroke-width="5"/><rect x="190" y="226" width="132" height="116" rx="16" fill="${col}" opacity=".16"/>
-<g transform="translate(256 284) scale(1.05)">${cEmblem(k,col)}</g>
-<g fill="${col}"><circle cx="204" cy="240" r="3.5"/><circle cx="308" cy="240" r="3.5"/><circle cx="204" cy="328" r="3.5"/><circle cx="308" cy="328" r="3.5"/></g>
-<rect x="104" y="386" width="46" height="16" rx="5" fill="#15172a"/><rect x="362" y="386" width="46" height="16" rx="5" fill="#15172a"/>
-<g class="clid"><path d="M196 150V128Q196 108 216 108H296Q316 108 316 128V150" fill="none" stroke="#2a2d42" stroke-width="22" stroke-linecap="round"/><path d="M196 150V128Q196 108 216 108H296Q316 108 316 128V150" fill="none" stroke="url(#t${i})" stroke-width="12" stroke-linecap="round"/>
-<path d="M84 196L110 140H402L428 196Z" fill="url(#t${i})" stroke="#15172a" stroke-width="6" stroke-linejoin="round"/><path d="M118 150H394" stroke="#fff" stroke-opacity=".3" stroke-width="4" stroke-linecap="round"/></g>
-${sparks}</svg>`;
-}
-function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${S.coins<c.price?' poor':''}${c.daily&&dClaimed()?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${contSvg(c,'k',false)}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.daily?(dClaimed()?'Через '+leftT(msToDay()):'Бесплатно · раз в сутки'):fmt(c.price)+' 🪙'}</span></button>`).join('')+'</div>'}
+function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${S.coins<c.price?' poor':''}${c.daily&&dClaimed()?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.daily?(dClaimed()?'Через '+leftT(msToDay()):'Бесплатно · раз в сутки'):fmt(c.price)+' 🪙'}</span></button>`).join('')+'</div>'}
 function renderCases(){
   let el=$('#cases');if(!el){const st=document.querySelector('#tab-game .stats');if(!st)return;el=document.createElement('div');el.id='cases';st.after(el)}
   setHtml(el,'');
@@ -1533,7 +1488,7 @@ function caseSheet(){
   sh.innerHTML=`<div class="sbg" data-cclose="1"></div><div class="sbox casebox" style="--cc:${c.c}"><div class="shead"><b>${c.ic} ${c.n}</b><button class="btn sm" data-cclose="1"${cs.busy?' disabled':''}>✕</button></div>
   <p class="cdesc3">${c.d}</p>
   <div class="codds">${c.w.map(([t,w])=>`<span style="--tc:${T[t].c}"><i></i>${T[t].n} <b>${pctw(w)}%</b></span>`).join('')}</div>
-  <div class="ccont${cs.res?' open still':''}" id="ccont">${contSvg(c,'s',true)}</div><div class="crl" id="crl"><i class="cptr"></i><div class="crt" id="crt"></div></div>
+  <div class="crl" id="crl"><i class="cptr"></i><div class="crt" id="crt"></div></div>
   <div id="cres">${rs?`<div class="cresc" style="--tc:${T[rs.t].c}"><small>${T[rs.t].n}</small><b>@${escH(rs.name)}</b><span>${fmt(rs.price)} 🪙</span><em>${escH(rs.msg)}</em></div>`:''}</div>
   <button class="btn main" id="cs-open"${cs.busy||need>0||dd?' disabled':''}>${cs.busy?'Открываем…':c.daily?(dd?'Следующий через '+leftT(msToDay()):'Открыть бесплатно'):need>0?`Не хватает ${fmt(need)} 🪙`:(fr>0?`Открыть бесплатно (промокод ×${fr})`:(rs?'Открыть ещё · ':'Открыть за ')+fmt(c.price)+' 🪙')}</button></div>`;
 }
@@ -1545,7 +1500,6 @@ async function openCase(){
   if(fr)S.cfree[c.id]--;else S.coins-=c.price;if(c.daily)S.dcase=todayK();S.casen++;if(pr.t>=3&&pr.t<=6)feedPush(pr.name,pr.t);S.cnt[pr.t]++;S.best=Math.max(S.best,pr.t);noteBest(pr.price,pr.name);addXp(8+pr.t*6);
   const msg=stashAll([{name:pr.name,t:pr.t,p:pr.p}]);save();render();   // приз выдан сразу: закрытие приложения его не отменит
   caseSheet();
-  {const cc=$('#ccont');if(cc){void cc.offsetWidth;cc.classList.add('open');sfx('tap');hap('i','medium')}await sleep(reduce?0:1150)}   // крышка открывается, потом идёт прокрутка
   const trk=$('#crt'),rl=$('#crl'),N=46,WIN=36,tw=96,gap=8,pitch=tw+gap;
   const tiles=Array.from({length:N},(_,i)=>{if(i===WIN)return caseTile(pr.t,pr.name);const t=rollTier(c),x=P(poolOf(t));return caseTile(t,x.name)});
   trk.innerHTML=tiles.join('');rl.classList.add('on');
