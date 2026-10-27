@@ -1024,25 +1024,3 @@ html.navin .app{animation:navin .22s ease-out both}
 .slist .item.pick b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body.shopen nav{visibility:hidden}
 
-/* контейнеры кейсов */
-.csi{display:block;line-height:0;filter:none}
-.csi .csvg{width:78px;height:auto;display:block;margin:-4px 0 0 -6px}
-.ccont{display:grid;place-items:center;margin:0 0 -6px}
-.ccont .csvg{width:min(78%,300px);height:auto;overflow:visible}
-.clid{transform-box:view-box;transform-origin:256px 140px}
-.cbeam,.csp2{opacity:0}
-.cin{opacity:0}
-.ccont.open .cin{opacity:1;transition:opacity .2s .15s}
-.ccont.open .clid{animation:lidopen .95s cubic-bezier(.3,1.25,.4,1) forwards}
-.ccont.open .cbeam{animation:beamup .9s .22s ease-out forwards}
-.ccont.open .csp2{animation:sparkup 1.4s ease-out both}
-.ccont.open .csvg{animation:cjolt .45s}
-.ccont.still .clid{animation:none;transform:scaleY(-.72);filter:brightness(.55)}
-.ccont.still .cbeam{animation:none;opacity:.55}
-.ccont.still .csp2{animation:none}
-.ccont.still .csvg{animation:none}
-@keyframes lidopen{0%{transform:scaleY(1)}18%{transform:translateY(3px) scaleY(.97)}38%{transform:translateY(-8px) scaleY(1.04)}100%{transform:scaleY(-.72);filter:brightness(.55)}}
-@keyframes beamup{0%{opacity:0}35%{opacity:1}100%{opacity:.55}}
-@keyframes sparkup{0%{opacity:0;transform:translateY(0) scale(.6)}20%{opacity:1}100%{opacity:0;transform:translateY(calc(var(--d)*-1)) scale(1.2)}}
-@keyframes cjolt{0%,100%{transform:translateY(0)}30%{transform:translateY(4px)}55%{transform:translateY(-3px)}}
-@media (prefers-reduced-motion:reduce){.ccont.open .clid,.ccont.open .cbeam,.ccont.open .csp2,.ccont.open .csvg{animation:none}.ccont.open .clid{transform:scaleY(-.72)}.ccont.open .cbeam{opacity:.55}}
