@@ -269,7 +269,8 @@ function fixState(){
   num('lotn',0);S.lotn=Math.max(0,Math.floor(S.lotn));S.cown=Array.isArray(S.cown)?[...new Set(S.cown.filter(x=>typeof x==='string'))]:[];if(typeof S.cn!=='string')S.cn='';if(typeof S.ct!=='string')S.ct='';
   num('casen',0);S.casen=Math.max(0,Math.floor(S.casen));
   num('upl',0);S.upl=Math.max(0,Math.floor(S.upl));S.uph=Array.isArray(S.uph)?S.uph.filter(x=>x&&typeof x==='object'&&typeof x.s==='string').slice(0,30):[];
-  num('ntf',0);S.ntf=Math.max(0,Math.min(31,Math.floor(S.ntf)));S.ntfs=S.ntfs?1:0;S.ntfok=S.ntfok?1:0;
+  S.ntfs=S.ntfs?1:0;S.ntfok=S.ntfok?1:0;if(!S.ntfs&&!S.ntf)S.ntf=31;   // по умолчанию включены все уведомления, пока игрок сам ничего не менял
+  num('ntf',0);S.ntf=Math.max(0,Math.min(31,Math.floor(S.ntf)));
   num('uid',0);num('en',EN_CAP);S.en=Math.max(0,Math.min(999,Math.floor(S.en)));num('enT',0);if(S.src!=='free'&&S.src!=='coin')S.src='free';S.snd=S.snd!==false;num('lvl',1);S.lvl=Math.max(1,Math.floor(S.lvl));num('xp',0);S.xp=Math.max(0,Math.floor(S.xp));
   S.show=Array.isArray(S.show)?[...new Set(S.show.filter(n=>n===0||n===1||n===2))]:[];
   S.cnt=Array.isArray(S.cnt)?Array.from({length:8},(_,i)=>Math.max(0,+S.cnt[i]||0)):[0,0,0,0,0,0,0,0];
