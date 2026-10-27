@@ -1014,3 +1014,12 @@ html.navin .app{animation:navin .22s ease-out both}
 .gh-play{flex:none;width:76px;height:76px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.35)}
 .gh-play i{font-style:normal;font-size:30px;padding-left:5px;color:#fff}
 .hsec{font:800 13px var(--head);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:0 0 12px 4px}
+
+.usheet{z-index:60}
+.sbox{max-height:78vh;max-height:78dvh}
+.sbox>.btn,.sbox>.shead{flex:none}
+.slist{overflow-x:hidden;overscroll-behavior:contain;min-height:0}
+.slist .item.pick{min-width:0}
+.slist .item.pick>div{min-width:0;overflow:hidden}
+.slist .item.pick b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.shopen nav{visibility:hidden}
