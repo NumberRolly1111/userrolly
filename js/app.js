@@ -4,7 +4,7 @@ addEventListener('unhandledrejection',e=>{try{console.error(e.reason)}catch(x){}
 const $=s=>document.querySelector(s),tg=window.Telegram&&Telegram.WebApp;
 try{if(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.start_param==='admin'&&!document.body.dataset.page&&!sessionStorage.getItem('nr_adm')){sessionStorage.setItem('nr_adm','1');location.replace('winvhfufkfdnditgv/')}}catch(e){}
 // если на хостинге лежит старый html без новых разделов (файлы загрузили не все) — создаём недостающие, чтобы игра не падала
-['ach','show','top','clan','market','museum','shop','auction','help'].forEach(k=>{if(!$('#tab-'+k)){const s=document.createElement('section');s.id='tab-'+k;s.className='list';s.hidden=true;($('#tab-bon')||document.body).after(s)}});
+['ach','show','top','clan','market','museum','shop','auction','help','guide'].forEach(k=>{if(!$('#tab-'+k)){const s=document.createElement('section');s.id='tab-'+k;s.className='list';s.hidden=true;($('#tab-bon')||document.body).after(s)}});
 // отступ сверху под системную панель Telegram («Закрыть», «…»): берём из SDK, иначе запасной
 function safeTop(){
   let t=0;try{t=((tg.safeAreaInset||{}).top||0)+((tg.contentSafeAreaInset||{}).top||0)}catch(e){}
@@ -742,6 +742,7 @@ function renderHelp(){
   const el=$('#tab-help');if(!el)return;
   const pl=(id,t,d,ic,x='')=>`<button class="pcard achbtn" ${id} style="margin-bottom:16px"><div><b>${t}</b><small>${d}</small></div>${x||`<span class="trophy">${ic}</span>`}</button>`;
   el.innerHTML=`<div class="ahead"><h2>Помощь</h2></div><p class="sum">Все разделы игры в одном месте.</p>`+
+  pl('id="guide-open"','Как играть','Туториал по шагам и видео','📖')+
   pl('id="top-open"','Рейтинг','Топ игроков по капиталу и лучшему нику','🏆')+
   pl('id="clan-open"','Кланы','Вступи в клан или создай свой','🛡️')+
   pl('id="ach-open"','Достижения',`${ACH.filter(achOk).length} из ${ACH.length}`,'🎖️')+
@@ -749,6 +750,24 @@ function renderHelp(){
   showPlate()+
   pl('id="cos-open"','Косметика','Ники, титулы и рамки','✨');
 }
+const GUIDE=[
+  ['🎰','Крути рулетку','Вкладка «Рулетка»: выбери режим («Любой», «Редкий+», «Эпик+») и нажми кнопку. Можно открыть 1 или сразу 3 ника. Платить можно монетами или бесплатной энергией: её запас до 15 единиц, одна восстанавливается за 15 минут.'],
+  ['💎','Узнай редкость','Ник получает редкость от «Обычного» до «Эксклюзивного» и цену по своим баллам. Чем короче, чище и необычнее ник, тем он дороже. Секретные ники выпадают только из апгрейда, кейсов и бонус-рулетки.'],
+  ['📦','Собирай коллекцию','Понравившийся ник нажми «Сохранить», он попадёт во вкладку «Коллекция». Лишнее можно сразу «Продать» за монеты. Место в коллекции ограничено, его можно расширять.'],
+  ['⚡','Делай апгрейд и крафт','«Апгрейд»: поставь до 5 ников и попробуй получить ник получше, чем больше ставка, тем выше шанс. «Крафт» (в профиле): три ника превращаются в один новый, шансы зависят от выбранных.'],
+  ['🎁','Забирай бонусы каждый день','Кнопка подарка вверху: награда за вход (серия из 7 дней), бесплатное колесо раз в день и задания недели. Не пропускай дни, серия даёт больше.'],
+  ['🗂️','Собери витрины','В «Помощи» → «Витрины»: собери набор из ников коллекции и получи награду. Ники при этом не тратятся.'],
+  ['🔨','Торгуй с игроками','«Рынок игроков» и «Аукцион»: выставляй свои ники и покупай чужие. Продажа приносит монеты, а бот пришлёт уведомление, когда ник купят.'],
+  ['🛡️','Вступай в клан и зови друзей','Кланы, рейтинг и достижения лежат в «Помощи» и в профиле. За каждого приглашённого друга ты получаешь монеты и энергию.']
+];
+function renderGuide(){
+  const el=$('#tab-guide');if(!el)return;
+  el.innerHTML=`<div class="ahead"><button class="btn sm" id="guide-back">‹ Помощь</button><h2>Как играть</h2></div><p class="sum">Коротко о том, как всё устроено. Посмотри видео или пройди шаги ниже.</p>
+  <div class="gvidw"><video class="gvid" id="guide-vid" controls playsinline preload="metadata" poster="media/tutorial.jpg"><source src="media/tutorial.mp4" type="video/mp4"></video></div>
+  <div class="gsteps">${GUIDE.map((g,i)=>`<div class="pcard gstep"><span class="gnum">${i+1}</span><div><b>${g[0]} ${g[1]}</b><small>${g[2]}</small></div></div>`).join('')}</div>`;
+  const v=$('#guide-vid');if(v)v.addEventListener('error',()=>{const w=v.closest('.gvidw');if(w)w.hidden=true},true);
+}
+$('#tab-guide').onclick=e=>{if(e.target.closest('#guide-back')){try{$('#guide-vid').pause()}catch(x){}return tab('help')}};
 function showPlate(){
   const r=showReady(),d=S.show.length;
   return `<button class="pcard achbtn" id="show-open" style="margin-bottom:16px"><div><b>Витрины</b><small>Собрано ${d} из ${SHOW.length}${r?` · наград к получению: ${r}`:''}</small></div><span class="mini" style="--p:${d/SHOW.length*100}"><i>${d}</i></span></button>`+`<button class="pcard achbtn" id="market-open" style="margin-bottom:16px"><div><b>Рынок игроков</b><small>Покупай и продавай ники за монеты</small></div><span class="trophy">🛒</span></button>`+`<button class="pcard achbtn" id="shop-open" style="margin-bottom:16px"><div><b>Магазин</b><small>Услуги и эксклюзивный @ceo</small></div><span class="trophy">🏷️</span></button>`+`<button class="pcard achbtn" id="museum-open" style="margin-bottom:16px"><div><b>Музей</b><small>Навсегда поставь ник на витрину славы</small></div><span class="trophy">🏛️</span></button>`+`<button class="pcard achbtn" data-craft="1" style="margin-bottom:16px"><div><b>Крафт</b><small>Три любых ника → один новый, шансы зависят от выбранных</small></div><span class="trophy">⚗️</span></button>`;
@@ -845,6 +864,7 @@ $('#reels').onclick=e=>{
 };
 $('#tab-help').onclick=e=>{
   const x=e.target;
+  if(x.closest('#guide-open'))return tab('guide');
   if(x.closest('#top-open'))return tab('top');
   if(x.closest('#clan-open'))return tab('clan');
   if(x.closest('#ach-open'))return tab('ach');
@@ -1181,7 +1201,7 @@ function renderProf(){
     <button class="ptile" id="clan-open"><span class="pti">🛡️</span><b>Кланы</b><small>${cl.me&&cl.me.clan?escH('['+(cl.me.clan.tag||'')+'] '+(cl.me.clan.name||'')):'Вступи или создай'}</small></button>
     <button class="ptile" id="ach-open"><span class="pti">🎖️</span><b>Достижения</b><small>${ACH.filter(achOk).length} из ${ACH.length}${achReady().length?' · наград: '+achReady().length:''}</small><span class="ptbar"><i style="width:${ACH.filter(achOk).length/ACH.length*100}%"></i></span></button>
     <button class="ptile" id="cos-open"><span class="pti">✨</span><b>Косметика</b><small>куплено ${S.cown.length} из ${NSTY.length+TTL.length+FRM.length}</small></button>
-    <button class="ptile" data-shopgo="1"><span class="pti">🏷️</span><div><b>Магазин</b><small>Услуги и эксклюзив</small></div></button>
+    <button class="ptile" data-shopgo="1"><span class="pti">🏷️</span><b>Магазин</b><small>Услуги и эксклюзив</small></button>
     <button class="ptile wide" data-craft="1"><span class="pti">⚗️</span><div><b>Крафт</b><small>Три любых ника → один новый, шансы зависят от выбранных</small></div></button>
   </div>
   <div class="pcard inv invx"><div><b>Позвать друзей</b><small>За каждого друга: +${fmt(REF_C)} 🪙 и +${REF_E} ⚡ · приглашено ${S.refc} из ${REF_MAX}</small></div><div class="invb">${lb.refn>0?`<button class="btn main" id="ref-claim">Забрать +${fmt(lb.refn*REF_C)} 🪙</button>`:''}<button class="btn${lb.refn>0?'':' main'}" id="invite">Позвать</button></div></div>
@@ -1242,7 +1262,7 @@ $('#prof-btn').onclick=()=>tab($('#tab-prof').hidden?'prof':'game');
 // Страницы: index.html (игра), rating.html (рейтинг), achievements.html (достижения). Состояние общее — в localStorage и облаке Telegram.
 const PAGE=document.body.dataset.page||'main',PAGES={top:'rating.html',ach:'achievements.html',clan:'clans.html',market:'market.html',museum:'museum.html',shop:'shop.html',auction:'auction.html'};
 function tab(n){
-  const here=PAGE==='main'?['game','col','up','prof','bon','show','help']:[PAGE];
+  const here=PAGE==='main'?['game','col','up','prof','bon','show','help','guide']:[PAGE];
   if(here.includes(n))return tabIn(n);
   save();try{if(cloudDone)cloudPush()}catch(e){}
   const go=(PAGES[n]||'index.html')+(PAGES[n]||n==='game'?'':'#'+n);
@@ -1250,8 +1270,8 @@ function tab(n){
   location.href=go;
 }
 function tabIn(n){
-  {const nn=['show','market','museum','top','clan','ach','help','auction'].includes(n)?'help':n;document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===nn))}
-  ['game','col','up','prof','bon','ach','show','top','clan','market','museum','shop','auction','help'].forEach(k=>{const e=$('#tab-'+k);if(!e)return;
+  {const nn=['show','market','museum','top','clan','ach','help','auction','guide'].includes(n)?'help':n;document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===nn))}
+  ['game','col','up','prof','bon','ach','show','top','clan','market','museum','shop','auction','help','guide'].forEach(k=>{const e=$('#tab-'+k);if(!e)return;
     if(k===n){if(e.hidden){e.hidden=false;e.classList.remove('tabin');void e.offsetWidth;e.classList.add('tabin');clearTimeout(e._ti);e._ti=setTimeout(()=>e.classList.remove('tabin'),900)}}else e.hidden=true});
   $('#prof-btn').setAttribute('aria-pressed',n==='prof');
   $('#bon-btn').setAttribute('aria-pressed',n==='bon');
@@ -1268,6 +1288,7 @@ function tabIn(n){
   if(n==='museum')openMuseum();
   if(n==='shop'||n==='auction')openShop();
   if(n==='help')renderHelp();
+  if(n==='guide')renderGuide();
   scrollTo(0,0);
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
@@ -2480,7 +2501,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)ntSync()});
 setTimeout(()=>ntSync(),7000);
 renderUp();
 if(PAGE!=='main')tabIn(PAGE);
-else{const h=location.hash.slice(1);if(['col','up','prof','bon','show','help'].includes(h))tabIn(h)}
+else{const h=location.hash.slice(1);if(['col','up','prof','bon','show','help','guide'].includes(h))tabIn(h)}
 try{if(PAGE!=='main'&&tg&&tg.BackButton){tg.BackButton.show();tg.BackButton.onClick(()=>{location.href=PAGE==='clan'?'rating.html':(PAGE==='market'||PAGE==='museum'||PAGE==='shop'||PAGE==='auction'||PAGE==='top')?'index.html#help':'index.html'})}}catch(e){}
 refInit();
 cloudLoad();
