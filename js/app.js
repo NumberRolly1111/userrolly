@@ -585,7 +585,8 @@ function sfxPlay(name,a){
 document.addEventListener('pointerdown',e=>{const b=e.target.closest&&e.target.closest('button,label.item');if(b&&!b.disabled&&b.id!=='spin')sfx('tap')},true);
 
 // ---------- Эпичная сцена на весь экран: мифический (t=5) и секретный (t=6) ----------
-function epic(r){
+function epic(r){return window.epic2?window.epic2(r):epicOld(r)}   // новые canvas-сцены лежат в js/epic.js
+function epicOld(r){
   return new Promise(res=>{
     if(reduce){res();return}
     const t=r.t,sec=t===6,chars=[...r.name],n=chars.length;
