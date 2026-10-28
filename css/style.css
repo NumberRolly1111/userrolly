@@ -1103,3 +1103,34 @@ details.fold:not([open])>summary{margin-bottom:0}
 details.taxl>small{display:block;color:var(--mute);font-size:12px;line-height:1.4}
 #evbar.off{background:var(--paper)}
 .hint{text-align:left}
+
+/* ---- Вкладки-«таблетки» (Склад, Магазин, Рейтинг, Оформление) ---- */
+.ptabs{display:flex;gap:4px;padding:5px;margin:0 0 14px;border-radius:18px;background:var(--paper);border:var(--bw) solid var(--line);overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+.ptabs::-webkit-scrollbar{display:none}
+.ptabs button{flex:1 0 auto;padding:10px 13px;border-radius:13px;background:none;border:0;color:var(--mute);font:700 13.5px/1.1 var(--body);white-space:nowrap;transition:background .2s,color .2s,box-shadow .2s}
+.ptabs button[aria-selected=true]{background:var(--tile);color:var(--fg);box-shadow:0 0 0 1px color-mix(in srgb,var(--fg) 12%,transparent) inset,0 2px 8px rgba(0,0,0,.25)}
+.ptabs button:active{transform:scale(.96)}
+.ptabs.sm button{padding:9px 11px;font-size:13px}
+/* ---- Итог крутки: плюс или минус ---- */
+.spres{display:flex;align-items:center;gap:10px;margin:10px 0 0;padding:10px 14px;border-radius:16px;border:2px solid var(--rc,var(--line));background:color-mix(in srgb,var(--rc,var(--line)) 14%,var(--paper));animation:sprIn .4s cubic-bezier(.3,1.4,.5,1) both}
+.spres[hidden]{display:none}
+.spres.up{--rc:#27D96B}.spres.dn{--rc:#FF5A4D}.spres.eq{--rc:#A29CD6}
+.spres .spi{font-size:22px;line-height:1}
+.spres .spm{display:flex;flex-direction:column;min-width:0;flex:1}
+.spres .spm b{font:800 15px var(--head);color:var(--rc)}
+.spres .spm small{color:var(--mute);font-size:12px;line-height:1.3}
+.spres .spt{font:700 11.5px var(--body);color:var(--mute);text-align:right;white-space:nowrap}
+.spres .spt b{display:block;font:800 12.5px var(--head)}
+.spres .spt b.up{color:#27D96B}.spres .spt b.dn{color:#FF5A4D}
+@keyframes sprIn{from{opacity:0;transform:translateY(-6px) scale(.97)}}
+@media (prefers-reduced-motion:reduce){.spres{animation:none}}
+/* ---- Оформление ---- */
+.cprevbig{position:relative}
+.dthm{display:block;width:100%;height:34px;border-radius:10px}
+.cprev .dthm{width:96px}
+.cinfo small.prc{color:#FFD84A}
+.ptabs{flex:none}
+.ptabs button{padding:10px 9px;font-size:13px}
+.ptabs.sm button{padding:9px 8px}
+.crow2{grid-template-columns:minmax(0,1.3fr) minmax(0,.9fr) auto}
+.crow2 .ttl{font-size:9.5px;padding:2px 7px}
