@@ -17,14 +17,15 @@ const EV_ANCHOR = Date.UTC(2026, 9, 26), SEASON_MS = 21 * 864e5;
 const h32 = (n) => { n = Math.imul(n ^ 0x9E3779B9, 0x85EBCA6B); n ^= n >>> 13; n = Math.imul(n, 0xC2B2AE35); n ^= n >>> 16; return n >>> 0; };
 const seasonId = (t) => Math.floor((t - EV_ANCHOR) / SEASON_MS);
 const SZ_NAMES = ['Неоновая осень', 'Ледяной шторм', 'Золотая лихорадка', 'Космический рейс', 'Тёмный лес', 'Огненный вихрь'];
-function evOfDay(d) {
-  const h = h32(d * 7919 + 13); if (h % 100 >= 38) return null;
-  const start = d * 864e5 + (4 + (h >>> 8) % 14) * 36e5, dur = 36e5, r = (h >>> 18) % 100;
-  let m = r < 50 ? 2 : r < 72 ? 3 : r < 84 ? 4 : r < 92 ? 5 : r < 97 ? 7 : 10; const kind = ((h >>> 25) % 4 === 0) ? 'sp' : 'coins';
-  if (kind === 'sp') m = Math.min(m, 3);
-  return { d, start, end: start + dur, m, kind };
+function evOfDay(d){   // событие каждый день: 1 час, время/тип/множитель (×1,5…×10) выбираются случайно, но одинаково у всех
+  const h=h32(d*7919+13),start=d*864e5+((h>>>8)%23)*36e5,dur=36e5,r=(h>>>18)%100,k=(h>>>25)%20;
+  let m=r<30?1.5:r<55?2:r<70?2.5:r<82?3:r<90?4:r<95?5:r<98?7:10;
+  const kind=k<8?'coins':k<13?'sp':k<17?'xp':'en';   // coins: монетные награды, sp: очки сезона, xp: опыт, en: энергия из наград
+  if(kind!=='coins')m=Math.min(m,kind==='sp'?5:4);
+  return {d,start,end:start+dur,m,kind};
 }
 function evNow(t) { const d = Math.floor(t / 864e5); for (const x of [d, d - 1]) { const e = evOfDay(x); if (e && t >= e.start && t < e.end) return e; } return null; }
+const EVK = { coins: 'к монетным наградам (вход, колесо, задания, достижения)', sp: 'к очкам сезона', xp: 'к опыту', en: 'к энергии из наград' };
 const SZ_PRIZE = (rank) => rank === 1 ? 5e6 : rank === 2 ? 3e6 : rank === 3 ? 2e6 : rank <= 10 ? 1e6 : rank <= 25 ? 4e5 : 0;
 let migrated = false;
 async function migrate(db) {   // добавляем новые столбцы сами, SQL вручную выполнять не нужно
@@ -134,7 +135,7 @@ async function cron(env) {
       let text;
       if (ev) {
         const t = new Date(ev.end + r.tz * 60000), hm = String(t.getUTCHours()).padStart(2, '0') + ':' + String(t.getUTCMinutes()).padStart(2, '0');
-        text = ev.kind === 'coins' ? `🎉 Событие: ×${ev.m} к монетным наградам (вход, колесо, задания, достижения)! Действует до ${hm}.` : `🎉 Событие: ×${ev.m} к очкам сезона! Действует до ${hm}.`;
+        text = `🎉 Событие часа: ×${String(ev.m).replace('.', ',')} ${EVK[ev.kind]}! Действует до ${hm}.`;
       } else text = `🏅 Начался сезон ${sid + 1}: «${SZ_NAMES[((sid % 6) + 6) % 6]}». Новая дорожка наград и рейтинг ждут!${sid > 0 ? ' Не забудь забрать приз за прошлый сезон.' : ''}`;
       await db.prepare('UPDATE ntf SET nev=?, nlast=? WHERE uid=?').bind(key, now, r.uid).run();
       await tgSend(env, r.uid, text);
