@@ -46,6 +46,9 @@ async function migrate(db) {   // добавляем новые столбцы �
   await db.prepare('CREATE TABLE IF NOT EXISTS season (sid INTEGER NOT NULL, uid TEXT NOT NULL, sp INTEGER NOT NULL DEFAULT 0, upd INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (sid, uid))').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_season ON season(sid, sp DESC)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS season_prize (sid INTEGER NOT NULL, uid TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (sid, uid))').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS promos (code TEXT PRIMARY KEY, kind TEXT NOT NULL, val TEXT NOT NULL DEFAULT \'\', n INTEGER NOT NULL DEFAULT 1, max INTEGER NOT NULL DEFAULT 0, exp INTEGER NOT NULL DEFAULT 0, uses INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS promo_use (code TEXT NOT NULL, uid TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (code, uid))').run();
+  await db.prepare("INSERT OR IGNORE INTO promos(code,kind,val,n,max,exp,uses,ts) VALUES('NAMEROULETTE','case','star',1,0,0,0,0)").run();
   await db.prepare('CREATE TABLE IF NOT EXISTS shop (item TEXT PRIMARY KEY, uid TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS ntf (uid TEXT PRIMARY KEY, mask INTEGER NOT NULL DEFAULT 0, wheel_at INTEGER NOT NULL DEFAULT 0, en_full INTEGER NOT NULL DEFAULT 0, tz INTEGER NOT NULL DEFAULT 0, seen INTEGER NOT NULL DEFAULT 0, nw INTEGER NOT NULL DEFAULT 0, ne INTEGER NOT NULL DEFAULT 0, nl INTEGER NOT NULL DEFAULT 0, nlast INTEGER NOT NULL DEFAULT 0, bad INTEGER NOT NULL DEFAULT 0, tst INTEGER NOT NULL DEFAULT 0)').run();
   try {
@@ -189,6 +192,27 @@ async function handle(req, env) {
         await env.DB.prepare('INSERT INTO grants(uid,amount,claimed,ts) VALUES(?,?,0,?)').bind(rows[0].uid, amount, Date.now()).run();
         return json({ ok: true, name: rows[0].name, uid: rows[0].uid, amount });
       }
+      if (url.pathname === '/admin/promo' && req.method === 'POST') {   // создать/обновить промокод: {code, kind:'case'|'coins', val:'star'|'', n, coins, max, days}
+        let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
+        const code = String(b.code || '').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24);
+        const kind = b.kind === 'coins' ? 'coins' : 'case';
+        const n = kind === 'coins' ? Math.max(1, Math.min(1e9, Math.trunc(Number(b.coins) || 0))) : Math.max(1, Math.min(50, Math.trunc(Number(b.n) || 1)));
+        const val = kind === 'case' ? String(b.val || 'star').slice(0, 16) : '';
+        const max = Math.max(0, Math.min(1e7, Math.trunc(Number(b.max) || 0))), days = Number(b.days) || 0;
+        if (!code || (kind === 'coins' && !(n > 0))) return json({ error: 'bad' }, 400);
+        const exp = days > 0 ? Date.now() + days * 864e5 : 0;
+        await env.DB.prepare('INSERT INTO promos(code,kind,val,n,max,exp,uses,ts) VALUES(?1,?2,?3,?4,?5,?6,0,?7) ON CONFLICT(code) DO UPDATE SET kind=?2,val=?3,n=?4,max=?5,exp=?6').bind(code, kind, val, n, max, exp, Date.now()).run();
+        return json({ ok: true, code, kind, val, n, max, exp });
+      }
+      if (url.pathname === '/admin/promo' && req.method === 'GET') {
+        return json({ promos: (await env.DB.prepare('SELECT code,kind,val,n,max,exp,uses FROM promos ORDER BY ts DESC LIMIT 50').all()).results });
+      }
+      if (url.pathname === '/admin/promo/delete' && req.method === 'POST') {
+        let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
+        const code = String(b.code || '').toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+        await env.DB.prepare('DELETE FROM promos WHERE code=?').bind(code).run();
+        return json({ ok: true });
+      }
       if (url.pathname === '/admin/log' && req.method === 'GET') {
         const r = (await env.DB.prepare('SELECT g.id,g.amount,g.claimed,g.ts,p.name FROM grants g LEFT JOIN players p ON p.uid=g.uid ORDER BY g.id DESC LIMIT 20').all()).results;
         return json({ log: r });
@@ -203,6 +227,20 @@ async function handle(req, env) {
       if (f && f.flag) return json({ error: 'flag' }, 403);
     }
 
+    if (url.pathname === '/promo/redeem' && req.method === 'POST') {
+      let b; try { b = await req.json(); } catch { b = {}; }
+      const code = String(b.code || '').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24), now = Date.now();
+      const p = code && await env.DB.prepare('SELECT * FROM promos WHERE code=?').bind(code).first();
+      if (!p) return json({ ok: false, err: 'none' });
+      if (p.exp && now > p.exp) return json({ ok: false, err: 'expired' });
+      if (p.max && p.uses >= p.max) return json({ ok: false, err: 'full' });
+      const ins = await env.DB.prepare('INSERT OR IGNORE INTO promo_use(code,uid,ts) VALUES(?,?,?)').bind(code, uid, now).run();
+      if (!ins.meta.changes) return json({ ok: false, err: 'used' });
+      const up = await env.DB.prepare('UPDATE promos SET uses=uses+1 WHERE code=?1 AND (max=0 OR uses<max)').bind(code).run();
+      if (!up.meta.changes) { await env.DB.prepare('DELETE FROM promo_use WHERE code=? AND uid=?').bind(code, uid).run(); return json({ ok: false, err: 'full' }); }
+      if (p.kind === 'coins') await env.DB.prepare('UPDATE players SET allow = allow + ? WHERE uid=?').bind(p.n, uid).run();
+      return json({ ok: true, code, kind: p.kind, val: p.val, n: p.n, left: p.max ? Math.max(0, p.max - p.uses - 1) : -1 });
+    }
     if (url.pathname === '/notify/set' && req.method === 'POST') {
       let b; try { b = await req.json(); } catch { b = {}; }
       const now = Date.now(), mask = int(b.mask, 63) || 0, wa = int(b.wheelAt, 4e12) || 0, ef = int(b.enFull, 4e12) || 0;
