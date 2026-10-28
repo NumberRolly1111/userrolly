@@ -1068,3 +1068,22 @@ body.shopen nav{visibility:hidden}
 
 #cnt.seg.two{grid-template-columns:repeat(3,1fr)}
 #cnt small{font-size:10px}
+
+.szbig{position:relative;display:grid;gap:8px;width:100%;text-align:left;margin-bottom:18px;padding:18px 18px 16px;border-radius:22px;color:var(--fg);font:inherit;overflow:hidden;border:var(--bw) solid #8B7CFF;background:radial-gradient(120% 140% at 100% 0,#5B6BFF 0,transparent 55%),linear-gradient(135deg,#2a2273,#171430);box-shadow:4px 4px 0 var(--sh)}
+.szbig:active{transform:scale(.98)}
+.szb-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.szb-k{font:800 11px var(--head);letter-spacing:.1em;text-transform:uppercase;color:#C9C2FF;background:rgba(255,255,255,.12);padding:4px 10px;border-radius:999px}
+.szb-left{font-size:12px;font-weight:700;color:#CFCBF5}
+.szb-name{font:800 22px/1.15 var(--head)}
+.szb-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.szb-lv{font:700 14px var(--body);color:#E6E2FF}.szb-lv i{font:800 24px var(--head);font-style:normal;color:#fff}
+.szb-pts{font-size:13px;font-weight:700;color:#CFCBF5}
+.szbig .szbar.big{margin:2px 0}
+.szb-foot{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.szb-foot small{color:#CFCBF5;font-size:12px}
+.szb-rdy,.szb-go{flex:none;font:800 12px var(--head);padding:8px 13px;border-radius:999px;background:#F2EFFF;color:#0D0B1A}
+.szb-rdy{background:#FFC933}
+
+.ptile.wide{padding:20px 18px;gap:16px;border-radius:20px}
+.ptile.wide .pti{width:56px;height:56px;border-radius:16px;font-size:30px}
+.ptile.wide b{font-size:20px}.ptile.wide small{font-size:13px;line-height:1.35}
