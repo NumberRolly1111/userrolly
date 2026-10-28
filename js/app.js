@@ -238,10 +238,11 @@ var CS=null,cloudTm=0,cloudDone=false;
 // Отметки «сегодня уже получено» (ежедневный кейс и рулетка) хранятся отдельно и всегда берутся по максимуму: откат облака или очистка памяти их не сбросит
 const DK='nr_dk';
 var dkLast='';
-function dkPush(){try{const o=JSON.stringify({c:S.dcase,w:S.wheel});if(o===dkLast)return;dkLast=o;localStorage.setItem(DK,o);if(CS)CS.setItem(DK,o,()=>{})}catch(e){}}
+function dkPush(){try{const o=JSON.stringify({c:S.dcase,w:S.wheel,k:S.cdt});if(o===dkLast)return;dkLast=o;localStorage.setItem(DK,o);if(CS)CS.setItem(DK,o,()=>{})}catch(e){}}
 function dkMerge(raw){let ch=false;try{const o=typeof raw==='string'?JSON.parse(raw):raw,d=new Date(),t=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   if(o&&typeof o.c==='string'&&o.c<=t&&o.c>S.dcase){S.dcase=o.c;ch=true}
-  if(o&&typeof o.w==='string'&&o.w<=t&&o.w>S.wheel){S.wheel=o.w;ch=true}}catch(e){}return ch}
+  if(o&&typeof o.w==='string'&&o.w<=t&&o.w>S.wheel){S.wheel=o.w;ch=true}
+  if(o&&o.k&&typeof o.k==='object'){if(!S.cdt||typeof S.cdt!=='object')S.cdt={};for(const id of ['daily','week']){const v=+o.k[id];if(v>0&&v<=Date.now()+6e4&&v>(+S.cdt[id]||0)){S.cdt[id]=v;ch=true}}}}catch(e){}return ch}
 try{dkMerge(localStorage.getItem(DK))}catch(e){}
 try{if(tg&&tg.CloudStorage&&tg.isVersionAtLeast&&tg.isVersionAtLeast('6.9'))CS=tg.CloudStorage}catch(e){}
 const save=()=>{if(S.coins>CAP)S.coins=CAP;S.ts=Date.now();dkPush();try{localStorage.setItem('nameroulette',JSON.stringify(S))}catch(e){}if(CS&&cloudDone){clearTimeout(cloudTm);cloudTm=setTimeout(cloudPush,2500)}};
@@ -263,7 +264,8 @@ function fixState(){
   else if(S.econ!==4){S.coins=START;S.econ=4}
   if(typeof S.bestn!=='string')S.bestn='';S.hide=S.hide?1:0;
   num('refc',0);S.refc=Math.max(0,Math.floor(S.refc));S.refd=S.refd?1:0;
-  if(typeof S.dcase!=='string')S.dcase='';S.fast=S.fast?1:0;if(typeof S.theme!=='string')S.theme='';if(typeof S.cf!=='string')S.cf='';
+  if(typeof S.dcase!=='string')S.dcase='';if(!S.cdt||typeof S.cdt!=='object')S.cdt={};{const d=new Date();if(S.dcase===d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')&&!S.cdt.daily)S.cdt.daily=Date.now()}
+  S.fast=S.fast?1:0;if(typeof S.theme!=='string')S.theme='';if(typeof S.cf!=='string')S.cf='';
   S.work=(Array.isArray(S.work)?S.work:[]).filter(w=>w&&typeof w.id==='string'&&isFinite(+w.t)).map(w=>({id:w.id,t:Math.min(Date.now(),+w.t)})).slice(0,3);
   if(!(S.lotp&&typeof S.lotp==='object'&&((S.lotp.k==='c'&&isFinite(+S.lotp.v)&&+S.lotp.v>0)||(S.lotp.k==='n'&&typeof S.lotp.name==='string'))))S.lotp=null;
   num('lotn',0);S.lotn=Math.max(0,Math.floor(S.lotn));S.cown=Array.isArray(S.cown)?[...new Set(S.cown.filter(x=>typeof x==='string'))]:[];if(typeof S.cn!=='string')S.cn='';if(typeof S.ct!=='string')S.ct='';
@@ -1480,9 +1482,8 @@ $('#tab-clan').onclick=async e=>{
 
 // ---------- Кейсы (под рулеткой) ----------
 // w: [редкость, шанс %]. Цены подобраны так, чтобы в среднем игрок получал около 90% цены кейса ником (средняя цена ников редкости берётся из пула).
-const weekLeft=()=>EV_ANCHOR+(weekId()+1)*WEEK_MS-Date.now();
 const CASES=[
-  {id:'daily',n:'Подарок дня',ic:'🎁',c:'#27D96B',price:0,daily:1,d:'Бесплатно раз в сутки: обычные и необычные, иногда редкие',w:[[0,40],[1,40],[2,17],[3,3]]},
+  {id:'daily',n:'Подарок дня',ic:'🎁',c:'#27D96B',price:0,daily:1,cd:864e5,d:'Бесплатно раз в сутки: обычные и необычные, иногда редкие',w:[[0,40],[1,40],[2,17],[3,3]]},
   {id:'start',n:'Первая добыча',ic:'📦',c:'#27D9BD',price:5200,d:'Необычные и редкие, с шансом на легендарный',w:[[1,55],[2,35],[3,9],[4,1]]},
   {id:'rare',n:'Сундук странника',ic:'💠',c:'#9B7BFF',price:25000,d:'Редкие и эпические, иногда мифический',w:[[2,40],[3,45],[4,14],[5,1]]},
   {id:'all',n:'Всё или ничего',ic:'🎲',c:'#FF5FA2',price:52000,d:'98% редкий ник, 2% — секретный',w:[[2,98],[6,2]]},
@@ -1493,8 +1494,9 @@ let cs={id:'',busy:false,res:null,tiles:[]},tierPool=null;
 const poolOf=t=>{if(!tierPool){tierPool=[[],[],[],[],[],[],[]];prizePool().forEach(x=>tierPool[x.t].push(x))}return tierPool[t]};
 const pctw=w=>w%1?w.toFixed(1).replace('.',','):String(w);
 function rollTier(c){let r=Math.random()*c.w.reduce((s,x)=>s+x[1],0);for(const [t,w] of c.w){r-=w;if(r<0)return t}return c.w[c.w.length-1][0]}
-const dClaimed=()=>S.dcase===todayK();
-function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${(c.id==='week'||S.coins<c.price)&&!(S.cfree&&S.cfree[c.id]>0)?' poor':''}${c.daily&&dClaimed()?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.daily?(dClaimed()?'Через '+leftT(msToDay()):'Бесплатно · раз в сутки'):(S.cfree&&S.cfree[c.id]>0?'Бесплатно · '+(c.id==='week'?'раз в неделю':'промокод'):c.id==='week'?'Новый через '+leftT(weekLeft()):fmt(c.price)+' 🪙')}</span></button>`).join('')+'</div>'}
+const cdLeft=c=>c&&c.cd?Math.max(0,(+(S.cdt&&S.cdt[c.id])||0)+c.cd-Date.now()):0;
+const dClaimed=()=>cdLeft(CASES[0])>0;
+function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${(c.id==='week'||S.coins<c.price)&&!(S.cfree&&S.cfree[c.id]>0)?' poor':''}${cdLeft(c)?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.cd?(cdLeft(c)?'Через '+leftT(cdLeft(c)):'Бесплатно · раз в '+(c.daily?'сутки':'неделю')):(S.cfree&&S.cfree[c.id]>0?'Бесплатно · промокод':fmt(c.price)+' 🪙')}</span></button>`).join('')+'</div>'}
 function renderCases(){
   let el=$('#cases');if(!el){const st=document.querySelector('#tab-game .stats');if(!st)return;el=document.createElement('div');el.id='cases';st.after(el)}
   setHtml(el,'');
@@ -1505,20 +1507,20 @@ function caseSheet(){
     sh.onclick=e=>{if(e.target.closest('[data-cclose]')&&!cs.busy){cs.id='';cs.res=null;caseSheet()}if(e.target.closest('#cs-open'))openCase()}}
   const c=CASES.find(x=>x.id===cs.id);if(!c){sh.hidden=true;sh.innerHTML='';return}
   sh.hidden=false;
-  const fr=(S.cfree&&S.cfree[c.id])|0,rs=cs.res,need=(fr>0?0:c.price)-S.coins,dd=c.daily&&dClaimed()&&!cs.busy,wk=c.id==='week'&&fr<1&&!cs.busy;
+  const fr=(S.cfree&&S.cfree[c.id])|0,rs=cs.res,need=(fr>0?0:c.price)-S.coins,dd=!!cdLeft(c)&&!cs.busy;
   sh.innerHTML=`<div class="sbg" data-cclose="1"></div><div class="sbox casebox" style="--cc:${c.c}"><div class="shead"><b>${c.ic} ${c.n}</b><button class="btn sm" data-cclose="1"${cs.busy?' disabled':''}>✕</button></div>
   <p class="cdesc3">${c.d}</p>
   <div class="codds">${c.w.map(([t,w])=>`<span style="--tc:${T[t].c}"><i></i>${T[t].n} <b>${pctw(w)}%</b></span>`).join('')}</div>
   <div class="crl" id="crl"><i class="cptr"></i><div class="crt" id="crt"></div></div>
   <div id="cres">${rs?`<div class="cresc" style="--tc:${T[rs.t].c}"><small>${T[rs.t].n}</small><b>@${escH(rs.name)}</b><span>${fmt(rs.price)} 🪙</span><em>${escH(rs.msg)}</em></div>`:''}</div>
-  <button class="btn main" id="cs-open"${cs.busy||need>0||dd||wk?' disabled':''}>${cs.busy?'Открываем…':wk?'Следующий через '+leftT(weekLeft()):c.daily?(dd?'Следующий через '+leftT(msToDay()):'Открыть бесплатно'):need>0?`Не хватает ${fmt(need)} 🪙`:(fr>0?`Открыть бесплатно (${c.id==='week'?'раз в неделю':'промокод ×'+fr})`:(rs?'Открыть ещё · ':'Открыть за ')+fmt(c.price)+' 🪙')}</button></div>`;
+  <button class="btn main" id="cs-open"${cs.busy||(c.cd?dd:need>0)?' disabled':''}>${cs.busy?'Открываем…':c.cd?(dd?'Следующий через '+leftT(cdLeft(c)):'Открыть бесплатно'):need>0?`Не хватает ${fmt(need)} 🪙`:(fr>0?`Открыть бесплатно (${c.id==='week'?'раз в неделю':'промокод ×'+fr})`:(rs?'Открыть ещё · ':'Открыть за ')+fmt(c.price)+' 🪙')}</button></div>`;
 }
 function caseTile(t,name){return `<b class="ct" style="--tc:${T[t].c}"><i>${escH(name)}</i><small>${T[t].s}</small></b>`}
 async function openCase(){
-  const c=CASES.find(x=>x.id===cs.id);const fr=S.cfree&&S.cfree[c&&c.id]>0;if(!c||cs.busy||(!fr&&(S.coins<c.price||c.id==='week'))||(c.daily&&dClaimed()))return;
+  const c=CASES.find(x=>x.id===cs.id);if(!c||cs.busy||cdLeft(c))return;const fr=!c.cd&&S.cfree&&S.cfree[c.id]>0;if(!c.cd&&!fr&&S.coins<c.price)return;
   cs.busy=true;xbusy=1;cs.res=null;
   const tier=rollTier(c),pr=P(poolOf(tier));
-  if(fr)S.cfree[c.id]--;else S.coins-=c.price;if(c.daily)S.dcase=todayK();S.casen++;try{spAdd(12)}catch(e){}if(pr.t>=3&&pr.t<=6)feedPush(pr.name,pr.t);S.cnt[pr.t]++;S.best=Math.max(S.best,pr.t);noteBest(pr.price,pr.name);addXp(8+pr.t*6);
+  if(c.cd){S.cdt[c.id]=Date.now();if(c.daily)S.dcase=todayK()}else if(fr)S.cfree[c.id]--;else S.coins-=c.price;S.casen++;try{spAdd(12)}catch(e){}if(pr.t>=3&&pr.t<=6)feedPush(pr.name,pr.t);S.cnt[pr.t]++;S.best=Math.max(S.best,pr.t);noteBest(pr.price,pr.name);addXp(8+pr.t*6);
   const msg=stashAll([{name:pr.name,t:pr.t,p:pr.p}]);save();render();   // приз выдан сразу: закрытие приложения его не отменит
   caseSheet();
   const trk=$('#crt'),rl=$('#crl'),N=46,WIN=36,tw=96,gap=8,pitch=tw+gap;
