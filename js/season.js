@@ -108,9 +108,8 @@ function szBuy() {
 function evLine() {
   const e = evNow();
   if (e) {
-    const what = e.kind === 'coins' ? `×${e.m} к монетным наградам` : `×${e.m} к очкам сезона`;
-    const sub = e.kind === 'coins' ? 'вход, колесо, задания, достижения' : 'рулетка, кейсы, апгрейды';
-    return `<div class="evbn on"><span class="evx">×${e.m}</span><div><b>${what}</b><small>${sub} · до ${szHM(e.end)} (ещё ${szLeft(e.end - Date.now())})</small></div></div>`;
+    const what = `×${evF(e.m)} ${EVK[e.kind][0]}`, sub = EVK[e.kind][1];
+    return `<div class="evbn on"><span class="evx">×${evF(e.m)}</span><div><b>${what}</b><small>${sub} · до ${szHM(e.end)} (ещё ${szLeft(e.end - Date.now())})</small></div></div>`;
   }
   const n = evNext();
   return `<div class="evbn"><span class="evx">🎉</span><div><b>Событие скоро</b><small>${n ? 'Следующее: ' + new Date(n.start).toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' }) + ' в ' + szHM(n.start) : 'Бот сообщит, когда оно начнётся'}</small></div></div>`;
@@ -122,7 +121,7 @@ function evBarUpd() {
   const e = evNow();
   if (!e) { if (b) b.remove(); return; }
   if (!b) { b = document.createElement('div'); b.id = 'evbar'; g.prepend(b); b.onclick = () => tab('season'); }
-  const t = `🎉 ×${e.m} ${e.kind === 'coins' ? 'к монетным наградам' : 'к очкам сезона'} · до ${szHM(e.end)}`;
+  const t = `🎉 ×${evF(e.m)} ${EVK[e.kind][0]} · до ${szHM(e.end)}`;
   if (b.textContent !== t) b.textContent = t;
 }
 
@@ -131,7 +130,12 @@ function seasonCard() {
   const z = szState(), lv = szLevel(), tot = szTotal(), into = lv >= SZ_LV ? SZ_SPL : tot % SZ_SPL;
   let rdy = 0;
   for (let l = 1; l <= lv; l++) { if (!z.fc.includes(l)) rdy++; if (z.paid && !z.pc.includes(l)) rdy++; }
-  return `<button class="pcard achbtn szcard" data-season="1" style="margin-bottom:16px"><div><b>🏅 Сезон ${z.id + 1} · ${szName(z.id)}</b><small>Уровень ${lv} из ${SZ_LV} · осталось ${szLeft(szEnd(z.id) - Date.now())}${rdy ? ` · наград к получению: ${rdy}` : ''}</small><div class="szbar"><i style="width:${into / SZ_SPL * 100}%"></i></div></div><span class="trophy">›</span></button>${evNow() ? evLine() : ''}`;
+  const need = lv >= SZ_LV ? 0 : SZ_SPL - into;
+  return `<button class="szbig" data-season="1"><span class="szb-top"><span class="szb-k">Сезон ${z.id + 1}</span><span class="szb-left">⏳ осталось ${szLeft(szEnd(z.id) - Date.now())}</span></span>
+  <b class="szb-name">🏅 ${szName(z.id)}</b>
+  <span class="szb-row"><span class="szb-lv">Уровень <i>${lv}</i> из ${SZ_LV}</span><span class="szb-pts">${fmt(tot)} очков</span></span>
+  <span class="szbar big"><i style="width:${into / SZ_SPL * 100}%"></i></span>
+  <span class="szb-foot"><small>${lv >= SZ_LV ? 'Все уровни пройдены' : 'До следующего уровня: ' + need + ' очков'}</small>${rdy ? `<span class="szb-rdy">🎁 наград: ${rdy}</span>` : '<span class="szb-go">Открыть ›</span>'}</span></button>${evNow() ? evLine() : ''}`;
 }
 
 // ---- страница сезона ----
