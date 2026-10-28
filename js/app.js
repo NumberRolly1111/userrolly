@@ -332,6 +332,25 @@ const evK=k=>{const e=evNow();return e&&e.kind===k?e.m:1};
 const evC=()=>evK('coins'),evS=()=>evK('sp'),evX=()=>evK('xp'),evE=()=>evK('en');
 const evF=m=>String(m).replace('.',',');
 const EVK={coins:['к монетным наградам','вход, колесо, задания, достижения'],sp:['к очкам сезона','рулетка, кейсы, апгрейды'],xp:['к опыту','всё, что даёт опыт: крутки, кейсы, задания'],en:['к энергии из наград','вход, задания и новые уровни']};
+// ---------- Налог на залежи: монеты сверх порога медленно сгорают ----------
+const TAX_FREE=1e9,TAX_R=.01;   // свыше 1 млрд монет сгорает 1% превышения в сутки (ники и капитал налогом не облагаются)
+function taxBurn(days){const ex=S.coins-TAX_FREE;return ex>0?Math.floor(ex*(1-Math.pow(1-TAX_R,days))):0}
+function taxTick(){
+  const now=Date.now();
+  if(S.coins<=TAX_FREE){S.taxT=now;return}
+  let t=+S.taxT||0;if(!t||t>now){S.taxT=now;return}
+  const d=Math.min(30,Math.floor((now-t)/864e5));if(d<1)return;
+  const b=taxBurn(d);S.taxT=t+d*864e5;if(now-S.taxT>864e5)S.taxT=now;
+  if(b>0){S.coins-=b;save();render();try{toast(`🔥 Налог на залежи: сгорело ${fmt(b)} 🪙`)}catch(e){}}else save();
+}
+function taxLine(){
+  if(S.coins<=TAX_FREE*.5)return '';
+  const left=Math.max(0,864e5-(Date.now()-(+S.taxT||Date.now())));
+  return S.coins>TAX_FREE?`<div class="pcard taxl"><b>🔥 Налог на залежи</b><small>Монеты сверх ${fmt(TAX_FREE)} 🪙 сгорают на 1% в сутки. Ближайшее сгорание через ${leftT(left)}: −${fmt(taxBurn(1))} 🪙. Трать монеты на кейсы, апгрейды и аукцион.</small></div>`
+   :`<div class="pcard taxl"><b>🔥 Налог на залежи</b><small>Если на балансе будет больше ${fmt(TAX_FREE)} 🪙, лишнее начнёт сгорать на 1% в сутки.</small></div>`;
+}
+setTimeout(()=>{try{taxTick()}catch(e){}},2500);setInterval(()=>{try{taxTick()}catch(e){}},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)try{taxTick()}catch(e){}});
 const LOGIN=[30000,45000,60000,90000,120000,150000,225000];
 // Призы ежедневной рулетки; w = шанс в процентах (сумма 100). k:'c' монеты, k:'n' ник редкости t
 const WHEEL0=[{k:'c',v:150000,w:32},{k:'c',v:300000,w:22},{k:'c',v:600000,w:13},{k:'c',v:1000000,w:7},{k:'c',v:1500000,w:3.5},{k:'c',v:3000000,w:1},
@@ -506,6 +525,12 @@ function riser(t,dur,vol=.1){
   tone(36,t,dur*.9,{vol:.07,att:dur*.6,slide:2.2,rv:0});tone(55,t,dur*.9,{type:'triangle',vol:.03,att:dur*.7,slide:3,rv:.1})
 }
 const arp=(ms,t,step,dur,o)=>ms.forEach((m,i)=>tone(m,t+i*step,dur,o));
+// вибрация под редкость выпавшего ника: чем реже, тем длиннее и сильнее
+function rareHap(t){
+  if(t<2)return;
+  const P={2:[[0,'light']],3:[[0,'medium']],4:[[0,'heavy'],[130,'medium']],5:[[0,'heavy'],[120,'heavy'],[250,'rigid'],[420,'ok']],6:[[0,'heavy'],[110,'heavy'],[220,'heavy'],[380,'rigid'],[560,'rigid'],[800,'ok']]};
+  (P[Math.min(6,t)]||[]).forEach(([d,k])=>setTimeout(()=>{try{k==='ok'?hap('n','success'):hap('i',k)}catch(e){}},d));
+}
 function sfx(name,a=0){try{sfxPlay(name,a)}catch(e){}}   // звук никогда не должен ломать игру
 function sfxPlay(name,a){
   const c=ac();if(!c||!SND.out)return;const t=c.currentTime+.01;
@@ -556,7 +581,7 @@ function epic(r){
     o.innerHTML=`<div class="ep-bg"></div><div class="ep-rays"></div><div class="ep-ring"></div><div class="ep-ring r2"></div><div class="ep-fx">${embers}</div>
       <div class="ep-box"><div class="ep-tier">${T[t].n}</div><div class="ep-name"><span class="at" style="--i:-1">@</span>${chars.map((ch,i)=>`<span style="--i:${i}">${ch}</span>`).join('')}</div></div><div class="ep-skip">нажми, чтобы продолжить</div>`;
     document.body.append(o);
-    r.epic=true;sfx('tier',t);try{hap('n','success')}catch(x){}
+    r.epic=true;sfx('tier',t);try{hap('n','success');rareHap(t)}catch(x){}
     const timers=[];let done=false;
     chars.forEach((_,i)=>timers.push(setTimeout(()=>{sfx(sec?'sec':'myt',i);hap('i',sec?'medium':'heavy')},st+i*sp)));
     const fin=()=>{if(done)return;done=true;timers.forEach(clearTimeout);o.classList.add('out');setTimeout(()=>{o.remove();res()},480)};
@@ -618,7 +643,7 @@ function playStage(st,reel,r,fresh){
     epic(r).then(()=>{const rl=(rid&&document.getElementById(rid))||reel;build(r.name,false,rl);fx2();hap('n','success');boom(T[r.t].c,r.t)});return;
   }
   const wait=build(r.name,fresh,reel,0);
-  if(fresh)setTimeout(()=>{fx2();hap('n','success');sfx('tier',r.t);if(r.t>=3)boom(T[r.t].c,r.t)},wait);else fx2();
+  if(fresh)setTimeout(()=>{fx2();hap('n','success');rareHap(r.t);sfx('tier',r.t);if(r.t>=3)boom(T[r.t].c,r.t)},wait);else fx2();
 }
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -654,7 +679,7 @@ function showSel(i,fresh){
   row.classList.add('hit');row.classList.toggle('shake',fresh&&c.t>=3);row.classList.toggle('mythic',c.t===5);row.classList.toggle('secret',c.t===6);
   renderPicks();renderMeta();
   requestAnimationFrame(()=>requestAnimationFrame(()=>meta.classList.add('on')));
-  if(fresh){if(!c.epic)sfx('tier',c.t);if(c.t>=2)hap('n','success');if(c.t>=3)boom(t.c,c.t)}
+  if(fresh){if(!c.epic)sfx('tier',c.t);if(c.t>=2){hap('n','success');rareHap(c.t)}if(c.t>=3)boom(t.c,c.t)}
 }
 function renderMeta(){
   const row=document.querySelector('#reels .rrow');if(!row)return;const c=cur[sel],t=T[c.t],meta=row.querySelector('.rmeta');
@@ -1538,7 +1563,7 @@ async function openCase(){
   const w=trk.children[WIN];if(w)w.classList.add('win');
   await sleep(reduce?0:650);
   if(pr.t>=5&&!reduce)await epic({name:pr.name,t:pr.t,p:pr.p});else sfx('tier',pr.t);
-  hap('n','success');
+  hap('n','success');if(pr.t<5||reduce)rareHap(pr.t);
   cs.res={name:pr.name,t:pr.t,price:pr.price,msg};cs.busy=false;xbusy=0;
   save();render();caseSheet();
   const t2=$('#crt'),r2=$('#crl');if(t2&&r2){r2.classList.add('on');t2.innerHTML=tiles.join('');t2.style.transition='none';t2.style.transform=`translateX(${r2.clientWidth/2-(WIN*pitch+tw/2+off)}px)`;const ww=t2.children[WIN];if(ww)ww.classList.add('win')}
@@ -1588,18 +1613,27 @@ function workSheet(close){
 }
 
 // ---------- Промокоды ----------
-var PROMOS={NAMEROULETTE:{c:'star',n:1}};   // код → бесплатное открытие кейса (один раз на игрока)
-function promoUse(raw){
-  const code=String(raw||'').trim().toUpperCase().replace(/[^A-Z0-9_-]/g,''),pr=PROMOS[code];
+var promoBusy=false;
+async function promoUse(raw){
+  const code=String(raw||'').trim().toUpperCase().replace(/[^A-Z0-9_-]/g,'');
   if(cs.busy)return toast('Дождись конца открытия кейса');
   if(!code)return toast('Введи промокод');
-  if(!pr)return toast('Такого промокода нет');
+  if(promoBusy)return;
   if(!Array.isArray(S.promo))S.promo=[];
   if(S.promo.includes(code))return toast('Ты уже использовал этот промокод');
-  const c=CASES.find(x=>x.id===pr.c);
-  S.promo.push(code);if(!S.cfree||typeof S.cfree!=='object')S.cfree={};S.cfree[pr.c]=(S.cfree[pr.c]|0)+pr.n;
-  save();sfx('ach');toast(`🎟️ Промокод принят: кейс «${c.n}»`);render();
-  cs.id=pr.c;cs.res=null;caseSheet();
+  if(!API||!tg||!tg.initData)return toast('Промокоды работают внутри Telegram');
+  promoBusy=true;let r;
+  try{r=await lbReq('/promo/redeem',{code})}catch(e){promoBusy=false;return toast(String(e.message)==='wait'?'Подожди несколько секунд':'Нет связи с сервером, попробуй позже')}
+  promoBusy=false;
+  if(!r||!r.ok){const m={none:'Такого промокода нет',expired:'Срок действия промокода истёк',full:'Промокод закончился: все активации уже разобраны',used:'Ты уже использовал этот промокод'}[r&&r.err];
+    if(r&&r.err==='used'&&!S.promo.includes(code)){S.promo.push(code);save()}return toast(m||'Не удалось применить промокод')}
+  S.promo.push(code);
+  if(r.kind==='coins'){S.coins=Math.min(CAP,S.coins+(+r.n||0));save();sfx('coins');hap('n','success');toast(`🎟️ Промокод принят: +${fmt(+r.n||0)} 🪙`);render();return}
+  const c=CASES.find(x=>x.id===r.val);
+  if(!c){save();return toast('🎟️ Промокод принят, но такого кейса в игре нет')}
+  if(!S.cfree||typeof S.cfree!=='object')S.cfree={};S.cfree[c.id]=(S.cfree[c.id]|0)+(+r.n||1);
+  save();sfx('ach');hap('n','success');toast(`🎟️ Промокод принят: кейс «${c.n}»`+(r.left>=0&&r.left<=20?` · осталось активаций: ${r.left}`:''));render();
+  cs.id=c.id;cs.res=null;caseSheet();
 }
 function promoCard(){return `<div class="pcard promo"><div class="bhead"><h3>Промокод</h3><span class="bsub">один раз на игрока</span></div><div class="prow"><input id="promo-in" type="text" placeholder="Введи код" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn main" id="promo-go">Применить</button></div></div>`}
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#promo-go')){const i=document.getElementById('promo-in');promoUse(i&&i.value);if(i)i.value=''}});
@@ -1736,7 +1770,7 @@ function crGo(){
   const pr=P(poolOf(tier));if(!pr)return;
   S.coins-=fee;S.items=S.items.filter(i=>!cr.sel.includes(i.id));
   addItem(pr.name,pr.t,pr.p);S.best=Math.max(S.best,pr.t);try{noteBest(pr.price,pr.name)}catch(e){}addXp(10+pr.t*6);
-  cr.res=pr;cr.sel=[];save();render();sfx('tier');hap('n','success');try{if(!$('#tab-prof').hidden)renderProf()}catch(e){}
+  cr.res=pr;cr.sel=[];save();render();sfx('tier',pr.t);hap('n','success');rareHap(pr.t);try{if(!$('#tab-prof').hidden)renderProf()}catch(e){}
   crSheet();
 }
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-craft]')){cr.sel=[];cr.res=null;crSheet()}});
@@ -2226,7 +2260,7 @@ function renderBon(){
   if(bon.busy)return;
   ensureQuests();
   const li=loginInfo(),can=S.wheel!==todayK(),el=$('#tab-bon');
-  let h=`<h2>Бонусы</h2>`+(()=>{try{return seasonCard()}catch(e){return ''}})();
+  let h=`<h2>Бонусы</h2>`+(()=>{try{return seasonCard()}catch(e){return ''}})()+(()=>{try{return taxLine()}catch(e){return ''}})();
   h+=`<div class="pcard"><div class="bhead"><h3>Ежедневный вход</h3><span class="bsub">Серия: ${li.n} ${dw(li.n)}</span></div><div class="lgrid">`+
     LOGIN.map((r,i)=>{const st=(li.done?i<=li.idx:i<li.idx)?'done':(!li.done&&i===li.idx)?'now':'';
       return `<div class="lcell ${st}${i===6?' big':''}"><small>День ${i+1}</small><b>${kfmt(r)}</b>${st==='done'?'<i>✓</i>':''}</div>`}).join('')+`</div>`+
@@ -2292,7 +2326,7 @@ async function doWheel(){
   await sleep(dur+150);
   bon.ang=fin;bon.win=k;wh.classList.remove('spinning');wh.classList.add('haswin');
   const ws=wh.querySelectorAll('.ws')[k];if(ws)ws.classList.add('won');
-  hap('n','success');if(win.k==='c')sfx(win.v>=20000?'coins':'coin');if(!reduce)boom(wcol(win),win.k==='n'?Math.max(3,win.t):win.v>=50000?5:win.v>=20000?4:3);
+  hap('n','success');if(win.k==='c')sfx(win.v>=20000?'coins':'coin');else{sfx('tier',win.t);rareHap(win.t)}if(!reduce)boom(wcol(win),win.k==='n'?Math.max(3,win.t):win.v>=50000?5:win.v>=20000?4:3);
   await sleep(reduce?0:900);
   bon.res=res;bon.fresh=true;bon.busy=false;xbusy=0;render();
 }
