@@ -114,6 +114,19 @@ function evLine() {
   const n = evNext();
   return `<div class="evbn"><span class="evx">🎉</span><div><b>Событие скоро</b><small>${n ? 'Следующее: ' + new Date(n.start).toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' }) + ' в ' + szHM(n.start) : 'Бот сообщит, когда оно начнётся'}</small></div></div>`;
 }
+function evAnnounce(e) {   // «событие началось» внутри открытого приложения: один раз на событие
+  const k = 'e' + e.d;
+  let seen = ''; try { seen = localStorage.getItem('nr_evseen') || ''; } catch (x) {}
+  if (seen === k) return;
+  try { localStorage.setItem('nr_evseen', k); } catch (x) {}
+  try { toast(`🎉 Событие: ×${evF(e.m)} ${EVK[e.kind][0]} до ${szHM(e.end)}`); sfx('ach'); hap('n', 'success'); } catch (x) {}
+}
+function szAnnounce() {
+  const k = 's' + seasonId();
+  let seen = null; try { seen = localStorage.getItem('nr_szseen'); } catch (x) {}
+  try { localStorage.setItem('nr_szseen', k); } catch (x) {}
+  if (seen && seen !== k) { try { toast(`🏅 Начался сезон ${seasonId() + 1}: «${szName(seasonId())}»`); sfx('level'); } catch (x) {} }
+}
 function evBarUpd() {
   const g = document.getElementById('tab-game');
   if (!g) return;
@@ -124,6 +137,7 @@ function evBarUpd() {
   const t = e ? `🎉 ×${evF(e.m)} ${EVK[e.kind][0]} · ещё ${leftT(e.end - Date.now())}`
     : `⏳ Событие ×${evF(n.m)} ${EVK[n.kind][0]} через ${leftT(n.start - Date.now())}`;
   b.classList.toggle('off', !e);
+  if (e) evAnnounce(e);
   if (b.textContent !== t) b.textContent = t;
 }
 
@@ -162,7 +176,7 @@ function renderSeason() {
   el.innerHTML = `<div class="ahead"><button class="btn sm" id="sz-back">‹ Бонусы</button><h2>Сезон ${z.id + 1}</h2></div>
   <div class="pcard szhero"><small>${szName(z.id)} · осталось ${szLeft(szEnd(z.id) - Date.now())}</small><div class="szlv"><b>Уровень ${lv}</b><span>${fmt(tot)} очков</span></div><div class="szbar big"><i style="width:${into / SZ_SPL * 100}%"></i></div><small>${lv >= SZ_LV ? 'Все уровни пройдены' : `До следующего уровня: ${SZ_SPL - into} очков`}</small>
   <div class="szsrc"><span>🎰 крутка +3</span><span>📦 кейс +12</span><span>⚡ апгрейд +15</span><span>📈 рост капитала до ${fmt(SZ_GROW_CAP)}</span></div></div>
-  ${evLine()}
+  ${hintCard('season')}${evLine()}
   <div class="szact">${z.paid ? '<div class="szpaid">✓ Платная дорожка открыта</div>' : `<button class="btn main" id="sz-buy">Открыть платную дорожку · ${fmt(SZ_PRICE)} 🪙</button>`}${rdy ? `<button class="btn" id="sz-all">Забрать всё (${rdy})</button>` : ''}</div>
   <div class="szth"><i></i><b>Бесплатно</b><b class="pd">Платная</b></div>
   <div class="szlist">${rows.join('')}</div>
@@ -222,4 +236,4 @@ CASES.push({ id: 'week', n: 'Кейс недели', ic: '🏆', c: '#FF8A3D', p
 if (S.cfree && S.cfree.week) { S.cfree.week = 0; }
 setInterval(() => { if (!document.hidden) evBarUpd(); }, 1000);
 document.addEventListener('visibilitychange', () => { if (document.hidden) spSync(); });
-setTimeout(() => { evBarUpd(); spSync(); }, 4000);
+setTimeout(() => { evBarUpd(); spSync(); szAnnounce(); }, 4000);
