@@ -317,16 +317,19 @@ S.maxStreak=Math.max(S.maxStreak||0,S.login.n||0);
 const EV_ANCHOR=Date.UTC(2026,9,26),SEASON_MS=21*864e5,WEEK_MS=7*864e5;   // сезон = 3 недели, отсчёт от понедельника 26.10.2026 (UTC)
 const h32=n=>{n=Math.imul(n^0x9E3779B9,0x85EBCA6B);n^=n>>>13;n=Math.imul(n,0xC2B2AE35);n^=n>>>16;return n>>>0};
 const seasonId=t=>Math.floor(((t||Date.now())-EV_ANCHOR)/SEASON_MS),weekId=t=>Math.floor(((t||Date.now())-EV_ANCHOR)/WEEK_MS);
-function evOfDay(d){   // случайное событие дня: примерно в 38% дней, время, длительность и множитель выбираются случайно (но одинаково у всех)
-  const h=h32(d*7919+13);if(h%100>=38)return null;
-  const start=d*864e5+(4+(h>>>8)%14)*36e5,dur=36e5,r=(h>>>18)%100;
-  let m=r<50?2:r<72?3:r<84?4:r<92?5:r<97?7:10;const kind=((h>>>25)%4===0)?'sp':'coins';   // coins: ×2…×10 к монетным наградам, sp: ×2…×3 к очкам сезона
-  if(kind==='sp')m=Math.min(m,3);
+function evOfDay(d){   // событие каждый день: 1 час, время/тип/множитель (×1,5…×10) выбираются случайно, но одинаково у всех
+  const h=h32(d*7919+13),start=d*864e5+((h>>>8)%23)*36e5,dur=36e5,r=(h>>>18)%100,k=(h>>>25)%20;
+  let m=r<30?1.5:r<55?2:r<70?2.5:r<82?3:r<90?4:r<95?5:r<98?7:10;
+  const kind=k<8?'coins':k<13?'sp':k<17?'xp':'en';   // coins: монетные награды, sp: очки сезона, xp: опыт, en: энергия из наград
+  if(kind!=='coins')m=Math.min(m,kind==='sp'?5:4);
   return {d,start,end:start+dur,m,kind};
 }
 function evNow(t){t=t||Date.now();const d=Math.floor(t/864e5);for(const x of [d,d-1]){const e=evOfDay(x);if(e&&t>=e.start&&t<e.end)return e}return null}
-function evNext(t){t=t||Date.now();const d=Math.floor(t/864e5);for(let x=d;x<d+6;x++){const e=evOfDay(x);if(e&&e.start>t)return e}return null}
-const evC=()=>{const e=evNow();return e&&e.kind==='coins'?e.m:1},evS=()=>{const e=evNow();return e&&e.kind==='sp'?e.m:1};
+function evNext(t){t=t||Date.now();const d=Math.floor(t/864e5);for(let x=d;x<d+3;x++){const e=evOfDay(x);if(e&&e.start>t)return e}return null}
+const evK=k=>{const e=evNow();return e&&e.kind===k?e.m:1};
+const evC=()=>evK('coins'),evS=()=>evK('sp'),evX=()=>evK('xp'),evE=()=>evK('en');
+const evF=m=>String(m).replace('.',',');
+const EVK={coins:['к монетным наградам','вход, колесо, задания, достижения'],sp:['к очкам сезона','рулетка, кейсы, апгрейды'],xp:['к опыту','всё, что даёт опыт: крутки, кейсы, задания'],en:['к энергии из наград','вход, задания и новые уровни']};
 const LOGIN=[30000,45000,60000,90000,120000,150000,225000];
 // Призы ежедневной рулетки; w = шанс в процентах (сумма 100). k:'c' монеты, k:'n' ник редкости t
 const WHEEL0=[{k:'c',v:150000,w:32},{k:'c',v:300000,w:22},{k:'c',v:600000,w:13},{k:'c',v:1000000,w:7},{k:'c',v:1500000,w:3.5},{k:'c',v:3000000,w:1},
@@ -418,7 +421,7 @@ const achReady=()=>ACH.map((x,i)=>i).filter(i=>achOk(ACH[i],i)&&!S.achGot.includ
 const achEarned=()=>S.achGot.reduce((s,i)=>s+(ACH[i]?ACH[i].r:0),0);
 function claimAch(i){   // i: номер или 'all'
   const ids=i==='all'?achReady():[+i].filter(n=>ACH[n]&&achOk(ACH[n],n)&&!S.achGot.includes(n));
-  if(!ids.length)return;const sum=ids.reduce((s,n)=>s+ACH[n].r,0)*evC();
+  if(!ids.length)return;const sum=Math.round(ids.reduce((s,n)=>s+ACH[n].r,0)*evC());
   S.achGot.push(...ids);S.coins+=sum;addXp(60*ids.length);sfx(sum>=20000?'coins':'coin');save();hap('n','success');if(sum>=20000)boom('#FFC933',sum>=100000?5:4);
   toast(`Награда: +${fmt(sum)} 🪙`);render();
 }
@@ -565,8 +568,8 @@ const lvReward=l=>({c:9000+l*3600,e:l%5===0?7:2});
 const RANKS=[[1,'Бронза','#D08A4A'],[10,'Серебро','#C5CCDB'],[20,'Золото','#FFC933'],[35,'Платина','#6FE3E0'],[50,'Алмаз','#7FA8FF']];
 const rankOf=l=>{let r=RANKS[0];RANKS.forEach(x=>{if(l>=x[0])r=x});return r};
 function addXp(n){
-  S.xp+=n;let up=0;
-  while(S.xp>=xpNeed(S.lvl)){S.xp-=xpNeed(S.lvl);S.lvl++;const r=lvReward(S.lvl);S.coins+=r.c;S.en+=r.e;up=S.lvl}
+  n=Math.round(n*evX());S.xp+=n;let up=0;
+  while(S.xp>=xpNeed(S.lvl)){S.xp-=xpNeed(S.lvl);S.lvl++;const r=lvReward(S.lvl);S.coins+=r.c;S.en+=Math.round(r.e*evE());up=S.lvl}
   if(up){const r=lvReward(up);setTimeout(()=>{toast(`⭐ Уровень ${up}: +${fmt(r.c)} 🪙 и +${r.e} ⚡`);sfx('level');hap('n','success');if(typeof render==='function')render()},2200)}
 }
 let mode=0,count=1,busy=false,cur=[],tt,sel=0,xbusy=0;
@@ -1477,6 +1480,7 @@ $('#tab-clan').onclick=async e=>{
 
 // ---------- Кейсы (под рулеткой) ----------
 // w: [редкость, шанс %]. Цены подобраны так, чтобы в среднем игрок получал около 90% цены кейса ником (средняя цена ников редкости берётся из пула).
+const weekLeft=()=>EV_ANCHOR+(weekId()+1)*WEEK_MS-Date.now();
 const CASES=[
   {id:'daily',n:'Подарок дня',ic:'🎁',c:'#27D96B',price:0,daily:1,d:'Бесплатно раз в сутки: обычные и необычные, иногда редкие',w:[[0,40],[1,40],[2,17],[3,3]]},
   {id:'start',n:'Первая добыча',ic:'📦',c:'#27D9BD',price:5200,d:'Необычные и редкие, с шансом на легендарный',w:[[1,55],[2,35],[3,9],[4,1]]},
@@ -1490,7 +1494,7 @@ const poolOf=t=>{if(!tierPool){tierPool=[[],[],[],[],[],[],[]];prizePool().forEa
 const pctw=w=>w%1?w.toFixed(1).replace('.',','):String(w);
 function rollTier(c){let r=Math.random()*c.w.reduce((s,x)=>s+x[1],0);for(const [t,w] of c.w){r-=w;if(r<0)return t}return c.w[c.w.length-1][0]}
 const dClaimed=()=>S.dcase===todayK();
-function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${S.coins<c.price&&!(S.cfree&&S.cfree[c.id]>0)?' poor':''}${c.daily&&dClaimed()?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.daily?(dClaimed()?'Через '+leftT(msToDay()):'Бесплатно · раз в сутки'):(S.cfree&&S.cfree[c.id]>0?'Бесплатно · '+(c.id==='week'?'раз в неделю':'промокод'):fmt(c.price)+' 🪙')}</span></button>`).join('')+'</div>'}
+function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${(c.id==='week'||S.coins<c.price)&&!(S.cfree&&S.cfree[c.id]>0)?' poor':''}${c.daily&&dClaimed()?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.daily?(dClaimed()?'Через '+leftT(msToDay()):'Бесплатно · раз в сутки'):(S.cfree&&S.cfree[c.id]>0?'Бесплатно · '+(c.id==='week'?'раз в неделю':'промокод'):c.id==='week'?'Новый через '+leftT(weekLeft()):fmt(c.price)+' 🪙')}</span></button>`).join('')+'</div>'}
 function renderCases(){
   let el=$('#cases');if(!el){const st=document.querySelector('#tab-game .stats');if(!st)return;el=document.createElement('div');el.id='cases';st.after(el)}
   setHtml(el,'');
@@ -1501,17 +1505,17 @@ function caseSheet(){
     sh.onclick=e=>{if(e.target.closest('[data-cclose]')&&!cs.busy){cs.id='';cs.res=null;caseSheet()}if(e.target.closest('#cs-open'))openCase()}}
   const c=CASES.find(x=>x.id===cs.id);if(!c){sh.hidden=true;sh.innerHTML='';return}
   sh.hidden=false;
-  const fr=(S.cfree&&S.cfree[c.id])|0,rs=cs.res,need=(fr>0?0:c.price)-S.coins,dd=c.daily&&dClaimed()&&!cs.busy;
+  const fr=(S.cfree&&S.cfree[c.id])|0,rs=cs.res,need=(fr>0?0:c.price)-S.coins,dd=c.daily&&dClaimed()&&!cs.busy,wk=c.id==='week'&&fr<1&&!cs.busy;
   sh.innerHTML=`<div class="sbg" data-cclose="1"></div><div class="sbox casebox" style="--cc:${c.c}"><div class="shead"><b>${c.ic} ${c.n}</b><button class="btn sm" data-cclose="1"${cs.busy?' disabled':''}>✕</button></div>
   <p class="cdesc3">${c.d}</p>
   <div class="codds">${c.w.map(([t,w])=>`<span style="--tc:${T[t].c}"><i></i>${T[t].n} <b>${pctw(w)}%</b></span>`).join('')}</div>
   <div class="crl" id="crl"><i class="cptr"></i><div class="crt" id="crt"></div></div>
   <div id="cres">${rs?`<div class="cresc" style="--tc:${T[rs.t].c}"><small>${T[rs.t].n}</small><b>@${escH(rs.name)}</b><span>${fmt(rs.price)} 🪙</span><em>${escH(rs.msg)}</em></div>`:''}</div>
-  <button class="btn main" id="cs-open"${cs.busy||need>0||dd?' disabled':''}>${cs.busy?'Открываем…':c.daily?(dd?'Следующий через '+leftT(msToDay()):'Открыть бесплатно'):need>0?`Не хватает ${fmt(need)} 🪙`:(fr>0?`Открыть бесплатно (${c.id==='week'?'раз в неделю':'промокод ×'+fr})`:(rs?'Открыть ещё · ':'Открыть за ')+fmt(c.price)+' 🪙')}</button></div>`;
+  <button class="btn main" id="cs-open"${cs.busy||need>0||dd||wk?' disabled':''}>${cs.busy?'Открываем…':wk?'Следующий через '+leftT(weekLeft()):c.daily?(dd?'Следующий через '+leftT(msToDay()):'Открыть бесплатно'):need>0?`Не хватает ${fmt(need)} 🪙`:(fr>0?`Открыть бесплатно (${c.id==='week'?'раз в неделю':'промокод ×'+fr})`:(rs?'Открыть ещё · ':'Открыть за ')+fmt(c.price)+' 🪙')}</button></div>`;
 }
 function caseTile(t,name){return `<b class="ct" style="--tc:${T[t].c}"><i>${escH(name)}</i><small>${T[t].s}</small></b>`}
 async function openCase(){
-  const c=CASES.find(x=>x.id===cs.id);const fr=S.cfree&&S.cfree[c&&c.id]>0;if(!c||cs.busy||(!fr&&S.coins<c.price)||(c.daily&&dClaimed()))return;
+  const c=CASES.find(x=>x.id===cs.id);const fr=S.cfree&&S.cfree[c&&c.id]>0;if(!c||cs.busy||(!fr&&(S.coins<c.price||c.id==='week'))||(c.daily&&dClaimed()))return;
   cs.busy=true;xbusy=1;cs.res=null;
   const tier=rollTier(c),pr=P(poolOf(tier));
   if(fr)S.cfree[c.id]--;else S.coins-=c.price;if(c.daily)S.dcase=todayK();S.casen++;try{spAdd(12)}catch(e){}if(pr.t>=3&&pr.t<=6)feedPush(pr.name,pr.t);S.cnt[pr.t]++;S.best=Math.max(S.best,pr.t);noteBest(pr.price,pr.name);addXp(8+pr.t*6);
@@ -1585,6 +1589,7 @@ function workSheet(close){
 var PROMOS={NAMEROULETTE:{c:'star',n:1}};   // код → бесплатное открытие кейса (один раз на игрока)
 function promoUse(raw){
   const code=String(raw||'').trim().toUpperCase().replace(/[^A-Z0-9_-]/g,''),pr=PROMOS[code];
+  if(cs.busy)return toast('Дождись конца открытия кейса');
   if(!code)return toast('Введи промокод');
   if(!pr)return toast('Такого промокода нет');
   if(!Array.isArray(S.promo))S.promo=[];
@@ -1596,6 +1601,7 @@ function promoUse(raw){
 }
 function promoCard(){return `<div class="pcard promo"><div class="bhead"><h3>Промокод</h3><span class="bsub">один раз на игрока</span></div><div class="prow"><input id="promo-in" type="text" placeholder="Введи код" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn main" id="promo-go">Применить</button></div></div>`}
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#promo-go')){const i=document.getElementById('promo-in');promoUse(i&&i.value);if(i)i.value=''}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='promo-in'){promoUse(e.target.value);e.target.value=''}});
 
 // ---------- Профиль другого игрока ----------
 var pls={i:-1,d:null,err:'',busy:false};
@@ -2223,7 +2229,7 @@ function renderBon(){
     LOGIN.map((r,i)=>{const st=(li.done?i<=li.idx:i<li.idx)?'done':(!li.done&&i===li.idx)?'now':'';
       return `<div class="lcell ${st}${i===6?' big':''}"><small>День ${i+1}</small><b>${kfmt(r)}</b>${st==='done'?'<i>✓</i>':''}</div>`}).join('')+`</div>`+
     (li.done?`<button class="btn" disabled>Получено · следующая через <span data-t="day"></span></button>`
-      :`<button class="btn main" data-b="login">Забрать день ${li.idx+1}: ${fmt(LOGIN[li.idx]*evC())} 🪙${evC()>1?' ×'+evC():''}</button>`)+
+      :`<button class="btn main" data-b="login">Забрать день ${li.idx+1}: ${fmt(Math.round(LOGIN[li.idx]*evC()))} 🪙${evC()>1?' ×'+evF(evC()):''}</button>`)+
     (!li.done&&!li.alive&&S.login.n>0?`<p class="sum">Серия прервалась, награды идут с первого дня.</p>`:'')+`</div>`;
   h+=`<div class="pcard"><div class="bhead"><h3>Ежедневная рулетка</h3><span class="bsub">${S.wheelx?`1 в сутки + ${S.wheelx} докупленных`:'1 попытка в сутки'}</span></div>
     ${wheelHtml()}<p class="sum" hidden>${fmt(Math.min(...WHEEL.filter(p=>p.k==='c').map(p=>p.v)))} до ${fmt(Math.max(...WHEEL.filter(p=>p.k==='c').map(p=>p.v)))} 🪙 и ники от «${T[Math.min(...WHEEL.filter(p=>p.k==='n').map(p=>p.t))].n}» до «${T[Math.max(...WHEEL.filter(p=>p.k==='n').map(p=>p.t))].n}».</p>`+
@@ -2246,12 +2252,12 @@ function renderBon(){
 }
 function claimLogin(){
   const i=loginInfo();if(i.done)return;
-  const r=LOGIN[i.idx]*evC();S.login={n:i.n+1,last:todayK()};S.maxStreak=Math.max(S.maxStreak,S.login.n);S.coins+=r;S.en+=5;addXp(30);sfx(r>=10000?'coins':'coin');save();
+  const r=Math.round(LOGIN[i.idx]*evC());S.login={n:i.n+1,last:todayK()};S.maxStreak=Math.max(S.maxStreak,S.login.n);S.coins+=r;S.en+=Math.round(5*evE());addXp(30);sfx(r>=10000?'coins':'coin');save();
   toast(`День ${i.idx+1}: +${fmt(r)} 🪙 и +5 ⚡`);hap('n','success');if(r>=20000)boom('#FFC933',4);render();
 }
 function claimQuest(i){
   const q=S.q.list[i];if(!q||q.got||q.p<q.n)return;
-  const r=QDEF[q.id].r*evC();q.got=true;S.qn++;S.coins+=r;S.en+=3;addXp(80);sfx('coin');save();toast(`Задание выполнено: +${fmt(r)} 🪙 и +3 ⚡`);hap('n','success');render();
+  const r=Math.round(QDEF[q.id].r*evC());q.got=true;S.qn++;S.coins+=r;S.en+=Math.round(3*evE());addXp(80);sfx('coin');save();toast(`Задание выполнено: +${fmt(r)} 🪙 и +3 ⚡`);hap('n','success');render();
 }
 async function doWheel(){
   if(bon.busy||(S.wheel===todayK()&&!S.wheelx))return;
@@ -2259,7 +2265,7 @@ async function doWheel(){
   // приз выдаём сразу (чтобы закрытие приложения не отменило крутку), показываем после анимации
   if(S.wheel===todayK())S.wheelx=Math.max(0,S.wheelx-1);else S.wheel=todayK();S.wheelN++;addQuest('wheel',1);addXp(25);ntSoon();
   let res;
-  if(win.k==='c'){const wv=win.v*evC();S.coins+=wv;res={k:'c',v:wv}}
+  if(win.k==='c'){const wv=Math.round(win.v*evC());S.coins+=wv;res={k:'c',v:wv}}
   else{
     S.cnt[pick.t]++;noteBest(pick.price,pick.name);
     if(S.items.length<MAX){addItem(pick.name,pick.t,pick.p);res={k:'n',name:pick.name,t:pick.t,p:pick.p,saved:true}}
