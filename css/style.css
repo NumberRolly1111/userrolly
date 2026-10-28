@@ -1087,3 +1087,6 @@ body.shopen nav{visibility:hidden}
 .ptile.wide{padding:20px 18px;gap:16px;border-radius:20px}
 .ptile.wide .pti{width:56px;height:56px;border-radius:16px;font-size:30px}
 .ptile.wide b{font-size:20px}.ptile.wide small{font-size:13px;line-height:1.35}
+
+#evbar.off{background:rgba(255,255,255,.05);border-color:var(--line);color:var(--mute);font-weight:600}
+.taxl{display:grid;gap:4px;margin-bottom:16px}.taxl small{color:var(--mute);font-size:12px;line-height:1.35}
