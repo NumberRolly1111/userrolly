@@ -1644,7 +1644,7 @@ var pls={i:-1,d:null,err:'',busy:false};
 async function playerSheet(i){
   let sh=document.getElementById('plsh');
   if(!sh){sh=document.createElement('div');sh.id='plsh';sh.className='usheet';document.body.append(sh);
-    sh.onclick=e=>{if(e.target.closest('[data-plx]')){sh.remove()}}}
+    sh.onclick=e=>{const g=e.target.closest('[data-pltg]');if(g&&/^[A-Za-z][A-Za-z0-9_]{3,31}$/.test(g.dataset.pltg)){openTg('https://t.me/'+g.dataset.pltg);return}if(e.target.closest('[data-plx]')){sh.remove()}}}
   pls.i=i;pls.d=null;pls.err='';plDraw();
   try{pls.d=await lbReq('/player?by='+lb.by+'&i='+i)}catch(e){pls.err='Не удалось загрузить профиль'}
   if(document.getElementById('plsh'))plDraw();
@@ -1663,7 +1663,7 @@ function plDraw(){
     <div class="pnm"><b class="pname">${d.tag?`<em class="ctag">[${eh(d.tag)}]</em> `:''}${nickHtml(d.name,cs3[0])}</b>${ttl}<span class="rank" style="--rc:${rk[2]}">🛡 ${rk[1]}</span></div></div>
     <div class="pgrid"><div class="pt"><small>Место в рейтинге</small><b>#${d.rank}</b></div><div class="pt"><small>Капитал</small><b>${fmtC(d.net)} 🪙</b></div>
     <div class="pt"><small>Уровень</small><b>${d.lvl||1}</b></div><div class="pt"><small>Клан</small><b>${d.cname?eh(d.cname):'—'}</b></div></div>
-    <div class="pcard" style="margin:10px 0 0"><small class="cap2">Самый дорогой ник</small>${bn?`<div class="muprev">${plate(d.bestn,bn.t)}<span>${fmtC(d.best)} 🪙</span></div>`:'<p class="sum">—</p>'}</div>`;
+    <div class="pcard" style="margin:10px 0 0"><small class="cap2">Самый дорогой ник</small>${bn?`<div class="muprev">${plate(d.bestn,bn.t)}<span>${fmtC(d.best)} 🪙</span></div>`:'<p class="sum">—</p>'}</div>`+(d.me?'':d.un?`<button class="btn main cwide" data-pltg="${eh(d.un)}" style="margin-top:12px">Открыть в Telegram ↗</button>`:`<p class="sum" style="margin-top:12px;text-align:center">Ссылка на Telegram появится, когда игрок зайдёт в игру в обновлённой версии, или у него нет username</p>`);
   }
   sh.innerHTML=`<div class="sbg" data-plx="1"></div><div class="sbox casebox"><div class="shead"><b>Профиль игрока</b><button class="btn sm" data-plx="1">✕</button></div>${b}</div>`;
 }
