@@ -118,10 +118,12 @@ function evBarUpd() {
   const g = document.getElementById('tab-game');
   if (!g) return;
   let b = document.getElementById('evbar');
-  const e = evNow();
-  if (!e) { if (b) b.remove(); return; }
+  const e = evNow(), n = e ? null : evNext();
+  if (!e && !n) { if (b) b.remove(); return; }
   if (!b) { b = document.createElement('div'); b.id = 'evbar'; g.prepend(b); b.onclick = () => tab('season'); }
-  const t = `🎉 ×${evF(e.m)} ${EVK[e.kind][0]} · до ${szHM(e.end)}`;
+  const t = e ? `🎉 ×${evF(e.m)} ${EVK[e.kind][0]} · ещё ${leftT(e.end - Date.now())}`
+    : `⏳ Событие ×${evF(n.m)} ${EVK[n.kind][0]} через ${leftT(n.start - Date.now())}`;
+  b.classList.toggle('off', !e);
   if (b.textContent !== t) b.textContent = t;
 }
 
@@ -218,6 +220,6 @@ document.addEventListener('click', (e) => {
 // ---- кейс недели: раз в неделю бесплатно ----
 CASES.push({ id: 'week', n: 'Кейс недели', ic: '🏆', c: '#FF8A3D', price: 0, cd: 7 * 864e5, d: 'Бесплатно: открыл — и снова через 7 дней. Лучшие шансы на редкие, эпические и выше', w: [[2, 40], [3, 38], [4, 16], [5, 5], [6, 1]] });
 if (S.cfree && S.cfree.week) { S.cfree.week = 0; }
-setInterval(() => { evBarUpd(); }, 30000);
+setInterval(() => { if (!document.hidden) evBarUpd(); }, 1000);
 document.addEventListener('visibilitychange', () => { if (document.hidden) spSync(); });
 setTimeout(() => { evBarUpd(); spSync(); }, 4000);
