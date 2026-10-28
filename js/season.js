@@ -216,12 +216,8 @@ document.addEventListener('click', (e) => {
 });
 
 // ---- кейс недели: раз в неделю бесплатно ----
-CASES.push({ id: 'week', n: 'Кейс недели', ic: '🏆', c: '#FF8A3D', price: 150000, d: 'Раз в неделю бесплатно. Лучшие шансы на редкие, эпические и выше', w: [[2, 40], [3, 38], [4, 16], [5, 5], [6, 1]] });
-function weekTick() {
-  const w = weekId();
-  if (S.wkid !== w) { S.wkid = w; S.cfree = S.cfree || {}; S.cfree.week = 1; save(); try { renderCases(); } catch (e) {} }
-}
-weekTick();
-setInterval(() => { weekTick(); evBarUpd(); const s = document.getElementById('tab-season'); if (s && !s.hidden && !document.hidden) { /* только таймеры: полный рендер по действиям */ } }, 30000);
+CASES.push({ id: 'week', n: 'Кейс недели', ic: '🏆', c: '#FF8A3D', price: 0, cd: 7 * 864e5, d: 'Бесплатно: открыл — и снова через 7 дней. Лучшие шансы на редкие, эпические и выше', w: [[2, 40], [3, 38], [4, 16], [5, 5], [6, 1]] });
+if (S.cfree && S.cfree.week) { S.cfree.week = 0; }
+setInterval(() => { evBarUpd(); }, 30000);
 document.addEventListener('visibilitychange', () => { if (document.hidden) spSync(); });
 setTimeout(() => { evBarUpd(); spSync(); }, 4000);
