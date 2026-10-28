@@ -151,6 +151,18 @@ async function cron(env) {
   }
 }
 
+// Категории рейтинга: net (капитал), best (самый дорогой ник), lvl (уровень), museum (стоимость экспонатов в музее)
+const topBy = (b) => (b === 'best' || b === 'lvl' || b === 'museum' ? b : 'net');
+function topSql(by, tail, full) {
+  const tag = '(SELECT c.tag FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=p.uid) AS tag';
+  const extra = full ? ',p.un,p.net,p.best,(SELECT c.name FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=p.uid) AS cname' : '';
+  if (by === 'museum') {
+    return `SELECT p.uid,p.name,x.s AS v,x.s AS mv,x.c AS mc,p.bestn,p.lvl,p.cos,${tag}${extra} FROM (SELECT owner, SUM(v) AS s, COUNT(*) AS c FROM museum GROUP BY owner) x JOIN players p ON p.uid=x.owner WHERE p.hide=0 AND p.flag=0 AND x.s>0 ORDER BY x.s DESC, p.upd ASC ${tail}`;
+  }
+  const col = by === 'best' ? 'best' : by === 'lvl' ? 'lvl' : 'net';
+  return `SELECT p.uid,p.name,p.${col} AS v,p.bestn,p.lvl,p.cos,${tag}${extra},(SELECT COUNT(*) FROM museum WHERE owner=p.uid) AS mc FROM players p WHERE p.hide=0 AND p.flag=0 AND p.${col}>0 ORDER BY p.${col} DESC, p.upd ASC ${tail}`;
+}
+
 export default {
   async scheduled(ev, env, ctx) { CTX = ctx; ctx.waitUntil(cron(env).catch(() => {})); },
   async fetch(req, env, ctx) {
@@ -338,24 +350,33 @@ async function handle(req, env) {
     }
 
     if (url.pathname === '/top' && req.method === 'GET') {
-      const col = url.searchParams.get('by') === 'best' ? 'best' : 'net';
-      const rows = (await env.DB.prepare(`SELECT p.uid,p.name,p.${col} AS v,p.bestn,p.lvl,p.cos,(SELECT c.tag FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=p.uid) AS tag FROM players p WHERE p.hide=0 AND p.flag=0 AND p.${col}>0 ORDER BY p.${col} DESC, p.upd ASC LIMIT 50`).all()).results;
-      const mine = await env.DB.prepare(`SELECT ${col} AS v, hide, flag FROM players WHERE uid=?`).bind(uid).first();
+      const by = topBy(url.searchParams.get('by'));
+      const rows = (await env.DB.prepare(topSql(by, 'LIMIT 50')).all()).results;
       let me = null;
-      if (mine && !mine.hide && !mine.flag) {
-        const c = await env.DB.prepare(`SELECT COUNT(*) AS n FROM players WHERE hide=0 AND flag=0 AND ${col}>?`).bind(mine.v).first();
-        me = { rank: c.n + 1, v: mine.v };
+      if (by === 'museum') {
+        const mine = await env.DB.prepare('SELECT p.hide, p.flag, (SELECT COALESCE(SUM(v),0) FROM museum WHERE owner=p.uid) AS v FROM players p WHERE p.uid=?').bind(uid).first();
+        if (mine && !mine.hide && !mine.flag && mine.v > 0) {
+          const c = await env.DB.prepare('SELECT COUNT(*) AS n FROM (SELECT m.owner, SUM(m.v) AS s FROM museum m JOIN players p ON p.uid=m.owner WHERE p.hide=0 AND p.flag=0 GROUP BY m.owner HAVING s>?)').bind(mine.v).first();
+          me = { rank: c.n + 1, v: mine.v };
+        }
+      } else {
+        const col = by === 'best' ? 'best' : by === 'lvl' ? 'lvl' : 'net';
+        const mine = await env.DB.prepare(`SELECT ${col} AS v, hide, flag FROM players WHERE uid=?`).bind(uid).first();
+        if (mine && !mine.hide && !mine.flag) {
+          const c = await env.DB.prepare(`SELECT COUNT(*) AS n FROM players WHERE hide=0 AND flag=0 AND ${col}>?`).bind(mine.v).first();
+          me = { rank: c.n + 1, v: mine.v };
+        }
       }
-      return json({ top: rows.map((r) => ({ name: r.name, v: r.v, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', tag: r.tag || '', me: r.uid === uid })), me });
+      return json({ top: rows.map((r) => ({ name: r.name, v: r.v, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', tag: r.tag || '', mc: r.mc || 0, me: r.uid === uid })), me });
     }
     // ---- профиль другого игрока: по месту в таблице (uid наружу не отдаём) ----
     if (url.pathname === '/player' && req.method === 'GET') {
-      const col = url.searchParams.get('by') === 'best' ? 'best' : 'net';
+      const by = topBy(url.searchParams.get('by'));
       const i = Math.floor(Number(url.searchParams.get('i')));
       if (!(i >= 0 && i < 50)) return json({ error: 'bad' }, 400);
-      const r = await env.DB.prepare(`SELECT p.uid,p.name,p.un,p.net,p.best,p.bestn,p.lvl,p.cos,(SELECT c.tag FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=p.uid) AS tag,(SELECT c.name FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=p.uid) AS cname FROM players p WHERE p.hide=0 AND p.flag=0 AND p.${col}>0 ORDER BY p.${col} DESC, p.upd ASC LIMIT 1 OFFSET ?`).bind(i).first();
+      const r = await env.DB.prepare(topSql(by, 'LIMIT 1 OFFSET ?', true)).bind(i).first();
       if (!r) return json({ error: 'none' }, 404);
-      return json({ rank: i + 1, name: r.name, net: r.net, best: r.best, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', tag: r.tag || '', cname: r.cname || '', un: r.un || '', me: r.uid === uid });
+      return json({ rank: i + 1, name: r.name, net: r.net, best: r.best, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', tag: r.tag || '', cname: r.cname || '', un: r.un || '', mc: r.mc || 0, mv: r.mv || 0, me: r.uid === uid });
     }
     // ---- LIVE-лента: крупные выпадения игроков ----
     if (url.pathname === '/feed' && req.method === 'GET') {
