@@ -31,7 +31,7 @@ let migrated = false;
 async function migrate(db) {   // добавляем новые столбцы сами, SQL вручную выполнять не нужно
   if (migrated) return;
   const have = (await db.prepare('PRAGMA table_info(players)').all()).results.map((r) => r.name);
-  for (const [c, d] of [['flag', 'INTEGER NOT NULL DEFAULT 0'], ['cos', "TEXT NOT NULL DEFAULT ''"], ['allow', 'INTEGER NOT NULL DEFAULT 0']]) {
+  for (const [c, d] of [['flag', 'INTEGER NOT NULL DEFAULT 0'], ['cos', "TEXT NOT NULL DEFAULT ''"], ['allow', 'INTEGER NOT NULL DEFAULT 0'], ['un', "TEXT NOT NULL DEFAULT ''"]]) {
     if (!have.includes(c)) await db.prepare(`ALTER TABLE players ADD COLUMN ${c} ${d}`).run();
   }
   await db.prepare('CREATE TABLE IF NOT EXISTS grants (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, amount INTEGER NOT NULL, claimed INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
@@ -64,6 +64,11 @@ async function hmac(key, data) {
   return new Uint8Array(await crypto.subtle.sign('HMAC', k, enc.encode(data)));
 }
 const hex = (b) => [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+
+// username из подписанных данных Telegram (подделать нельзя), только допустимые символы
+function tgUn(initData) {
+  try { const u = JSON.parse(new URLSearchParams(initData).get('user')); const n = u && u.username; return /^[A-Za-z][A-Za-z0-9_]{3,31}$/.test(n || '') ? n : ''; } catch { return ''; }
+}
 
 // Проверка подписи Telegram: initData нельзя подделать без токена бота.
 async function auth(initData, token) {
@@ -283,6 +288,7 @@ async function handle(req, env) {
         `INSERT INTO players(uid,name,net,best,bestn,lvl,hide,upd,flag,cos,allow) VALUES(?,?,?,?,?,?,?,?,0,?,0)
          ON CONFLICT(uid) DO UPDATE SET name=excluded.name,net=excluded.net,best=excluded.best,bestn=excluded.bestn,lvl=excluded.lvl,hide=excluded.hide,upd=excluded.upd,flag=0,cos=excluded.cos,allow=0`
       ).bind(uid, clean(b.name, 24) || 'Игрок', net, best, clean(b.bestn, 32), lvl, b.hide ? 1 : 0, now, cos).run();
+      try { await env.DB.prepare('UPDATE players SET un=? WHERE uid=?').bind(tgUn(req.headers.get('X-Init-Data')), uid).run(); } catch {}
       return json({ ok: true });
     }
 
@@ -347,9 +353,9 @@ async function handle(req, env) {
       const col = url.searchParams.get('by') === 'best' ? 'best' : 'net';
       const i = Math.floor(Number(url.searchParams.get('i')));
       if (!(i >= 0 && i < 50)) return json({ error: 'bad' }, 400);
-      const r = await env.DB.prepare(`SELECT p.uid,p.name,p.net,p.best,p.bestn,p.lvl,p.cos,(SELECT c.tag FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=p.uid) AS tag,(SELECT c.name FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=p.uid) AS cname FROM players p WHERE p.hide=0 AND p.flag=0 AND p.${col}>0 ORDER BY p.${col} DESC, p.upd ASC LIMIT 1 OFFSET ?`).bind(i).first();
+      const r = await env.DB.prepare(`SELECT p.uid,p.name,p.un,p.net,p.best,p.bestn,p.lvl,p.cos,(SELECT c.tag FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=p.uid) AS tag,(SELECT c.name FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=p.uid) AS cname FROM players p WHERE p.hide=0 AND p.flag=0 AND p.${col}>0 ORDER BY p.${col} DESC, p.upd ASC LIMIT 1 OFFSET ?`).bind(i).first();
       if (!r) return json({ error: 'none' }, 404);
-      return json({ rank: i + 1, name: r.name, net: r.net, best: r.best, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', tag: r.tag || '', cname: r.cname || '', me: r.uid === uid });
+      return json({ rank: i + 1, name: r.name, net: r.net, best: r.best, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', tag: r.tag || '', cname: r.cname || '', un: r.un || '', me: r.uid === uid });
     }
     // ---- LIVE-лента: крупные выпадения игроков ----
     if (url.pathname === '/feed' && req.method === 'GET') {
