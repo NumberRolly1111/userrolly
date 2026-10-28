@@ -128,17 +128,11 @@ function szAnnounce() {
   if (seen && seen !== k) { try { toast(`🏅 Начался сезон ${seasonId() + 1}: «${szName(seasonId())}»`); sfx('level'); } catch (x) {} }
 }
 function evBarUpd() {
-  const g = document.getElementById('tab-game');
-  if (!g) return;
-  let b = document.getElementById('evbar');
-  const e = evNow(), n = e ? null : evNext();
-  if (!e && !n) { if (b) b.remove(); return; }
-  if (!b) { b = document.createElement('div'); b.id = 'evbar'; g.prepend(b); b.onclick = () => tab('season'); }
-  const t = e ? `🎉 ×${evF(e.m)} ${EVK[e.kind][0]} · ещё ${leftT(e.end - Date.now())}`
-    : `⏳ Событие ×${evF(n.m)} ${EVK[n.kind][0]} через ${leftT(n.start - Date.now())}`;
-  b.classList.toggle('off', !e);
+  // плашки события на главном экране больше нет; остаётся только уведомление о старте события
+  const b = document.getElementById('evbar');
+  if (b) b.remove();
+  const e = evNow();
   if (e) evAnnounce(e);
-  if (b.textContent !== t) b.textContent = t;
 }
 
 // ---- карточка в «Бонусах» ----
