@@ -16,7 +16,7 @@ const T=[{n:'Обычный',c:'#9AA5DB',v:390},{n:'Необычный',c:'#27D9
 const BDGP={crown:10000000,dragon:7500000,unicorn:5000000,liberty:4000000,slot:3000000,fire:2000000,rose:1500000,coin:1000000,moai:1000000},TOPP=500000,MULTIP=1000000,MULTIN=5;
 T.forEach((t,i)=>t.s=['Обычн.','Необыч.','Редкий','Эпик','Легенд.','Миф.','Секрет','Эксклюз.'][i]);;
 const MULTI5={l:'×5',min:0,cost:5000};   // мульти-крутка ×5: только за монеты, 5 000 🪙 за каждый ник, режим не выбирается
-const MODES=[{l:'Любой',min:0,cost:3000},{l:'Редкий+',min:2,cost:10500},{l:'Эпик+',min:3,cost:30000}];
+const MODES=[{l:'Любой',min:0,cost:3000},{l:'Редкий+',min:2,cost:10500},{l:'Эпик+',min:3,cost:40000}];
 const WORDS=['storm','night','wolf9','cyber','pixel','ghost','nova7','lunar','ember','frost','raven','blaze','orbit','pulse','zenith','vortex','shadow','dragon','falcon','comet','atlas','magic','royal','alpha','omega','delta','sigma','ninja','panda','tiger','cobalt','cipher','quartz','rocket','silent','golden','crystal','phoenix','nexus','vector','matrix','legend','hunter','pirate','wizard','spirit','shiver','velvet','copper','jungle','sunset','thunder','galaxy','planet','meteor','aurora','eclipse','horizon','cosmos','stellar','nebula','quasar','photon','plasma','neutron','proton','carbon','silver','bronze','marble','granite','onyx','amber','jade','ruby','sapphire','opal','ivory','ebony','crimson','scarlet','violet','indigo','azure','emerald','cinder','smoke','steel','iron','titan','giant','knight','archer','viking','samurai','shogun','ronin','sensei','monk','sage','oracle','druid','shaman','rogue','bandit','outlaw','rebel','phantom','specter','wraith','demon','angel','mystic','arcane','cosmic','atomic','turbo','hyper','super','rapid','swift','stealth','blizzard','glacier','tundra','desert','canyon','island','ocean','river','forest','meadow','garden','harbor','castle','temple','tower','bridge','anchor','compass','lantern','candle','mirror','puzzle','riddle','secret','myth','fable','story','poem','melody','rhythm','echo','whisper','thunder','lightning','tornado','cyclone','volcano','crater','spark','flame','inferno','magma','cobra','viper','python','raptor','condor','eagle','hawk','owl','lynx','puma','jaguar','leopard','cheetah','panther','wolfpack','badger','otter','beaver','bison','moose','walrus','penguin','dolphin','octopus','kraken','hydra','griffin','pegasus','unicorn','goblin','ogre','troll','golem','zombie','vampire','captain','sailor','pilot','shuttle','module','sensor','signal','binary','kernel','socket','packet','buffer','cache','proxy','server','client','script','coder','hacker','gamer','streamer','player','winner','champion','master','expert','genius','sorcerer','alchemy','potion','gemstone','diamond','pearl','coral','reef','wave','tide','breeze','zephyr','mistral','monsoon'].filter(w=>/^[a-z]{5,}$/.test(w));
 const L='abcdefghijklmnopqrstuvwxyz',V='aeiouy',K='bcdfghjklmnprstvwxz',POOL=L+'0123456789_#$%@';
 const R=n=>Math.floor(Math.random()*n),P=a=>a[R(a.length)];
@@ -343,11 +343,27 @@ function taxTick(){
   const b=taxBurn(d);S.taxT=t+d*864e5;if(now-S.taxT>864e5)S.taxT=now;
   if(b>0){S.coins-=b;save();render();try{toast(`🔥 Налог на залежи: сгорело ${fmt(b)} 🪙`)}catch(e){}}else save();
 }
+// ---------- Подсказки при первом заходе и сворачиваемые блоки ----------
+const HINTS={
+  season:['🏅 Что такое сезон','Сезон идёт 3 недели. За крутки, кейсы и апгрейды копятся очки: каждый уровень даёт награду, а платная дорожка даёт ещё больше. Лучшие по очкам получают призы в конце.'],
+  events:['🎉 События','Каждый день в случайный час включается событие на 1 час: ×1,5…×10 к монетным наградам, очкам сезона, опыту или энергии. Плашка на главной покажет, когда оно начнётся.'],
+  craft:['⚗️ Крафт','Выбери три ника любой редкости: они сгорят, а взамен придёт новый. Чем реже выбранные ники, тем выше шанс получить редкий. Стоит небольшая плата.'],
+  museum:['🏛️ Музей','Купи зал и ставь туда ники: они остаются навсегда и приносят монеты за просмотры. Экспонаты видят все игроки.'],
+};
+function hintCard(id){
+  if(S.hints&&S.hints[id])return '';const h=HINTS[id];if(!h)return '';
+  return `<div class="hint"><div><b>${h[0]}</b><small>${h[1]}</small></div><button class="btn sm" data-hint="${id}">Понятно</button></div>`;
+}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-hint]');if(!b)return;
+  if(!S.hints||typeof S.hints!=='object')S.hints={};S.hints[b.dataset.hint]=1;save();const x=b.closest('.hint');if(x)x.remove();try{const t=document.getElementById('tab-bon');if(t)t._h=''}catch(er){}});
+const fo=(id,def)=>((S.fold&&id in S.fold)?S.fold[id]:def)?' open':'';
+document.addEventListener('toggle',e=>{const d=e.target;if(!d||!d.dataset||!d.dataset.fold)return;if(!S.fold||typeof S.fold!=='object')S.fold={};S.fold[d.dataset.fold]=d.open?1:0;save();const t=document.getElementById('tab-bon');if(t)t._h=''},true);
 function taxLine(){
   if(S.coins<=TAX_FREE*.5)return '';
   const left=Math.max(0,864e5-(Date.now()-(+S.taxT||Date.now())));
-  return S.coins>TAX_FREE?`<div class="pcard taxl"><b>🔥 Налог на залежи</b><small>Монеты сверх ${fmt(TAX_FREE)} 🪙 сгорают на 1% в сутки. Ближайшее сгорание через ${leftT(left)}: −${fmt(taxBurn(1))} 🪙. Трать монеты на кейсы, апгрейды и аукцион.</small></div>`
-   :`<div class="pcard taxl"><b>🔥 Налог на залежи</b><small>Если на балансе будет больше ${fmt(TAX_FREE)} 🪙, лишнее начнёт сгорать на 1% в сутки.</small></div>`;
+  const sm=S.coins>TAX_FREE?'сгорает 1% в сутки':'порог '+kfmt(TAX_FREE);
+  return `<details class="pcard fold taxl" data-fold="tax"${fo('tax',0)}><summary class="bhead"><h3>🔥 Налог на залежи</h3><span class="bsub">${sm}</span></summary>`+(S.coins>TAX_FREE?`<small>Монеты сверх ${fmt(TAX_FREE)} 🪙 сгорают на 1% в сутки. Ближайшее сгорание через ${leftT(left)}: −${fmt(taxBurn(1))} 🪙. Трать монеты на кейсы, апгрейды и аукцион.</small>`
+   :`<small>Если на балансе будет больше ${fmt(TAX_FREE)} 🪙, лишнее начнёт сгорать на 1% в сутки.</small>`)+`</details>`;
 }
 setTimeout(()=>{try{taxTick()}catch(e){}},2500);setInterval(()=>{try{taxTick()}catch(e){}},60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)try{taxTick()}catch(e){}});
@@ -1635,7 +1651,7 @@ async function promoUse(raw){
   save();sfx('ach');hap('n','success');toast(`🎟️ Промокод принят: кейс «${c.n}»`+(r.left>=0&&r.left<=20?` · осталось активаций: ${r.left}`:''));render();
   cs.id=c.id;cs.res=null;caseSheet();
 }
-function promoCard(){return `<div class="pcard promo"><div class="bhead"><h3>Промокод</h3><span class="bsub">один раз на игрока</span></div><div class="prow"><input id="promo-in" type="text" placeholder="Введи код" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn main" id="promo-go">Применить</button></div></div>`}
+function promoCard(){return `<details class="pcard fold promo" data-fold="promo"${fo('promo',0)}><summary class="bhead"><h3>Промокод</h3><span class="bsub">один раз на игрока</span></summary><div class="prow"><input id="promo-in" type="text" placeholder="Введи код" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn main" id="promo-go">Применить</button></div></details>`}
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#promo-go')){const i=document.getElementById('promo-in');promoUse(i&&i.value);if(i)i.value=''}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='promo-in'){promoUse(e.target.value);e.target.value=''}});
 
@@ -1756,7 +1772,7 @@ function crSheet(close){
   const oddsH=odds.length?`<div class="crodds">${odds.map(([t,w])=>`<span style="--tc:${T[t].c}"><i></i>${T[t].n} <b>${Math.round(w*100)}%</b></span>`).join('')}</div>`:'<div class="crodds"><small>Выбери три ника — здесь появятся шансы</small></div>';
   const res=cr.res?`<div class="cresc" style="--tc:${T[cr.res.t].c}"><small>${T[cr.res.t].n}</small><b>@${eh(cr.res.name)}</b><span>${fmt(cr.res.price)} 🪙</span></div>`:'';
   sh.innerHTML=`<div class="sbg" data-crx="1"></div><div class="sbox casebox"><div class="shead"><b>⚗️ Крафт</b><button class="btn sm" data-crx="1">✕</button></div>
-  <p class="cdesc3">Выбери три любых ника, можно разной редкости: они сгорят, а взамен придёт случайный ник. Чем выше редкость выбранных, тем выше шанс на лучший результат. Комиссия — ${Math.round(CRF*100)}% от их стоимости.</p>
+  ${hintCard('craft')}<p class="cdesc3">Выбери три любых ника, можно разной редкости: они сгорят, а взамен придёт случайный ник. Чем выше редкость выбранных, тем выше шанс на лучший результат. Комиссия — ${Math.round(CRF*100)}% от их стоимости.</p>
   <div class="crslots">${slots}<i>→</i><div class="crslot out">?</div></div>
   ${oddsH}${res}
   <div class="slist mpick">${list.length?list.map(x=>`<button class="item wpk${cr.sel.includes(x.id)?' crsel':''}" data-cri="${x.id}" style="--tc:${T[x.t].c}"><div><b>@${eh(x.n)}</b><small>${T[x.t].n}</small></div><span>${fmt(val(x.t,x.p,x.n))} 🪙</span></button>`).join(''):'<div class="pcard lbmsg"><small>Нет ников для крафта (легендарные и выше не берём).</small></div>'}</div>
@@ -2182,7 +2198,7 @@ function renderMuseum(){
     ${sel?`<div class="muprev">${plate(sel.n,sel.t)}<span>${fmt(val(sel.t,sel.p,sel.n))} 🪙</span></div>`:''}
     <small class="sum">Ник навсегда уйдёт из коллекции и станет экспонатом. Вернуть или продать его будет нельзя.</small>
     <button class="btn main${mu.armed?' danger':''}" id="mu-ok"${sel?'':' disabled'}>${mu.armed?'Точно поставить навсегда?':'Поставить в музей'}</button></div></div>`:'';
-  setHtml(el,`<div class="ahead"><button class="btn sm" id="mu-back">‹ Помощь</button><h2>Музей</h2></div>${(()=>{try{return hallPlate()}catch(e){return ''}})()}${(()=>{try{return S.hall?museumIncome():''}catch(e){return ''}})()}${body}${sheet}`);
+  setHtml(el,`<div class="ahead"><button class="btn sm" id="mu-back">‹ Помощь</button><h2>Музей</h2></div>${hintCard('museum')}${(()=>{try{return hallPlate()}catch(e){return ''}})()}${(()=>{try{return S.hall?museumIncome():''}catch(e){return ''}})()}${body}${sheet}`);
 }
 $('#tab-museum').onchange=e=>{const s=e.target.closest('[data-musel]');if(!s)return;mu.sel=s.dataset.musel;mu.armed=false;renderMuseum()};
 $('#tab-museum').onclick=async e=>{
@@ -2260,21 +2276,22 @@ function renderBon(){
   if(bon.busy)return;
   ensureQuests();
   const li=loginInfo(),can=S.wheel!==todayK(),el=$('#tab-bon');
-  let h=`<h2>Бонусы</h2>`+(()=>{try{return seasonCard()}catch(e){return ''}})()+(()=>{try{return taxLine()}catch(e){return ''}})();
-  h+=`<div class="pcard"><div class="bhead"><h3>Ежедневный вход</h3><span class="bsub">Серия: ${li.n} ${dw(li.n)}</span></div><div class="lgrid">`+
+  let h=`<h2>Бонусы</h2><h4 class="bgrp">Сезон и события</h4>`+(()=>{try{return seasonCard()}catch(e){return ''}})()+hintCard('events')+(()=>{try{return taxLine()}catch(e){return ''}})()+'<h4 class="bgrp">Каждый день</h4>';
+  h+=`<details class="pcard fold" data-fold="login"${fo('login',1)}><summary class="bhead"><h3>Ежедневный вход</h3><span class="bsub">Серия: ${li.n} ${dw(li.n)}</span></summary><div class="lgrid">`+
     LOGIN.map((r,i)=>{const st=(li.done?i<=li.idx:i<li.idx)?'done':(!li.done&&i===li.idx)?'now':'';
       return `<div class="lcell ${st}${i===6?' big':''}"><small>День ${i+1}</small><b>${kfmt(r)}</b>${st==='done'?'<i>✓</i>':''}</div>`}).join('')+`</div>`+
     (li.done?`<button class="btn" disabled>Получено · следующая через <span data-t="day"></span></button>`
       :`<button class="btn main" data-b="login">Забрать день ${li.idx+1}: ${fmt(Math.round(LOGIN[li.idx]*evC()))} 🪙${evC()>1?' ×'+evF(evC()):''}</button>`)+
-    (!li.done&&!li.alive&&S.login.n>0?`<p class="sum">Серия прервалась, награды идут с первого дня.</p>`:'')+`</div>`;
-  h+=`<div class="pcard"><div class="bhead"><h3>Ежедневная рулетка</h3><span class="bsub">${S.wheelx?`1 в сутки + ${S.wheelx} докупленных`:'1 попытка в сутки'}</span></div>
+    (!li.done&&!li.alive&&S.login.n>0?`<p class="sum">Серия прервалась, награды идут с первого дня.</p>`:'')+`</details>`;
+  h+=`<details class="pcard fold" data-fold="wheel"${fo('wheel',1)}><summary class="bhead"><h3>Ежедневная рулетка</h3><span class="bsub">${S.wheelx?`1 в сутки + ${S.wheelx} докупленных`:'1 попытка в сутки'}</span></summary>
     ${wheelHtml()}<p class="sum" hidden>${fmt(Math.min(...WHEEL.filter(p=>p.k==='c').map(p=>p.v)))} до ${fmt(Math.max(...WHEEL.filter(p=>p.k==='c').map(p=>p.v)))} 🪙 и ники от «${T[Math.min(...WHEEL.filter(p=>p.k==='n').map(p=>p.t))].n}» до «${T[Math.max(...WHEEL.filter(p=>p.k==='n').map(p=>p.t))].n}».</p>`+
     (can?`<button class="spin" data-b="wheel">Крутить рулетку${S.wheelx?` · ещё ×${S.wheelx}`:''}</button>`:S.wheelx?`<button class="spin" data-b="wheel">Крутить ещё · осталось ${S.wheelx}</button>`:`<button class="spin" disabled>Уже крутили · ещё <span data-t="day"></span></button>`)+
-    `<div class="upres">${wresHtml()}</div></div>`;
-  h+=`<div class="pcard"><div class="bhead"><h3>Задания недели</h3><span class="bsub">обновятся через <span data-t="week"></span></span></div>`+
+    `<div class="upres">${wresHtml()}</div></details>`;
+  h+='<h4 class="bgrp">Задания и коды</h4>';
+  h+=`<details class="pcard fold" data-fold="quests"${fo('quests',1)}><summary class="bhead"><h3>Задания недели</h3><span class="bsub">обновятся через <span data-t="week"></span></span></summary>`+
     S.q.list.map((q,i)=>{const d=QDEF[q.id],ok=q.p>=q.n;
       return `<div class="quest${q.got?' got':''}"><div class="qtop"><b>${d.t(q.n)}</b><span>${fmt(d.r)} 🪙</span></div>${d.h?`<small class="qh">${d.h}</small>`:''}<div class="qbar"><i style="width:${q.p/q.n*100}%"></i></div>`+
-      `<div class="qbot"><small>${q.p} / ${q.n}</small>${q.got?'<em>Получено ✓</em>':ok?`<button class="btn main sm" data-b="quest" data-i="${i}">Забрать</button>`:''}</div></div>`}).join('')+`</div>`;
+      `<div class="qbot"><small>${q.p} / ${q.n}</small>${q.got?'<em>Получено ✓</em>':ok?`<button class="btn main sm" data-b="quest" data-i="${i}">Забрать</button>`:''}</div></div>`}).join('')+`</details>`;
   try{h+=promoCard()}catch(e){}
   try{h+=`<div class="bcases">${casesHtml()}</div>`}catch(e){}
   try{h+=`<div class="bcases bmini"><div class="cshd"><b>Мини игры</b><small>2 из 4</small></div><div class="csgrid"><button class="cscard${S.coins<LOTP?' poor':''}" id="lot-open" style="--cc:#FFC933"><span class="csi">🎟️</span><b>Лотерея</b><small>Найди три одинаковых из девяти</small><span class="csp">${fmt(LOTP)} 🪙</span></button><button class="cscard${S.coins<GSC?' poor':''}" id="gs-open" style="--cc:#27D9BD"><span class="csi">🔎</span><b>Угадай юзернейм</b><small>Дороже, дешевле или второй? Успей за 12 секунд</small><span class="csp">${fmt(GSC)} 🪙</span></button>`+[1,2].map(()=>`<div class="cscard soon" style="--cc:#7A7F9A"><span class="csi">🔒</span><b>Скоро…</b><small>Новая мини игра</small><span class="csp">В разработке</span></div>`).join('')+`</div></div>`}catch(e){}
