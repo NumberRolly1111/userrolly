@@ -165,10 +165,11 @@ const STARS_SHOP = {
   pack_pro: { t: 'Набор «Профи»', d: '2 500 000 🪙, 60 ⚡ и ник «Эпик+»', stars: 99, allow: 6e6 },
   pack_gold: { t: 'Золотой набор', d: '7 000 000 🪙, 150 ⚡, ник «Легендарный+» и золотая рамка', stars: 249, allow: 12e6 },
   energy60: { t: 'Энергия ×60', d: '+60 ⚡ в запас', stars: 39 },
-  vip: { t: 'VIP на 30 дней', d: 'Крутка ×5 бесплатно с выбором редкости, энергия быстрее, +10 мест, комиссия ниже, музей +30% и другое', stars: 299 },
+  vip: { t: 'VIP на 30 дней', d: 'Крутка ×5 бесплатно с выбором редкости, энергия за 8 минут, +10 мест, комиссия 2%, музей +30%, подарок каждый день', stars: 299 },
   museum: { t: 'Музей', d: 'Открывает зал музея без монет', stars: 115, once: 1 },
   collector: { t: 'Коллекционер', d: 'Открывает все места в коллекции', stars: 399, once: 1 },
   wheel5: { t: 'Мульти-крутка ×5', d: '5 дополнительных кручений ежедневного колеса', stars: 29 },
+  ceo: { t: 'Эксклюзивный ник @ceo', d: 'Фиолетовый эксклюзивный ник, всего 3 на весь сервер', stars: 2499, once: 1 },
   title_oligarch: { t: 'Титул «Олигарх»', d: 'Эксклюзивный титул, его нельзя купить за монеты', stars: 349, once: 1 },
   custom_nick: { t: 'Именной юзернейм', d: 'Любой свободный юзернейм по твоему выбору через поддержку', stars: 349 },
   pass: { t: 'Платный пропуск', d: 'Платная дорожка наград текущего сезона', stars: 99, season: 1 },
@@ -204,11 +205,28 @@ async function payApply(db, env, uid, id, stars, charge, via) {
   const ins = await db.prepare('INSERT OR IGNORE INTO purchases(uid,item,meta,stars,charge,via,ts,claimed) VALUES(?,?,?,?,?,?,?,?)').bind(uid, id, meta, stars, charge, via, Date.now(), it.topup ? 1 : 0).run();
   if (!ins.meta.changes) return false;
   await acctGet(db, uid);
+  if (id === 'ceo' && !(await ceoSlot(db, uid))) {   // раскуплен в момент оплаты: звёзды возвращаем на баланс
+    await db.prepare('DELETE FROM purchases WHERE charge=?').bind(charge).run();
+    await db.prepare('UPDATE acct SET bal=bal+? WHERE uid=?').bind(stars, uid).run();
+    return false;
+  }
   if (it.topup) await db.prepare('UPDATE acct SET bal=bal+? WHERE uid=?').bind(it.topup, uid).run();
   if (id === 'vip') await db.prepare('UPDATE acct SET vip=MAX(vip,?)+? WHERE uid=?').bind(Date.now(), VIP_MS, uid).run();
   if (id === 'custom_nick' && env) for (const a of String(env.ADMIN_IDS || '').split(',').map((x) => x.trim()).filter(Boolean)) bg(tgSend(env, a, `🛒 Заказ именного юзернейма: игрок ${uid} оплатил ${stars} ⭐. Он напишет в поддержку, выдай ник вручную.`));
   return true;
 }
+async function ceoSlot(db, uid) {   // выдать один из 3 экземпляров @ceo; false, если все разобраны или он уже у игрока
+  const sl = ['ceo', 'ceo2', 'ceo3'];
+  const rows = (await db.prepare(`SELECT item,uid FROM shop WHERE item IN (?,?,?)`).bind(...sl).all()).results;
+  if (rows.some((r) => r.uid === uid)) return true;
+  for (const s of sl) {
+    if (rows.some((r) => r.item === s)) continue;
+    const r = await db.prepare('INSERT OR IGNORE INTO shop(item,uid,ts) VALUES(?,?,?)').bind(s, uid, Date.now()).run();
+    if (r.meta.changes) return true;
+  }
+  return false;
+}
+async function ceoLeft(db) { const n = await db.prepare("SELECT COUNT(*) AS n FROM shop WHERE item IN ('ceo','ceo2','ceo3')").first(); return 3 - n.n; }
 async function payRoutes(url, req, env, uid, json) {
   const p = url.pathname;
   if (!p.startsWith('/pay/')) return null;
@@ -217,7 +235,7 @@ async function payRoutes(url, req, env, uid, json) {
     const a = await acctGet(db, uid), have = {};
     for (const id of Object.keys(STARS_SHOP)) if (await owned(db, uid, id)) have[id] = 1;
     const cat = {}; for (const [id, it] of Object.entries(STARS_SHOP)) cat[id] = it.stars;
-    return json({ bal: a.bal, vip: a.vip, vgift: a.vgift, now: Date.now(), owned: have, cat, topups: TOPUPS });
+    return json({ bal: a.bal, vip: a.vip, vgift: a.vgift, now: Date.now(), ceoLeft: await ceoLeft(db), owned: have, cat, topups: TOPUPS });
   }
   if (req.method !== 'POST') return json({ error: 'not found' }, 404);
   let b; try { b = await req.json(); } catch { b = {}; }
@@ -225,6 +243,7 @@ async function payRoutes(url, req, env, uid, json) {
   if (p === '/pay/invoice') {
     if (!it) return json({ error: 'bad' }, 400);
     if (await owned(db, uid, id)) return json({ error: 'owned' });
+    if (id === 'ceo' && (await ceoLeft(db)) < 1) return json({ error: 'sold' });
     const r = await tgApi(env, 'sendInvoice', {
       chat_id: uid, title: it.t, description: it.d, payload: id + ':' + uid, currency: 'XTR',
       prices: [{ label: it.t, amount: it.stars }],
@@ -234,6 +253,7 @@ async function payRoutes(url, req, env, uid, json) {
   if (p === '/pay/balance') {
     if (!it || it.topup) return json({ error: 'bad' }, 400);
     if (await owned(db, uid, id)) return json({ error: 'owned' });
+    if (id === 'ceo' && (await ceoLeft(db)) < 1) return json({ error: 'sold' });
     await acctGet(db, uid);
     const d = await db.prepare('UPDATE acct SET bal=bal-? WHERE uid=? AND bal>=?').bind(it.stars, uid, it.stars).run();
     if (!d.meta.changes) return json({ error: 'poor' });
@@ -276,6 +296,7 @@ async function tgHook(req, env, json) {
     let ok = !!it && q.currency === 'XTR' && q.total_amount === it.stars && String(q.from.id) === who;
     let msg = 'Товар недоступен';
     if (ok && await owned(db, String(q.from.id), id)) { ok = false; msg = 'Это уже куплено'; }
+    if (ok && id === 'ceo' && (await ceoLeft(db)) < 1) { ok = false; msg = 'Все экземпляры раскуплены'; }
     await tgApi(env, 'answerPreCheckoutQuery', ok ? { pre_checkout_query_id: q.id, ok: true } : { pre_checkout_query_id: q.id, ok: false, error_message: msg });
     return json({ ok: true });
   }
@@ -809,12 +830,12 @@ async function marketRoutes(url, req, env, uid, json) {
     const lot = await db.prepare('SELECT top FROM market WHERE id=? AND seller=? AND status=0').bind(id, uid).first();
     if (!lot) return json({ error: 'gone' }, 404);
     if (lot.top > Date.now()) return json({ error: 'already' }, 409);
-    const me = await db.prepare('SELECT net FROM players WHERE uid=?').bind(uid).first();
-    if (!me || me.net < MARKET_TOP_PRICE) return json({ error: 'poor' }, 400);
+    const cr = await db.prepare("UPDATE purchases SET meta='used' WHERE id=(SELECT id FROM purchases WHERE uid=? AND item='top' AND meta<>'used' ORDER BY id LIMIT 1)").bind(uid).run();
+    if (!cr.meta.changes) return json({ error: 'nopaid' }, 400);   // «лот в топ» продаётся только за звёзды
     const until = Date.now() + 24 * 3600000;
     const r = await db.prepare('UPDATE market SET top=? WHERE id=? AND seller=? AND status=0').bind(until, id, uid).run();
     if (!r.meta.changes) return json({ error: 'gone' }, 404);
-    return json({ ok: true, price: MARKET_TOP_PRICE, until });
+    return json({ ok: true, price: 0, until });
   }
 
   if (p === '/market/list') {
@@ -941,6 +962,7 @@ async function auctionRoutes(url, req, env, uid, json) {
   }
   if (p === '/shop/buy' && req.method === 'POST') {
     let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
+    return json({ error: 'stars' }, 400);   // @ceo продаётся только за звёзды (/pay/*)
     const item = String(b.item || ''), price = EXCL[item];
     if (!price) return json({ error: 'bad' }, 400);
     const sl = slotsOf(item), rows = (await db.prepare(`SELECT item,uid FROM shop WHERE item IN (${sl.map(() => '?').join(',')})`).bind(...sl).all()).results;
