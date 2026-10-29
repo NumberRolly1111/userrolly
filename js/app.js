@@ -33,7 +33,7 @@ const MAX0=10,MAXSLOTS=30;   // стартовый и предельный ра�
 let MAX=MAX0;                // текущий размер коллекции (растёт за монеты, хранится в S.slots)
 const slotPrice=n=>Math.round(75000*Math.pow(1.35,n-MAX0)/1000)*1000;   // цена следующего места при n местах
 const EN_CAP=15,EN_INT=15*60*1000;
-const V5_DAY=3;   // VIP: сколько бесплатных кручений ×5 в сутки
+const V5_DAY=15;   // VIP: сколько бесплатных кручений ×5 в сутки
 var vipOn=()=>(+S.vip||0)>Date.now(),vipX=()=>vipOn()?10:0,enInt=()=>vipOn()?8*60*1000:EN_INT,setMax=()=>{MAX=(S.slots||MAX0)+vipX()};
 var v5Left=()=>{const d=todayK();if(!S.v5||S.v5.d!==d)S.v5={d,n:0};return Math.max(0,V5_DAY-S.v5.n)};   // запас энергии и время накопления одной единицы (15 минут)
 const AUTO=['выключена','ниже необычного','ниже редкого','ниже эпического','ниже легендарного','ниже мифического'];
