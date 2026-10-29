@@ -597,7 +597,7 @@ function sfxPlay(name,a){
 document.addEventListener('pointerdown',e=>{const b=e.target.closest&&e.target.closest('button,label.item');if(b&&!b.disabled&&b.id!=='spin')sfx('tap')},true);
 
 // ---------- Эпичная сцена на весь экран: мифический (t=5) и секретный (t=6) ----------
-function epic(r){return window.epic2?window.epic2(r):epicOld(r)}   // новые canvas-сцены лежат в js/epic.js
+function epic(r){return epicOld(r)}   // вернули первые CSS-анимации секретки и мифика (canvas-сцены из js/epic.js отключены)
 function epicOld(r){
   return new Promise(res=>{
     if(reduce){res();return}
@@ -1954,7 +1954,7 @@ function renderMarket(){
     ((mk.lots||[]).length?mk.lots.map(mLot).join(''):'<div class="pcard lbmsg"><small>Лотов нет. Выстави свой ник во вкладке «Мои лоты».</small></div>');
   else{
     const m=mk.my||{active:[],sold:[],fee:.05,max:10},tot=m.sold.reduce((s,x)=>s+x.get,0);
-    body=(S.toppick?`<div class="pcard msold toppick"><div><b>🔝 Выбери лот для топа</b><small>Стоит ${fmt(TOPP)} 🪙 · лот будет первым на рынке 24 часа</small></div><button class="btn sm" id="m-topx">Отмена</button></div>`:'')+`<button class="btn main cwide" id="m-new">＋ Выставить ник</button>`+
+    body=(S.toppick?`<div class="pcard msold toppick"><div><b>🔝 Выбери лот для топа</b><small>Оплачено ⭐ · лот будет первым на рынке 24 часа</small></div><button class="btn sm" id="m-topx">Отмена</button></div>`:'')+`<button class="btn main cwide" id="m-new">＋ Выставить ник</button>${S.toppick?'':'<button class="btn cwide" data-stgo="top">🔝 Лот в топ · ⭐ 19</button>'}`+
     (m.sold.length?`<div class="pcard msold"><div><b>Продано: ${m.sold.length}</b><small>${m.sold.map(x=>'@'+escH(x.name)).slice(0,3).join(', ')}${m.sold.length>3?'…':''}</small></div><button class="btn main" id="m-claim">Забрать +${fmt(tot)} 🪙</button></div>`:'')+
     `<h3 class="ch3">Мои лоты · ${m.active.length} из ${m.max}</h3>`+
     (m.active.length?m.active.map(x=>{const n=nickVal(x.name);return `<div class="mlot" style="--tc:${T[n.t].c}"><div class="mi"><b>@${escH(x.name)}</b><small>${T[n.t].n}</small></div><div class="mpr"><b>${fmt(x.price)} 🪙</b>${S.toppick?(x.top>(m.now||Date.now())?'<span class="cchip ok">🔝 уже в топе</span>':`<button class="btn main sm" data-top="${x.id}">В топ</button>`):(x.top>(m.now||Date.now())?'<span class="cchip ok">🔝 в топе</span>':'')+`<button class="btn sm" data-cancel="${x.id}">Снять</button>`}</div></div>`}).join(''):'<div class="pcard lbmsg"><small>Ты пока ничего не выставил.</small></div>')+
@@ -1981,8 +1981,8 @@ $('#tab-market').onclick=async e=>{
   if(t.closest('[data-mclose]')){mk.sheet=false;return renderMarket()}
   if(t.closest('#m-topx')){S.toppick=0;save();return renderMarket()}
   {const tp=t.closest('[data-top]');if(tp){
-    if(!S.topfree&&S.coins<TOPP){toast('Не хватает монет');return}
-    const r=await mAct('/market/top',{id:+tp.dataset.top},()=>{if(S.topfree>0)S.topfree--;else S.coins-=TOPP;S.toppick=0;save();render();try{sfx('coins')}catch(x){}toast('Лот в топе на 24 часа')});
+    if(!S.topfree){toast('Лот в топ продаётся за ⭐: Магазин → Звёзды');return}
+    const r=await mAct('/market/top',{id:+tp.dataset.top},()=>{if(S.topfree>0)S.topfree--;S.toppick=S.topfree>0?1:0;save();render();try{sfx('coins')}catch(x){}toast('Лот в топе на 24 часа')});
     return renderMarket()}}
   if(t.closest('#m-new')){mk.sheet=true;mk.sel='';mk.price='';return renderMarket()}
   const kk=t.closest('[data-mk]');if(kk){const it=S.items.find(i=>i.id===mk.sel);if(it){mk.price=String(Math.round(val(it.t,it.p,it.n)*+kk.dataset.mk));renderMarket()}return}
@@ -2491,7 +2491,6 @@ function renderShop(){
   }
   else body=!sh.hist?'<div class="pcard lbmsg"><small>Загружаю…</small></div>':(sh.hist.length?sh.hist.map(h=>{const n=nickVal(h.name),sold=h.kind==='sold',won=h.kind==='won';return `<div class="mlot hrow2" style="--tc:${T[n.t].c}"><div class="mi"><b>${sold?'💰 Продано':won?'🏆 Выиграно':'↩ Без ставок'} · @${escH(h.name)}</b><small>${T[n.t].n}${h.kind==='unsold'?'':` · ${sold?'покупатель':'продавец'}: ${escH(h.who)}`}</small><small>${fmtDate(h.ts)}</small></div><div class="mpr">${h.kind==='unsold'?'<small>ник вернулся</small>':`<b class="${sold?'hplus':'hminus'}">${sold?'+':'−'}${fmt(sold?h.get:h.price)} 🪙</b>${sold?`<small>цена ${fmt(h.price)}</small>`:''}`}</div></div>`}).join(''):'<div class="pcard lbmsg"><small>Завершённых аукционов пока нет.</small></div>');
   el.innerHTML=`${subTabs('shop',AUCP?'auction':'shop')}
-  ${AUCP?'':`<div class="seg"><button data-shtab="stars" aria-pressed="${sh.tab==='stars'}">⭐ Звёзды</button><button data-shtab="ex" aria-pressed="${sh.tab==='ex'}">🪙 Монеты</button></div>`}
   ${AUCP?`<div class="seg three"><button data-shtab="auc" aria-pressed="${sh.tab==='auc'}">Лоты</button><button data-shtab="my" aria-pressed="${sh.tab==='my'}">Мои${sh.my&&sh.my.lead&&sh.my.lead.length?' •':''}</button><button data-shtab="hist" aria-pressed="${sh.tab==='hist'}">История</button></div>`:''}${body}${shSheet()}${sh.tab==='stars'?stSheet():''}`;
   shAfter(keepBid,keepQ);
 }
@@ -2565,6 +2564,7 @@ var STC={
   pack_gold:['💎','Золотой набор','7 000 000 🪙 · 150 ⚡ · ник «Легендарный+» · золотая рамка',249,0],
   energy60:['⚡','Энергия ×60','+60 ⚡ в запас, копится даже сверх лимита',39,0],
   vip:['👑','VIP на 30 дней','Крутка ×5 бесплатно, энергия быстрее, +10 мест, комиссия 2%, музей +30%, подарок каждый день',299,0],
+  ceo:['🟣','Эксклюзивный ник @ceo','Фиолетовый эксклюзивный ник, редкость выше секретных. Всего 3 на весь сервер',2499,1],
   title_oligarch:['🏆','Титул «Олигарх»','Эксклюзивный титул, за монеты его не купить',349,1],
   collector:['🗂️','Коллекционер','Открывает все 30 мест в коллекции',399,1],
   museum:['🏛️','Музей','Свой зал в музее без монет',115,1],
@@ -2573,11 +2573,11 @@ var STC={
   pass:['🎫','Платный пропуск','Платная дорожка наград текущего сезона',99,0],
   custom_nick:['✏️','Именной юзернейм','Любой свободный юзернейм по твоему выбору. Выдаёт поддержка @ddwwks',349,0]
 };
-var STG=[['Наборы',['starter','pack_pro','pack_gold','energy60']],['Статус',['vip','title_oligarch','collector','museum']],['Услуги',['wheel5','top','pass','custom_nick']]];
+var STG=[['Наборы',['starter','pack_pro','pack_gold','energy60']],['Статус',['ceo','title_oligarch','collector','museum']],['Услуги',['wheel5','top','pass','custom_nick']]];
 var STUP=[25,50,100,150,250,500,750,1000,1500];
-var VIPPERK=['Крутка ×5 бесплатно с выбором редкости (до '+V5_DAY+' в сутки)','Энергия восстанавливается за 8 минут вместо 15','+10 мест в коллекции','Комиссия рынка и аукциона 2% вместо 5%','Доход музея +30%','Подарок каждый день: 100 000 🪙 и 5 ⚡','Значок 👑 VIP в профиле'];
+var VIPPERK=['Крутка ×5 бесплатно с выбором редкости (до '+V5_DAY+' в сутки), обычным игрокам ×5 недоступна','Энергия восстанавливается за 8 минут вместо 15','+10 мест в коллекции','Комиссия рынка и аукциона 2% вместо 5%','Доход музея +30%','Подарок каждый день: 100 000 🪙 и 5 ⚡','Значок 👑 VIP в профиле'];
 var stPr=id=>(st.cat&&st.cat[id])||STC[id][3];
-var stHave=id=>{const c=STC[id];if(!c)return false;if(id==='pass'){try{return !!(st.owned.pass||szState().paid)}catch(e){return !!st.owned.pass}}return !!(c[4]&&(S.sx[id]||st.owned[id]))};
+var stHave=id=>{const c=STC[id];if(!c)return false;if(id==='ceo')return !!(S.exc.ceo||st.owned.ceo||(sh.ex&&sh.ex.ceo&&sh.ex.ceo.mine));if(id==='pass'){try{return !!(st.owned.pass||szState().paid)}catch(e){return !!st.owned.pass}}return !!(c[4]&&(S.sx[id]||st.owned[id]))};
 function goStar(id){try{sessionStorage.setItem('nr_st',id)}catch(e){}if(PAGE==='shop'){sh.tab='stars';st.sel=id;renderShop()}else tab('shop')}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-stgo]');if(b)goStar(b.dataset.stgo)});
 function stHtml(){
@@ -2587,10 +2587,11 @@ function stHtml(){
   if(st.msg==='nochat')h+=`<div class="pcard lbmsg"><b>Бот не смог отправить счёт</b><small>Открой чат с ботом, нажми «Старт» и повтори покупку.</small><button class="btn main" id="st-chat">Открыть чат</button></div>`;
   if(st.sent)h+=`<div class="pcard lbmsg"><b>Счёт отправлен в чат с ботом</b><small>Оплати его в Telegram и вернись в игру: покупка придёт сама через несколько секунд.</small><button class="btn main" id="st-chat">Открыть чат с ботом</button></div>`;
   if(S.sx.custom>0)h+=`<div class="pcard lbmsg"><b>✏️ Именной юзернейм оплачен</b><small>Напиши в поддержку @ddwwks и назови желаемый юзернейм. Это можно сделать сейчас.</small><button class="btn main" id="st-sup">Написать в поддержку</button><button class="btn" id="st-done">Ник выдали, скрыть</button></div>`;
-  if(vip)h+=`<div class="pcard stvip"><b>👑 VIP активен</b><small>до ${fmtDate(S.vip)}. Продли покупкой ниже, дни добавятся к текущим.</small></div>`;
+  h+=`<div class="pcard vipbig"><div class="vbh"><span class="vbi">👑</span><div><b>VIP на 30 дней</b><small>${vip?'Активен до '+fmtDate(S.vip)+'. Продли, дни добавятся.':'Все преимущества сразу'}</small></div></div><ul class="stperk">${VIPPERK.map(x=>`<li>${x}</li>`).join('')}</ul><button class="btn main cwide" data-st="vip">${vip?'Продлить':'Купить'} · ⭐ ${stPr('vip')}</button></div>`;
   for(const [g,ids] of STG){
     h+=`<h3 class="ch3">${g}</h3>`+ids.map(id=>{const c=STC[id],own=stHave(id);
-      return `<div class="pcard svc stit${own?' own':''}"${own?'':` data-st="${id}"`}><span class="svi">${c[0]}</span><div><b>${c[1]}</b><small>${c[2]}</small></div><button class="btn ${own?'':'main '}sm"${own?' disabled':` data-st="${id}"`}>${own?'Куплено ✓':'⭐ '+stPr(id)}</button></div>`}).join('');
+      const out=id==='ceo'&&!own&&sh.ex&&sh.ex.ceo&&sh.ex.ceo.left<1,ds=id==='ceo'&&sh.ex&&sh.ex.ceo?c[2]+` · осталось ${sh.ex.ceo.left} из ${sh.ex.ceo.total}`:c[2],dis=own||out;
+      return `<div class="pcard svc stit${dis?' own':''}"${dis?'':` data-st="${id}"`}><span class="svi">${c[0]}</span><div><b>${c[1]}</b><small>${ds}</small></div><button class="btn ${dis?'':'main '}sm"${dis?' disabled':` data-st="${id}"`}>${own?'Куплено ✓':out?'Раскуплен':'⭐ '+fmt(stPr(id))}</button></div>`}).join('');
   }
   return h+`<small class="sum">Оплата идёт через Telegram Stars. Звёзды покупаются в самом Telegram, их можно потратить на баланс игры или на любой товар напрямую.</small>`;
 }
@@ -2616,6 +2617,7 @@ function stOwned(){   // восстановить разовые покупки,
   if(o.collector){S.sx.collector=1;if(S.slots<MAXSLOTS)S.slots=MAXSLOTS}
   if(o.pass){try{szState().paid=1}catch(e){}}
   if(o.starter)S.sx.starter=1;
+  if(o.ceo){S.exc.ceo=1;if(!S.items.some(i=>i.n==='ceo'))addItem('ceo',7,0)}
 }
 function stGive(min){const c=roll({min,cost:0});if(S.items.length<MAX){addItem(c.name,c.t,c.p);return `ник @${c.name}`}const v=val(c.t,c.p,c.name);S.coins=Math.min(CAP,S.coins+v);return `ник @${c.name} продан за ${fmt(v)} 🪙 (коллекция полна)`}
 function stApply(r,out){
@@ -2626,6 +2628,7 @@ function stApply(r,out){
   else if(id==='pack_gold')pk(7e6,150,4,1);
   else if(id==='energy60'){S.en+=60;out.push('+60 ⚡')}
   else if(id==='vip'){out.push('👑 VIP включён')}
+  else if(id==='ceo'){S.exc.ceo=1;if(!S.items.some(i=>i.n==='ceo'))addItem('ceo',7,0);out.push('эксклюзивный ник @ceo')}
   else if(id==='museum'){S.sx.museum=1;S.hall=1;out.push('🏛️ зал музея открыт')}
   else if(id==='collector'){S.sx.collector=1;S.slots=MAXSLOTS;out.push('все места в коллекции')}
   else if(id==='wheel5'){S.wheelx+=5;out.push('+5 кручений колеса')}
