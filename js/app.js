@@ -1281,8 +1281,8 @@ function renderProf(){
     <button class="ptile" id="ach-open"><span class="pti">🎖️</span><b>Достижения</b><small>${ACH.filter(achOk).length} из ${ACH.length}${achReady().length?' · наград: '+achReady().length:''}</small><span class="ptbar"><i style="width:${ACH.filter(achOk).length/ACH.length*100}%"></i></span></button>
     <button class="ptile" id="cos-open"><span class="pti">✨</span><b>Оформление</b><small>титулы, рамки, ник, тема · куплено ${S.cown.length}</small></button>
     <button class="ptile" id="guide-open"><span class="pti">📖</span><b>Как играть</b><small>видео и 8 шагов</small></button>
-    <button class="ptile" id="chat-open"><span class="pti">💬</span><b>Чат игроков</b><small>общий чат игры</small></button>
-    <button class="ptile wide" id="hist-open"><span class="pti">🧾</span><div><b>История покупок</b><small>что и когда куплено за звёзды</small></div></button>
+    <button class="ptile" id="chat-open"><span class="pti">💬</span><b>Чат игроков</b><small>общий и личные</small></button>
+    <button class="ptile" id="hist-open"><span class="pti">🧾</span><b>Покупки</b><small>история за звёзды</small></button>
     <button class="ptile" data-craft="1"><span class="pti">⚗️</span><b>Крафт</b><small>3 ника → 1 новый</small></button>
   </div>
   <div class="pcard inv invx"><div><b>Позвать друзей</b><small>За каждого друга: +${fmt(REF_C)} 🪙 и +${REF_E} ⚡ · приглашено ${S.refc} из ${REF_MAX}</small></div><div class="invb">${lb.refn>0?`<button class="btn main" id="ref-claim">Забрать +${fmt(lb.refn*REF_C)} 🪙</button>`:''}<button class="btn${lb.refn>0?'':' main'}" id="invite">Позвать</button></div></div>
