@@ -2439,11 +2439,11 @@ document.addEventListener('pointerdown',()=>{if(S.mus&&(!musEl||musEl.paused))mu
 document.addEventListener('visibilitychange',()=>{if(document.hidden){try{musEl&&musEl.pause()}catch(e){}}else musApply()});
 addEventListener('pagehide',()=>{try{if(musEl&&S.mus)sessionStorage.setItem('nr_mt',JSON.stringify({k:S.mus,t:musEl.currentTime}))}catch(e){}});
 // ---------- Мини-игра «Поиск слов»: 10×10, слова из списка, колесо множителей ----------
-var WSC=50000,WS_DAY=10,WS_RW=600,WS_N=10;
+var WSC=0,WS_DAY=10,WS_RW=600,WS_N=10;
 var WS_WORDS=['НИК','ЮЗЕР','КЛАН','РИСК','КЕЙС','ЛОТ','БОНУС','КРАФТ','МУЗЕЙ','РЫНОК','УДАЧА','ТЫКВА','ЗВЕЗДА','КОРОНА','СЕЗОН','МИФИК','ЛУНА','МОНЕТА','КОЛЛЕКЦИЯ','РУЛЕТКА','АПГРЕЙД','АУКЦИОН','РЕЙТИНГ','ЭНЕРГИЯ','ЛЕГЕНДА','ПРИЗРАК','ВЕДЬМА','ТРОФЕЙ','ДЖЕКПОТ','ПОДАРОК','ТЕЛЕГРАМ','ЛОТЕРЕЯ','ВИТРИНА','ПРОФИЛЬ','СЕКРЕТКА','ЮЗЕРНЕЙМ','ПРОМОКОД','ТОРГОВЛЯ','ЧЕЛЛЕНДЖ','МНОЖИТЕЛЬ','ДОСТИЖЕНИЕ','БАЛАНС','ТИТУЛ','РАМКА','ЭПИК','ТЕМА','ОПЫТ','ПАМЯТЬ','ЗАЛ','КАРТА'];
 var WS_SL=[1.2,1.2,1.5,1.2,2,1.2,1.5,3,1.2,1.5,1.2,2,1.2,1.5,5,1.2,2,1.5,1.2,10];   // 20 долей колеса: шансы 45% ×1,2 · 25% ×1,5 · 15% ×2 · 5% ×3 · 5% ×5 · 5% ×10
 var WS_COL=['#FF6B4A','#FFB13D','#36E07C','#2E8BFF','#B05BFF','#FF5FA2'];
-var WS_DIR=[[0,1],[1,0],[1,1],[-1,1],[0,-1],[-1,0],[-1,-1],[1,-1]],ws={sel:null,spin:false};
+var WS_DIR=[[0,1],[1,0],[1,1],[-1,1]],ws={sel:null,spin:false};
 function wsMake(){
   const pool=WS_WORDS.filter(w=>w.length>=3&&w.length<=10),cnt=3+R(8);
   const pick=[...pool].sort(()=>Math.random()-.5).slice(0,cnt).sort((a,b)=>b.length-a.length);
@@ -2451,7 +2451,7 @@ function wsMake(){
   for(const w of pick){
     let ok=false;
     for(let t=0;t<300&&!ok;t++){
-      const d=WS_DIR[R(8)],r0=R(WS_N),c0=R(WS_N),r1=r0+d[0]*(w.length-1),c1=c0+d[1]*(w.length-1);
+      const d=WS_DIR[R(WS_DIR.length)],r0=R(WS_N),c0=R(WS_N),r1=r0+d[0]*(w.length-1),c1=c0+d[1]*(w.length-1);
       if(r1<0||r1>=WS_N||c1<0||c1>=WS_N)continue;
       let fit=true;for(let i=0;i<w.length;i++){const ch=g[r0+d[0]*i][c0+d[1]*i];if(ch&&ch!==w[i]){fit=false;break}}
       if(!fit)continue;
@@ -2468,8 +2468,7 @@ function wsLeft(){const k=todayK();if(!S.wsd||S.wsd.d!==k)S.wsd={d:k,n:0};return
 function wsStart(){
   if(S.ws&&S.ws.ph==='play'||S.ws&&S.ws.ph==='wheel')return;
   if(!wsLeft())return toast('На сегодня игры закончились, приходи завтра');
-  if(S.coins<WSC)return toast('Не хватает монет');
-  S.coins-=WSC;S.wsd.n++;S.ws=wsMake();save();setCoins();sfx('tap');ws.sel=null;wsSheet();
+  S.wsd.n++;S.ws=wsMake();save();setCoins();sfx('tap');ws.sel=null;wsSheet();
 }
 function wsCells(a,b){
   const dr=b[0]-a[0],dc=b[1]-a[1];if(!dr&&!dc)return [a];
@@ -2492,7 +2491,7 @@ function wsTry(cells){
   save();return true;
 }
 function wsGiveUp(){
-  ask('Сдаться? Ставка и все найденные награды сгорят.',()=>{S.ws=null;save();wsSheet();toast('Игра окончена: всё сгорело')});
+  ask('Сдаться? Все найденные награды сгорят.',()=>{S.ws=null;save();wsSheet();toast('Игра окончена: всё сгорело')});
 }
 function wsSpin(){
   const G=S.ws;if(!G||G.ph!=='wheel'||ws.spin)return;
@@ -2529,20 +2528,20 @@ function wsSheet(close){
   const G=S.ws,left=wsLeft(),head=`<div class="shead"><b>🔤 Поиск слов</b><button class="btn sm" data-wsx="1">✕</button></div>`;
   let body='';
   if(!G||G.ph==='none'){
-    body=`<p class="sum">Найди все слова из списка в сетке 10×10. Слова идут в любую сторону, в том числе по диагонали и задом наперёд: проведи пальцем от первой буквы до последней. За каждое слово награда, а когда найдёшь все, крутится колесо с множителем <b>×1,2 … ×10</b> на всю награду. Можно сдаться, но тогда всё сгорает.</p>
-      <div class="wsinfo"><div><b>${fmt(WSC)} 🪙</b><small>вход</small></div><div><b>3–10</b><small>слов</small></div><div><b>×1,2–10</b><small>колесо</small></div><div><b>${left}/${WS_DAY}</b><small>игр сегодня</small></div></div>
-      <button class="btn main cwide" id="ws-go"${S.coins<WSC||!left?' disabled':''}>${!left?'На сегодня игры закончились':S.coins<WSC?'Не хватает '+fmt(WSC-S.coins)+' 🪙':'Играть за '+fmt(WSC)+' 🪙'}</button>`;
+    body=`<p class="sum">Найди все слова из списка в сетке 10×10. Слова читаются как обычно: слева направо, сверху вниз или по диагонали вверх-вправо и вниз-вправо. Проведи пальцем от первой буквы до последней. За каждое слово награда, а когда найдёшь все, крутится колесо с множителем <b>×1,2 … ×10</b> на всю награду. Игра бесплатная. Можно сдаться, но тогда найденное сгорает.</p>
+      <div class="wsinfo"><div><b>0 🪙</b><small>вход</small></div><div><b>3–10</b><small>слов</small></div><div><b>×1,2–10</b><small>колесо</small></div><div><b>${left}/${WS_DAY}</b><small>игр сегодня</small></div></div>
+      <button class="btn main cwide" id="ws-go"${!left?' disabled':''}>${!left?'На сегодня игры закончились':'Играть бесплатно'}</button>`;
   }else{
     const fw=new Set(G.found.map(f=>f.w));
     const list=`<div class="wsw">${G.words.map(w=>`<span class="${fw.has(w)?'ok':''}">${w}</span>`).join('')}</div>`;
     const pot=`<div class="wspot"><span>Награда: <b>${fmt(G.pot)} 🪙</b></span><span>${G.found.length} из ${G.words.length}</span></div>`;
     const foundMap={};G.found.forEach((f,i)=>f.cells.forEach(([r,c])=>foundMap[r+','+c]=i%6));
     const grid=`<div class="wsg">${G.g.map((row,r)=>[...row].map((ch,c)=>{const k=foundMap[r+','+c];return `<div class="wsc${k!=null?' f f'+k:''}" data-r="${r}" data-c="${c}">${ch}</div>`}).join('')).join('')}</div>`;
-    if(G.ph==='play')body=list+pot+grid+`<button class="btn cwide wsgive" id="ws-give">Сдаться (всё сгорит)</button>`;
+    if(G.ph==='play')body=list+pot+grid+`<button class="btn cwide wsgive" id="ws-give">Сдаться (найденное сгорит)</button>`;
     else{
       const wheel=`<div class="wswrap"><div class="wsptr">▼</div><div class="wswh" id="wswh" style="background:conic-gradient(${WS_SL.map((m,i)=>`${WS_COL[(m===1.2?i%2:m===1.5?2+i%2:m===2?4:m===3?5:m===5?3:1)%6]} ${i*18}deg ${(i+1)*18}deg`).join(',')});${G.ph==='done'?`transform:rotate(${360*6+(360-(G.idx*18+9))}deg)`:''}">${WS_SL.map((m,i)=>`<span style="transform:rotate(${i*18+9}deg) translateY(-112px)">${String(m).replace('.',',')}</span>`).join('')}</div></div>`;
       body=(G.ph==='wheel'?`<h3 class="wsh3">🎉 Все слова найдены!</h3><p class="sum">Награда за слова: <b>${fmt(G.pot)} 🪙</b>. Крути колесо: множитель умножит её.</p>${wheel}<button class="btn main cwide" id="ws-spin">Крутить колесо</button>`
-        :`<h3 class="wsh3">Множитель ×${String(G.mult).replace('.',',')}</h3>${wheel}<div class="pcard lbmsg"><b>+${fmt(G.pay)} 🪙</b><small>${fmt(G.pot)} × ${String(G.mult).replace('.',',')}${G.pay>WSC?' · в плюсе':' · вход '+fmt(WSC)}</small></div><button class="btn main cwide" id="ws-again"${S.coins<WSC||!left?' disabled':''}>${!left?'На сегодня всё':'Сыграть ещё · '+fmt(WSC)+' 🪙'}</button>`);
+        :`<h3 class="wsh3">Множитель ×${String(G.mult).replace('.',',')}</h3>${wheel}<div class="pcard lbmsg"><b>+${fmt(G.pay)} 🪙</b><small>${fmt(G.pot)} × ${String(G.mult).replace('.',',')}</small></div><button class="btn main cwide" id="ws-again"${!left?' disabled':''}>${!left?'На сегодня всё':'Сыграть ещё'}</button>`);
     }
   }
   sh.innerHTML=`<div class="sbg" data-wsx="1"></div><div class="sbox wsbox">${head}${body}</div>`;
@@ -2690,7 +2689,7 @@ function renderBon(){
       `<div class="qbot"><small>${q.p} / ${q.n}</small>${q.got?'<em>Получено ✓</em>':ok?`<button class="btn main sm" data-b="quest" data-i="${i}">Забрать</button>`:''}</div></div>`}).join('')+`</details>`;
   try{h+=promoCard()}catch(e){}
   try{h+=`<div class="bcases">${casesHtml()}</div>`}catch(e){}
-  try{h+=`<div class="bcases bmini"><div class="cshd"><b>Мини игры</b><small>3 из 4</small></div><div class="csgrid"><button class="cscard${S.coins<LOTP?' poor':''}" id="lot-open" style="--cc:#FFC933"><span class="csi">🎟️</span><b>Лотерея</b><small>Найди три одинаковых из девяти</small><span class="csp">${fmt(LOTP)} 🪙</span></button><button class="cscard${S.coins<GSC?' poor':''}" id="gs-open" style="--cc:#27D9BD"><span class="csi">🔎</span><b>Угадай юзернейм</b><small>Дороже, дешевле или второй? Успей за 12 секунд</small><span class="csp">${fmt(GSC)} 🪙</span></button>`+`<button class="cscard${S.coins<WSC?' poor':''}" id="ws-open" style="--cc:#FF8A3D"><span class="csi">🔤</span><b>Поиск слов</b><small>Найди слова в сетке 10×10, в конце колесо ×1,2–10</small><span class="csp">${fmt(WSC)} 🪙</span></button>`+[1].map(()=>`<div class="cscard soon" style="--cc:#7A7F9A"><span class="csi">🔒</span><b>Скоро…</b><small>Новая мини игра</small><span class="csp">В разработке</span></div>`).join('')+`</div></div>`}catch(e){}
+  try{h+=`<div class="bcases bmini"><div class="cshd"><b>Мини игры</b><small>3 из 4</small></div><div class="csgrid"><button class="cscard${S.coins<LOTP?' poor':''}" id="lot-open" style="--cc:#FFC933"><span class="csi">🎟️</span><b>Лотерея</b><small>Найди три одинаковых из девяти</small><span class="csp">${fmt(LOTP)} 🪙</span></button><button class="cscard${S.coins<GSC?' poor':''}" id="gs-open" style="--cc:#27D9BD"><span class="csi">🔎</span><b>Угадай юзернейм</b><small>Дороже, дешевле или второй? Успей за 12 секунд</small><span class="csp">${fmt(GSC)} 🪙</span></button>`+`<button class="cscard" id="ws-open" style="--cc:#FF8A3D"><span class="csi">🔤</span><b>Поиск слов</b><small>Найди слова в сетке 10×10, в конце колесо ×1,2–10</small><span class="csp">Бесплатно</span></button>`+[1].map(()=>`<div class="cscard soon" style="--cc:#7A7F9A"><span class="csi">🔒</span><b>Скоро…</b><small>Новая мини игра</small><span class="csp">В разработке</span></div>`).join('')+`</div></div>`}catch(e){}
   if(el._h!==h){
     el.innerHTML=h;el._h=h;
     const fr=bon.fresh;bon.fresh=false;
