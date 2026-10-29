@@ -1366,3 +1366,6 @@ body.shk{animation:shk .5s}
 .rkg{position:relative}
 .rkbox{position:absolute;top:0;left:0;bottom:0;width:calc((100% - 24px)/5);border:2.5px solid #FFC933;border-radius:12px;box-shadow:0 0 18px rgba(255,201,51,.65),inset 0 0 12px rgba(255,201,51,.25);pointer-events:none;will-change:transform}
 .rkt{transition:transform .12s,border-color .12s,background .12s}
+/* выбор ников после ×3/×5: последний неполный ряд по центру */
+.picks{display:flex;flex-wrap:wrap;justify-content:center}
+.picks>*{flex:0 0 calc((100% - 16px)/3);min-width:0}
