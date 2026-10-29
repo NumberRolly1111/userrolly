@@ -1043,6 +1043,7 @@ function upSkeleton(){
     <div class="hist"><div class="hstrip" id="hstrip"></div><button class="hlink" id="up-hist">История ›</button></div>
     <p class="hint">Выбери ники из коллекции и цель. Шанс = цена ставки ÷ цена цели × 0,9. Не повезёт — ставка сгорит.</p>
   </div>
+  <p class="sum adc">Реклама в игре: <b>@ddwwks</b></p>
   <div class="pcard sndrow"><div><b>Страховка</b><small id="ins-sub"></small></div><button class="sw" id="up-ins" role="switch" aria-checked="false" aria-label="Страховка"><i></i></button></div>
   <button class="spin" id="up-main">Выбрать из коллекции</button>
   <div class="upres" id="upres"></div>
@@ -2751,6 +2752,21 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout
 
 
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-plid]');if(!b)return;(async()=>{try{await navigator.clipboard.writeText(String(b.dataset.plid).padStart(6,'0'));toast('ID скопирован')}catch(x){toast('Не удалось скопировать')}})()});
+
+// ---------- Реклама: плашка снизу экрана ----------
+var adv={list:[],i:0,t:0};
+async function adLoad(){if(!API||!tg||!tg.initData)return;try{const r=await lbReq('/ads');adv.list=r.ads||[]}catch(e){}}
+function adShow(){
+  if(document.hidden||document.getElementById('adb')||!adv.list.length)return;
+  if(document.querySelector('.usheet:not([hidden]),#buyfx'))return;
+  const a=adv.list[adv.i++%adv.list.length],o=document.createElement('div');o.id='adb';
+  o.innerHTML=`<span class="adl">Реклама</span><div class="adt">${a.title?`<b>${escH(a.title)}</b>`:''}<span>${escH(a.text)}</span></div><button class="adg" aria-label="Открыть">↗</button><button class="adx" aria-label="Закрыть">✕</button>`;
+  const close=()=>{o.classList.add('out');setTimeout(()=>o.remove(),300)};
+  o.querySelector('.adx').onclick=e=>{e.stopPropagation();close()};
+  o.onclick=()=>{lbReq('/ads/hit',{id:a.id,k:'c'}).catch(()=>{});try{/^https:\/\/t\.me\//.test(a.url)&&tg.openTelegramLink?tg.openTelegramLink(a.url):tg.openLink?tg.openLink(a.url):window.open(a.url,'_blank')}catch(e){window.open(a.url,'_blank')}close()};
+  document.body.append(o);lbReq('/ads/hit',{id:a.id,k:'v'}).catch(()=>{});setTimeout(()=>{if(o.isConnected)close()},9000);
+}
+setTimeout(async()=>{await adLoad();setTimeout(adShow,2000);setInterval(adShow,240000);setInterval(adLoad,900000)},25000);
 // ---------- История покупок ----------
 async function histSheet(){
   let o=document.getElementById('hissh');if(o)o.remove();

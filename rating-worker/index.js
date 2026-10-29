@@ -69,6 +69,7 @@ async function migrate(db) {   // добавляем новые столбцы �
   } catch (e) {}
   await db.prepare('CREATE TABLE IF NOT EXISTS chat_rep (mid INTEGER NOT NULL, uid TEXT NOT NULL, PRIMARY KEY (mid, uid))').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS chat_ban (uid TEXT PRIMARY KEY, until INTEGER NOT NULL DEFAULT 0, why TEXT NOT NULL DEFAULT \'\')').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS ads (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL DEFAULT \'\', text TEXT NOT NULL, url TEXT NOT NULL, exp INTEGER NOT NULL DEFAULT 0, views INTEGER NOT NULL DEFAULT 0, clicks INTEGER NOT NULL DEFAULT 0, off INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS evfeed (id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0)').run();
   migrated = true;
 }
@@ -538,6 +539,23 @@ async function handle(req, env) {
         await env.DB.prepare('DELETE FROM promos WHERE code=?').bind(code).run();
         return json({ ok: true });
       }
+      if (url.pathname === '/admin/ads' && req.method === 'GET') {
+        return json({ ads: (await env.DB.prepare('SELECT id,title,text,url,exp,views,clicks,off FROM ads ORDER BY id DESC LIMIT 50').all()).results });
+      }
+      if (url.pathname === '/admin/ads' && req.method === 'POST') {   // {title, text, url, days, id?(править), off?}
+        let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
+        const text = String(b.text || '').trim().slice(0, 90), title = String(b.title || '').trim().slice(0, 30), u = String(b.url || '').trim().slice(0, 300);
+        if (!text || !/^https:\/\/\S+$/.test(u)) return json({ error: 'bad' }, 400);
+        const days = Number(b.days) || 0, exp = days > 0 ? Date.now() + days * 864e5 : 0;
+        if (b.id) await env.DB.prepare('UPDATE ads SET title=?1,text=?2,url=?3,exp=?4,off=?5 WHERE id=?6').bind(title, text, u, exp, b.off ? 1 : 0, Math.trunc(Number(b.id))).run();
+        else await env.DB.prepare('INSERT INTO ads(title,text,url,exp,ts) VALUES(?1,?2,?3,?4,?5)').bind(title, text, u, exp, Date.now()).run();
+        return json({ ok: true });
+      }
+      if (url.pathname === '/admin/ads/delete' && req.method === 'POST') {
+        let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
+        await env.DB.prepare('DELETE FROM ads WHERE id=?').bind(Math.trunc(Number(b.id)) || 0).run();
+        return json({ ok: true });
+      }
       if (url.pathname === '/admin/log' && req.method === 'GET') {
         const r = (await env.DB.prepare('SELECT g.id,g.amount,g.claimed,g.ts,p.name FROM grants g LEFT JOIN players p ON p.uid=g.uid ORDER BY g.id DESC LIMIT 20').all()).results;
         return json({ log: r });
@@ -552,6 +570,16 @@ async function handle(req, env) {
       if (f && f.flag) return json({ error: 'flag' }, 403);
     }
 
+    if (url.pathname === '/ads' && req.method === 'GET') {   // активная реклама (показывается снизу экрана)
+      const rows = (await env.DB.prepare('SELECT id,title,text,url FROM ads WHERE off=0 AND (exp=0 OR exp>?) ORDER BY id DESC LIMIT 10').bind(Date.now()).all()).results;
+      return json({ ads: rows });
+    }
+    if (url.pathname === '/ads/hit' && req.method === 'POST') {   // {id, k:'v'|'c'}: счётчик показов и переходов
+      let b; try { b = await req.json(); } catch { b = {}; }
+      const col = b.k === 'c' ? 'clicks' : 'views';
+      await env.DB.prepare(`UPDATE ads SET ${col}=${col}+1 WHERE id=?`).bind(Math.trunc(Number(b.id)) || 0).run();
+      return json({ ok: true });
+    }
     if (url.pathname === '/promo/redeem' && req.method === 'POST') {
       let b; try { b = await req.json(); } catch { b = {}; }
       const code = String(b.code || '').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24), now = Date.now();

@@ -47,6 +47,14 @@ button.m{background:linear-gradient(145deg,#5B6BFF,#9B5BFF)}button:disabled{opac
     <div id="msg"></div>
   </div>
   <div class="c"><b>Продажи за звёзды</b><div id="sales" style="margin-top:8px"><small style="color:#9A96C8">Загрузка…</small></div></div>
+  <div class="c"><b>Реклама снизу экрана</b>
+    <small style="color:#9A96C8;display:block;margin-top:4px">Показывается игрокам всплывающей плашкой «Реклама». Контакт для рекламодателей: @ddwwks</small>
+    <label for="adt">Заголовок (до 30 символов)</label><input id="adt" maxlength="30" placeholder="Название канала или бренда">
+    <label for="adx">Текст (до 90 символов)</label><input id="adx" maxlength="90" placeholder="Коротко, что предлагаем">
+    <label for="adu">Ссылка (https://…)</label><input id="adu" placeholder="https://t.me/канал">
+    <div class="r" style="margin-top:10px"><input id="add" inputmode="numeric" placeholder="дней показа, 0 = без срока"><button id="adgo" type="button">Добавить</button></div>
+    <div id="adl" style="margin-top:8px"></div>
+  </div>
   <div class="c"><b>Покупки игрока, возврат и бан чата</b>
     <label for="bid">ID игрока (из профиля)</label>
     <input id="bid" inputmode="numeric" placeholder="например 123456">
@@ -98,8 +106,18 @@ async function loadLog(){
   try{const d=await req('/admin/log');$('#log').innerHTML=d.log.length?d.log.map(l=>`<div class="lg"><span>${esc(l.name||'?')}<br><small>${new Date(l.ts).toLocaleString('ru-RU')}</small></span><span style="text-align:right"><b class="${l.amount>0?'ok':'er'}">${l.amount>0?'+':''}${fmt(l.amount)}</b><br><small>${l.claimed?'получено':'ждёт игрока'}</small></span></div>`).join(''):'<small style="color:#9A96C8">Пока пусто</small>'}
   catch(e){$('#log').innerHTML='<small style="color:#9A96C8">'+esc(e.message)+'</small>'}
 }
-loadLog();$('#key').onchange=()=>{loadLog();loadSales()};
+loadLog();loadAds();$('#key').onchange=()=>{loadLog();loadSales();loadAds()};
 const bsay=(t,ok)=>{$('#bmsg').className=ok?'ok':'er';$('#bmsg').textContent=t};
+async function loadAds(){
+  try{const r=await req('/admin/ads');
+    $('#adl').innerHTML=r.ads.map(a=>`<div class="lg"><span>${a.off?'⏸ ':''}<b>${esc(a.title||'—')}</b> ${esc(a.text)}<br><small style="color:#9A96C8">${a.exp?'до '+new Date(a.exp).toLocaleDateString('ru-RU'):'без срока'} · 👁 ${a.views} · 👆 ${a.clicks}</small></span><span><button data-adoff="${a.id}" data-o="${a.off?0:1}" type="button">${a.off?'Вкл':'Пауза'}</button> <button data-addel="${a.id}" type="button">✕</button></span></div>`).join('')||'<small style="color:#9A96C8">Рекламы пока нет</small>';
+    window._ads=r.ads}catch(e){$('#adl').textContent=e.message}
+}
+$('#adgo').onclick=async()=>{try{await req('/admin/ads',{title:$('#adt').value,text:$('#adx').value,url:$('#adu').value,days:+$('#add').value||0});$('#adx').value='';$('#adt').value='';$('#adu').value='';loadAds()}catch(e){alert(e.message)}};
+$('#adl').onclick=async e=>{const d=e.target.closest('[data-addel]'),o=e.target.closest('[data-adoff]');
+  try{if(d){if(!confirm('Удалить рекламу?'))return;await req('/admin/ads/delete',{id:+d.dataset.addel})}
+  else if(o){const a=(window._ads||[]).find(x=>x.id==o.dataset.adoff);await req('/admin/ads',{id:a.id,title:a.title,text:a.text,url:a.url,days:a.exp?Math.max(1,Math.ceil((a.exp-Date.now())/864e5)):0,off:+o.dataset.o})}
+  else return;loadAds()}catch(x){alert(x.message)}};
 async function loadSales(){
   try{const s=await req('/admin/sales');
     $('#sales').innerHTML=`<div class="lg"><span>Оплачено в Telegram</span><span><b>${fmt(s.paid.total)} ⭐</b> · ${s.paid.count} покупок · ${s.paid.buyers} покупателей</span></div>
