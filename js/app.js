@@ -359,7 +359,7 @@ function taxTick(){
 const HINTS={
   season:['🏅 Что такое сезон','Сезон идёт 3 недели. За крутки, кейсы и апгрейды копятся очки: каждый уровень даёт награду, а платная дорожка даёт ещё больше. Лучшие по очкам получают призы в конце.'],
   events:['🎉 События','Каждый день в случайный час включается событие на 1 час: ×1,5…×10 к монетным наградам, очкам сезона, опыту или энергии. Плашка на главной покажет, когда оно начнётся.'],
-  craft:['⚗️ Крафт','Выбери три ника любой редкости: они сгорят, а взамен придёт новый. Чем реже выбранные ники, тем выше шанс получить редкий. Стоит небольшая плата.'],
+  craft:['🧪 Крафт','Выбери три ника любой редкости: они сгорят, а взамен придёт новый. Чем реже выбранные ники, тем выше шанс получить редкий. Стоит небольшая плата.'],
   museum:['🏛️ Музей','Купи зал и ставь туда ники: они остаются навсегда и приносят монеты за просмотры. Экспонаты видят все игроки.'],
 };
 function hintCard(id){
@@ -840,7 +840,7 @@ function renderGuide(){
 $('#tab-guide').onclick=e=>{if(e.target.closest('#guide-back')){try{$('#guide-vid').pause()}catch(x){}return tab('prof')}};
 function showPlate(){
   const r=showReady(),d=S.show.length;
-  return `<button class="pcard achbtn" id="show-open" style="margin-bottom:16px"><div><b>Витрины</b><small>Собрано ${d} из ${SHOW.length}${r?` · наград к получению: ${r}`:''}</small></div><span class="mini" style="--p:${d/SHOW.length*100}"><i>${d}</i></span></button>`+`<button class="pcard achbtn" id="market-open" style="margin-bottom:16px"><div><b>Рынок игроков</b><small>Покупай и продавай ники за монеты</small></div><span class="trophy">🛒</span></button>`+`<button class="pcard achbtn" id="shop-open" style="margin-bottom:16px"><div><b>Магазин</b><small>Услуги и эксклюзивный @ceo</small></div><span class="trophy">🏷️</span></button>`+`<button class="pcard achbtn" id="museum-open" style="margin-bottom:16px"><div><b>Музей</b><small>Навсегда поставь ник на витрину славы</small></div><span class="trophy">🏛️</span></button>`+`<button class="pcard achbtn" data-craft="1" style="margin-bottom:16px"><div><b>Крафт</b><small>Три любых ника → один новый, шансы зависят от выбранных</small></div><span class="trophy">⚗️</span></button>`;
+  return `<button class="pcard achbtn" id="show-open" style="margin-bottom:16px"><div><b>Витрины</b><small>Собрано ${d} из ${SHOW.length}${r?` · наград к получению: ${r}`:''}</small></div><span class="mini" style="--p:${d/SHOW.length*100}"><i>${d}</i></span></button>`+`<button class="pcard achbtn" id="market-open" style="margin-bottom:16px"><div><b>Рынок игроков</b><small>Покупай и продавай ники за монеты</small></div><span class="trophy">🛒</span></button>`+`<button class="pcard achbtn" id="shop-open" style="margin-bottom:16px"><div><b>Магазин</b><small>Услуги и эксклюзивный @ceo</small></div><span class="trophy">🏷️</span></button>`+`<button class="pcard achbtn" id="museum-open" style="margin-bottom:16px"><div><b>Музей</b><small>Навсегда поставь ник на витрину славы</small></div><span class="trophy">🏛️</span></button>`+`<button class="pcard achbtn" data-craft="1" style="margin-bottom:16px"><div><b>Крафт</b><small>Три любых ника → один новый, шансы зависят от выбранных</small></div><span class="trophy">🧪</span></button>`;
 }
 function renderShow(){
   setHtml($('#tab-show'),`${subTabs('stock','show')}<p class="sum">Собери набор из ников коллекции и забери награду. Ники не тратятся, награда выдаётся один раз.</p>`+showHtml());
@@ -1283,7 +1283,7 @@ function renderProf(){
     <button class="ptile" id="guide-open"><span class="pti">📖</span><b>Как играть</b><small>видео и 8 шагов</small></button>
     <button class="ptile" id="chat-open"><span class="pti">💬</span><b>Чат игроков</b><small>общий и личные</small></button>
     <button class="ptile" id="hist-open"><span class="pti">🧾</span><b>Покупки</b><small>история за звёзды</small></button>
-    <button class="ptile" data-craft="1"><span class="pti">⚗️</span><b>Крафт</b><small>3 ника → 1 новый</small></button>
+    <button class="ptile" data-craft="1"><span class="pti">🧪</span><b>Крафт</b><small>3 ника → 1 новый</small></button>
   </div>
   <div class="pcard inv invx"><div><b>Позвать друзей</b><small>За каждого друга: +${fmt(REF_C)} 🪙 и +${REF_E} ⚡ · приглашено ${S.refc} из ${REF_MAX}</small></div><div class="invb">${lb.refn>0?`<button class="btn main" id="ref-claim">Забрать +${fmt(lb.refn*REF_C)} 🪙</button>`:''}<button class="btn${lb.refn>0?'':' main'}" id="invite">Позвать</button></div></div>
   <div class="pcard"><h3>Статистика</h3>
@@ -1833,7 +1833,7 @@ function crSheet(close){
   const slots=[0,1,2].map(i=>{const x=its[i];return `<div class="crslot${x?' fl':''}"${x?` style="--tc:${T[x.t].c}"`:''}>${x?'@'+eh(x.n):'?'}</div>`}).join('');
   const oddsH=odds.length?`<div class="crodds">${odds.map(([t,w])=>`<span style="--tc:${T[t].c}"><i></i>${T[t].n} <b>${Math.round(w*100)}%</b></span>`).join('')}</div>`:'<div class="crodds"><small>Выбери три ника — здесь появятся шансы</small></div>';
   const res=cr.res?`<div class="cresc" style="--tc:${T[cr.res.t].c}"><small>${T[cr.res.t].n}</small><b>@${eh(cr.res.name)}</b><span>${fmt(cr.res.price)} 🪙</span></div>`:'';
-  sh.innerHTML=`<div class="sbg" data-crx="1"></div><div class="sbox casebox"><div class="shead"><b>⚗️ Крафт</b><button class="btn sm" data-crx="1">✕</button></div>
+  sh.innerHTML=`<div class="sbg" data-crx="1"></div><div class="sbox casebox"><div class="shead"><b>🧪 Крафт</b><button class="btn sm" data-crx="1">✕</button></div>
   ${hintCard('craft')}<p class="cdesc3">Выбери три любых ника, можно разной редкости: они сгорят, а взамен придёт случайный ник. Чем выше редкость выбранных, тем выше шанс на лучший результат. Комиссия — ${Math.round(CRF*100)}% от их стоимости.</p>
   <div class="crslots">${slots}<i>→</i><div class="crslot out">?</div></div>
   ${oddsH}${res}
