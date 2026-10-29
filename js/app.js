@@ -1272,6 +1272,13 @@ function albumCard(){
   <div class="algrid">${DEXS.map((x,i)=>{const ok=n>=x[0],cl=got.includes(i),w=Math.min(100,n/x[0]*100);return `<div class="alm${cl?' cl':ok?' ok':''}${i===nxt?' nx':''}"><b>${fmt(x[0])}</b><span class="alr">${short(x[1])} 🪙</span><div class="alb"><i style="width:${w}%"></i></div><em>${cl?'✓ получено':ok?'можно забрать':'ещё '+fmt(x[0]-n)}</em></div>`}).join('')}</div>
   ${ready.length?`<button class="btn main cwide" id="dex-claim">Забрать награды · +${fmt(ready.reduce((a,i)=>a+DEXS[i][1],0))} 🪙</button>`:''}</div>`}
 function dexClaim(){dexSeed();const n=dexCount();if(!Array.isArray(S.dexg))S.dexg=[];let sum=0;DEXS.forEach((x,i)=>{if(n>=x[0]&&!S.dexg.includes(i)){S.dexg.push(i);sum+=x[1]}});if(!sum)return;S.coins=Math.min(CAP,S.coins+sum);save();render();sfx('coins');toast('📖 Альбом: +'+fmt(sum)+' 🪙');renderProf()}
+function anBtn(){const b=document.getElementById('anpk');if(!b)return;const a=ANIMN.find(x=>x[0]===animMode());b.innerHTML=`<span>🎞</span><b>${a[1]}</b><i>▾</i>`;
+  const m=document.getElementById('anmenu');m.innerHTML=ANIMN.map(x=>`<button data-anm="${x[0]}" aria-pressed="${animMode()===x[0]}"><b>${x[1]}</b><small>${x[2]}</small></button>`).join('')}
+document.addEventListener('click',e=>{const b=document.getElementById('anpk'),m=document.getElementById('anmenu');if(!b||!m)return;
+  if(e.target.closest('#anpk')){m.hidden=!m.hidden;b.setAttribute('aria-expanded',String(!m.hidden));return}
+  const o=e.target.closest('[data-anm]');if(o){S.anim=o.dataset.anm;save();anBtn();m.hidden=true;b.setAttribute('aria-expanded','false');toast('Анимация: '+ANIMN.find(x=>x[0]===S.anim)[1]);return}
+  if(!m.hidden&&!e.target.closest('#anmenu')){m.hidden=true;b.setAttribute('aria-expanded','false')}});
+setTimeout(anBtn,0);
 function anPrev(){const r=document.getElementById('anreel');if(!r)return;const w=['hjaajh','kingvx','stormy','nova_x','blazer'];build(P(w),true,r,0)}
 function renderProf(){
   if(typeof refPoll==='function'&&!renderProf.t){renderProf.t=1;setTimeout(()=>{renderProf.t=0;refPoll()},0)}
@@ -1328,7 +1335,7 @@ $('#tab-prof').onclick=e=>{
   if(e.target.closest('#guide-open'))return tab('guide');
   {const nb=e.target.closest('[data-nt]');if(nb)return ntToggle(+nb.dataset.nt)}
   if(e.target.closest('#nt-test'))return ntTest();
-  const anb=e.target.closest('[data-an]');if(anb){S.anim=anb.dataset.an;save();document.querySelectorAll('[data-an]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.an===S.anim));anPrev();return}
+  const anb=e.target.closest('[data-an]');if(anb){S.anim=anb.dataset.an;save();document.querySelectorAll('[data-an]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.an===S.anim));anPrev();anBtn();return}
   if(e.target.closest('#snd-tg')){S.snd=!S.snd;save();renderProf();if(S.snd){sfx('ach')}return}
   if(e.target.closest('#idcopy')){(async()=>{try{await navigator.clipboard.writeText(String(S.uid).padStart(6,'0'));toast('ID скопирован')}catch(x){toast('Не удалось скопировать ID')}})();return}
   if(e.target.closest('#ref-claim'))return claimRefs();

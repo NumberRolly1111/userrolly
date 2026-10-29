@@ -1284,3 +1284,11 @@ section .usheet .sbox{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 .cell.flpc{perspective:300px}.cell.flp{animation:flipt .09s linear}
 @keyframes flipt{0%{transform:rotateX(75deg);opacity:.4}100%{transform:none;opacity:1}}
 .cell.mtx{color:#4DFFB0;text-shadow:0 0 10px #4DFFB0;filter:blur(.6px)}
+/* выбор анимации в углу рулетки */
+.reelw{position:relative}
+.anpk{position:absolute;top:8px;right:8px;z-index:4;display:flex;align-items:center;gap:5px;padding:5px 9px;border-radius:999px;background:color-mix(in srgb,var(--paper) 88%,#000);border:1.5px solid var(--line);font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.anpk b{font:700 12px var(--head)}.anpk i{font-style:normal;opacity:.7;font-size:10px}
+.anmenu{position:absolute;top:42px;right:8px;z-index:6;display:grid;gap:4px;width:min(230px,calc(100% - 16px));padding:6px;border-radius:16px;background:var(--paper);border:2px solid var(--line);box-shadow:0 14px 34px rgba(0,0,0,.55);animation:rise .2s both}
+.anmenu[hidden]{display:none}
+.anmenu button{display:grid;gap:1px;text-align:left;padding:8px 10px;border-radius:11px}
+.anmenu button small{font-size:11px;opacity:.7}.anmenu button[aria-pressed=true]{background:color-mix(in srgb,var(--blue) 22%,var(--tile));outline:2px solid var(--blue)}
