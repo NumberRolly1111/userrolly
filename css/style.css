@@ -1166,3 +1166,10 @@ details.taxl>small{display:block;color:var(--mute);font-size:12px;line-height:1.
 .chrow{display:flex;gap:8px;padding-top:6px}
 .chrow input{flex:1;min-width:0;padding:11px 12px;border-radius:12px;border:2px solid var(--line);background:var(--paper);color:inherit;font:inherit}
 .cher{color:#ff8a8a;font-size:12px;min-height:14px}
+.vipbig{border-color:#ffc933;background:linear-gradient(145deg,#3a2f12,#2a2150 70%);padding:18px}
+.vipbig .vbh{display:flex;align-items:center;gap:14px}
+.vipbig .vbi{font-size:44px;line-height:1}
+.vipbig .vbh b{display:block;font:800 20px 'Unbounded',system-ui,sans-serif;color:#ffd34e}
+.vipbig .vbh small{color:#d8d3ff;font-size:13px}
+.vipbig .stperk{font-size:14px;line-height:1.6;margin:14px 0 16px}
+.vipbig .btn{font-size:16px;padding:14px}
