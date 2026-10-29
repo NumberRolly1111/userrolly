@@ -1265,3 +1265,4 @@ section .usheet .sbox{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 .tqr.done{opacity:.55}.tqi{font-size:22px}.tqr .qbar{margin:4px 0 0;height:8px}.tqr .arw{white-space:nowrap;font:700 12px var(--head)}.tqr .arw.got{color:#27D9BD}
 .streakl{margin-top:8px}
 .hrow .hi2{flex:none}.hrow{box-sizing:border-box;width:100%;overflow:hidden}.hrow>div{flex:1 1 0}
+.plid{grid-column:1/-1;text-align:left;cursor:pointer}

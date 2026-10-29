@@ -1740,7 +1740,7 @@ function plDraw(){
     b=`<div class="plhd"><div class="av">${fr}<span class="avi"><b>${eh([...String(d.name||'?')][0]||'?').toUpperCase()}</b></span><em class="lvb">${d.lvl||1}</em></div>
     <div class="pnm"><b class="pname">${d.tag?`<em class="ctag">[${eh(d.tag)}]</em> `:''}${nickHtml(d.name,cs3[0])}</b>${ttl}${vipOn()?'<span class="vipb">👑 VIP</span>':''}<span class="rank" style="--rc:${rk[2]}">🛡 ${rk[1]}</span></div></div>
     <div class="pgrid"><div class="pt"><small>Место в рейтинге</small><b>#${d.rank}</b></div><div class="pt"><small>Капитал</small><b>${fmtC(d.net)} 🪙</b></div>
-    <div class="pt"><small>Уровень</small><b>${d.lvl||1}</b></div><div class="pt"><small>Клан</small><b>${d.cname?eh(d.cname):'—'}</b></div></div>
+    <div class="pt"><small>Уровень</small><b>${d.lvl||1}</b></div><div class="pt"><small>Клан</small><b>${d.cname?eh(d.cname):'—'}</b></div>${d.gid?`<button class="pt plid" data-plid="${d.gid}"><small>ID игрока · нажми, чтобы скопировать</small><b>${String(d.gid).padStart(6,'0')} ⧉</b></button>`:''}</div>
     <div class="pcard" style="margin:10px 0 0"><small class="cap2">Самый дорогой ник</small>${bn?`<div class="muprev">${plate(d.bestn,bn.t)}<span>${fmtC(d.best)} 🪙</span></div>`:'<p class="sum">—</p>'}</div>`+(d.me?'':d.un?`<button class="btn main cwide" data-pltg="${eh(d.un)}" style="margin-top:12px">Открыть в Telegram ↗</button>`:`<p class="sum" style="margin-top:12px;text-align:center">Ссылка на Telegram появится, когда игрок зайдёт в игру в обновлённой версии, или у него нет username</p>`);
   }
   sh.innerHTML=`<div class="sbg" data-plx="1"></div><div class="sbox casebox"><div class="shead"><b>Профиль игрока</b><button class="btn sm" data-plx="1">✕</button></div>${b}</div>`;
@@ -2750,6 +2750,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout
 
 
 
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-plid]');if(!b)return;(async()=>{try{await navigator.clipboard.writeText(String(b.dataset.plid).padStart(6,'0'));toast('ID скопирован')}catch(x){toast('Не удалось скопировать')}})()});
 // ---------- История покупок ----------
 async function histSheet(){
   let o=document.getElementById('hissh');if(o)o.remove();

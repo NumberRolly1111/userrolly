@@ -684,7 +684,7 @@ async function handle(req, env) {
       if (!(i >= 0 && i < 50)) return json({ error: 'bad' }, 400);
       const r = await env.DB.prepare(topSql(by, 'LIMIT 1 OFFSET ?', true)).bind(i).first();
       if (!r) return json({ error: 'none' }, 404);
-      return json({ rank: i + 1, name: r.name, net: r.net, best: r.best, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', tag: r.tag || '', cname: r.cname || '', un: r.un || '', mc: r.mc || 0, mv: r.mv || 0, me: r.uid === uid });
+      return json({ rank: i + 1, name: r.name, net: r.net, best: r.best, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', tag: r.tag || '', cname: r.cname || '', un: r.un || '', mc: r.mc || 0, mv: r.mv || 0, gid: gidOf(r.uid), me: r.uid === uid });
     }
     // ---- LIVE-лента: крупные выпадения игроков ----
     if (url.pathname === '/chat' && req.method === 'GET') {   // общий чат и личные сообщения
