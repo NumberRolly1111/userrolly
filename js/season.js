@@ -171,7 +171,7 @@ function renderSeason() {
   <div class="pcard szhero"><small>${szName(z.id)} · осталось ${szLeft(szEnd(z.id) - Date.now())}</small><div class="szlv"><b>Уровень ${lv}</b><span>${fmt(tot)} очков</span></div><div class="szbar big"><i style="width:${into / SZ_SPL * 100}%"></i></div><small>${lv >= SZ_LV ? 'Все уровни пройдены' : `До следующего уровня: ${SZ_SPL - into} очков`}</small>
   <div class="szsrc"><span>🎰 крутка +3</span><span>📦 кейс +12</span><span>⚡ апгрейд +15</span><span>📈 рост капитала до ${fmt(SZ_GROW_CAP)}</span></div></div>
   ${hintCard('season')}${evLine()}
-  <div class="szact">${z.paid ? '<div class="szpaid">✓ Платная дорожка открыта</div>' : `<button class="btn main" id="sz-buy">Открыть платную дорожку · ${fmt(SZ_PRICE)} 🪙</button>`}${rdy ? `<button class="btn" id="sz-all">Забрать всё (${rdy})</button>` : ''}</div>
+  <div class="szact">${z.paid ? '<div class="szpaid">✓ Платная дорожка открыта</div>' : `<button class="btn main" id="sz-buy">Открыть платную дорожку · ${fmt(SZ_PRICE)} 🪙</button><button class="btn cwide" data-stgo="pass">⭐ Или за звёзды</button>`}${rdy ? `<button class="btn" id="sz-all">Забрать всё (${rdy})</button>` : ''}</div>
   <div class="szth"><i></i><b>Бесплатно</b><b class="pd">Платная</b></div>
   <div class="szlist">${rows.join('')}</div>
   <div class="pcard"><div class="bhead"><h3>Задания сезона</h3><span class="bsub">до конца сезона</span></div>${qs}</div>
