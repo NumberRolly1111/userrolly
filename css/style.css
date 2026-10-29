@@ -1222,3 +1222,46 @@ section .usheet .sbox{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 #stsheet .sbox .cwide{margin:0}
 #stsheet #st-bal{margin-top:4px}
 #stsheet .stprice{margin:4px 0 6px}
+
+/* ---- анимация покупки ---- */
+.bfx{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:16px;animation:bfxin .25s both}
+.bfx.out{animation:bfxout .3s both}
+.bfx-bg{position:absolute;inset:0;background:rgba(8,8,30,.82);backdrop-filter:blur(4px)}
+.bfx-rays{position:absolute;left:50%;top:50%;width:520px;height:520px;margin:-260px 0 0 -260px;background:repeating-conic-gradient(rgba(255,201,51,.16) 0 10deg,transparent 10deg 20deg);border-radius:50%;-webkit-mask:radial-gradient(circle,#000 0,transparent 68%);mask:radial-gradient(circle,#000 0,transparent 68%);animation:bfxspin 12s linear infinite}
+.bfx-in{position:relative;width:min(380px,100%);display:grid;gap:12px}
+.bfx-t{text-align:center;font:800 22px var(--head);color:#FFC933;animation:bfxpop .5s both;text-shadow:0 2px 0 rgba(0,0,0,.3)}
+.bfx-l{display:grid;gap:8px}
+.bfx-c{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--paper);border:2px solid var(--c);box-shadow:0 0 18px -4px var(--c),4px 4px 0 var(--sh);opacity:0;transform:translateY(24px) scale(.8);animation:bfxcard .55s cubic-bezier(.2,1.5,.4,1) forwards;animation-delay:calc(.3s + var(--i)*.3s)}
+.bfx-c b{display:block;font:800 16px var(--head);color:var(--c);word-break:break-all}
+.bfx-c small{font-size:12px;opacity:.8}
+.bfx-i{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:var(--tile);font-size:24px;font-weight:800;flex:none;color:var(--c)}
+.bfx-ok{opacity:0;animation:bfxpop .4s .9s both}
+@keyframes bfxin{from{opacity:0}}@keyframes bfxout{to{opacity:0}}
+@keyframes bfxspin{to{transform:rotate(360deg)}}
+@keyframes bfxpop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@keyframes bfxcard{to{opacity:1;transform:none}}
+/* ---- магазин: бонус и лента ---- */
+.stfirst{margin:0 0 10px;padding:9px 12px;border-radius:12px;background:linear-gradient(90deg,#27D9BD33,#FFC93333);border:2px dashed #27D9BD;font:700 13px var(--head);text-align:center}
+.stfeed{display:grid;gap:5px;font-size:13px}.stfeed div{display:flex;justify-content:space-between;gap:8px}.stfeed small{opacity:.6;white-space:nowrap}
+/* ---- история покупок ---- */
+.hislist{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;overflow:auto;max-height:60vh;padding-top:6px}
+.hrow{min-width:0;display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:12px;background:var(--tile)}
+.hrow.ref{opacity:.6}.hrow>div{flex:1;min-width:0}.hrow b{display:block;font-size:14px}.hrow small{font-size:11px;opacity:.7}
+.hi2{font-size:22px}.hs2{font:800 14px var(--head);white-space:nowrap;flex:none;margin-left:auto}
+/* ---- чат ---- */
+.chtabs{grid-template-columns:1fr 1fr;margin:8px 0}
+.chtabs button[aria-pressed=true]{background:var(--blue);color:#fff}
+.chq{font-size:11px;opacity:.75;border-left:3px solid #9B8CFF;padding:1px 6px;margin:2px 0 3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.chq b{display:inline;font-size:11px}
+.chm.dm{box-shadow:inset 0 0 0 2px #FF5FA2}.chm em{font-style:normal;color:#FF5FA2}
+.chm small{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cha{display:flex;gap:2px}.cha button{padding:2px 6px;font-size:13px;opacity:.7}
+.chctx{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;padding:4px 8px;border-radius:10px;background:var(--tile)}.chctx:empty{display:none}
+.chctx span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.chrule{display:block;font-size:10px;opacity:.55;text-align:center;padding-top:4px}
+/* ---- срочные задания и серия ---- */
+.tqc{display:grid;gap:8px}.tqh{display:flex;justify-content:space-between;align-items:baseline}.tqh small{opacity:.7;font-size:12px}
+.tqr{display:flex;align-items:center;gap:10px}.tqr>div{flex:1;min-width:0}.tqr b{display:block;font-size:14px}.tqr small{font-size:12px;opacity:.75}.tqr em{font-style:normal;font-size:10px;color:#FFC933}
+.tqr.done{opacity:.55}.tqi{font-size:22px}.tqr .qbar{margin:4px 0 0;height:8px}.tqr .arw{white-space:nowrap;font:700 12px var(--head)}.tqr .arw.got{color:#27D9BD}
+.streakl{margin-top:8px}
+.hrow .hi2{flex:none}.hrow{box-sizing:border-box;width:100%;overflow:hidden}.hrow>div{flex:1 1 0}

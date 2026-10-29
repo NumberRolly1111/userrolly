@@ -59,6 +59,17 @@ async function migrate(db) {   // добавляем новые столбцы �
     const nh = (await db.prepare('PRAGMA table_info(ntf)').all()).results.map((r) => r.name);
     if (nh.length && !nh.includes('nev')) await db.prepare("ALTER TABLE ntf ADD COLUMN nev TEXT NOT NULL DEFAULT ''").run();
   } catch (e) {}
+  try {
+    const pc = (await db.prepare('PRAGMA table_info(purchases)').all()).results.map((r) => r.name);
+    if (pc.length && !pc.includes('ref')) await db.prepare('ALTER TABLE purchases ADD COLUMN ref INTEGER NOT NULL DEFAULT 0').run();
+    const cc = (await db.prepare('PRAGMA table_info(chat)').all()).results.map((r) => r.name);
+    if (cc.length && !cc.includes('re')) await db.prepare('ALTER TABLE chat ADD COLUMN re INTEGER NOT NULL DEFAULT 0').run();
+    if (cc.length && !cc.includes('to_uid')) await db.prepare("ALTER TABLE chat ADD COLUMN to_uid TEXT NOT NULL DEFAULT ''").run();
+    if (cc.length && !cc.includes('hid')) await db.prepare('ALTER TABLE chat ADD COLUMN hid INTEGER NOT NULL DEFAULT 0').run();
+  } catch (e) {}
+  await db.prepare('CREATE TABLE IF NOT EXISTS chat_rep (mid INTEGER NOT NULL, uid TEXT NOT NULL, PRIMARY KEY (mid, uid))').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS chat_ban (uid TEXT PRIMARY KEY, until INTEGER NOT NULL DEFAULT 0, why TEXT NOT NULL DEFAULT \'\')').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS evfeed (id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0)').run();
   migrated = true;
 }
 const enc = new TextEncoder();
@@ -96,7 +107,7 @@ const int = (v, max) => { v = Math.round(Number(v)); return Number.isFinite(v) &
 // ---- уведомления от бота ----
 // Биты mask: 1 аукцион, 2 рынок, 4 бесплатное колесо, 8 полная энергия, 16 «давно не заходил».
 // Бот может написать только тому, кто разрешил это в игре (requestWriteAccess) или нажимал «Старт».
-const NT = { AUC: 1, MKT: 2, WHEEL: 4, EN: 8, AWAY: 16 };
+const NT = { AUC: 1, MKT: 2, WHEEL: 4, EN: 8, AWAY: 16, DM: 64 };
 const nf = (n) => Math.floor(Number(n) || 0).toLocaleString('ru-RU');
 let CTX = null;
 const bg = (p) => { try { if (CTX) CTX.waitUntil(p); } catch (e) {} return p; };
@@ -158,6 +169,9 @@ async function cron(env) {
 // ================= Оплата звёздами Telegram (XTR) =================
 // Каталог лежит на сервере: цену и состав клиент не определяет. Счёт приходит в чат с ботом, платёж подтверждает вебхук /tg.
 // Баланс звёзд (acct.bal) пополняется отдельными счетами bal25…bal1500 и тратится на любые товары одним нажатием.
+const FIRST_BONUS = 0.1;   // бонус к первому пополнению звёздного баланса
+let LAST_BONUS = 0;
+const FEED_TXT = { vip: 'купил(а) VIP 👑', ceo: 'купил(а) эксклюзивный ник @ceo 🟣', title_oligarch: 'стал(а) Олигархом 🏆', pack_gold: 'купил(а) Золотой набор 💎', collector: 'стал(а) Коллекционером', museum: 'открыл(а) свой зал в музее' };
 const VIP_FOREVER = 4102444800000, VIP_FEE = 0.02;   // VIP навсегда (до 2100 года)
 const TOPUPS = [50, 100, 250, 500, 1000];
 const STARS_SHOP = {
@@ -194,8 +208,8 @@ async function feeOf(db, uid, base) {   // комиссия продавца: у
 async function owned(db, uid, id) {   // «разовые» товары: куплено ли уже
   const it = STARS_SHOP[id];
   if (!it || !it.once && !it.season) return false;
-  const q = it.season ? await db.prepare('SELECT 1 AS x FROM purchases WHERE uid=? AND item=? AND meta=?').bind(uid, id, String(seasonId(Date.now()))).first()
-    : await db.prepare('SELECT 1 AS x FROM purchases WHERE uid=? AND item=?').bind(uid, id).first();
+  const q = it.season ? await db.prepare('SELECT 1 AS x FROM purchases WHERE uid=? AND item=? AND meta=? AND ref=0').bind(uid, id, String(seasonId(Date.now()))).first()
+    : await db.prepare('SELECT 1 AS x FROM purchases WHERE uid=? AND item=? AND ref=0').bind(uid, id).first();
   return !!q;
 }
 // записать покупку и применить серверную часть (баланс, VIP); возвращает true, если это новая покупка
@@ -210,9 +224,23 @@ async function payApply(db, env, uid, id, stars, charge, via) {
     await db.prepare('UPDATE acct SET bal=bal+? WHERE uid=?').bind(stars, uid).run();
     return false;
   }
-  if (it.topup) await db.prepare('UPDATE acct SET bal=bal+? WHERE uid=?').bind(it.topup, uid).run();
+  let bonus = 0;
+  if (it.topup) {   // бонус +10% к первому пополнению
+    const prev = await db.prepare("SELECT COUNT(*) AS n FROM purchases WHERE uid=? AND item LIKE 'bal%' AND id<?").bind(uid, ins.meta.last_row_id).first();
+    if (!prev.n) bonus = Math.floor(it.topup * FIRST_BONUS);
+    await db.prepare('UPDATE acct SET bal=bal+? WHERE uid=?').bind(it.topup + bonus, uid).run();
+    if (bonus) await db.prepare('UPDATE purchases SET meta=? WHERE id=?').bind(String(bonus), ins.meta.last_row_id).run();
+  }
+  if (FEED_TXT[id]) {
+    const pl = await db.prepare('SELECT name,hide FROM players WHERE uid=?').bind(uid).first();
+    const nm = pl && !pl.hide && pl.name ? pl.name : 'Игрок';
+    await db.prepare('INSERT INTO evfeed(text,ts) VALUES(?,?)').bind(`${nm} ${FEED_TXT[id]}`, Date.now()).run();
+    bg(db.prepare('DELETE FROM evfeed WHERE id < (SELECT MAX(id) FROM evfeed) - 60').run());
+  }
   if (id === 'vip') await db.prepare('UPDATE acct SET vip=? WHERE uid=?').bind(VIP_FOREVER, uid).run();
   if (id === 'custom_nick' && env) for (const a of String(env.ADMIN_IDS || '').split(',').map((x) => x.trim()).filter(Boolean)) bg(tgSend(env, a, `🛒 Заказ именного юзернейма: игрок ${uid} оплатил ${stars} ⭐. Он напишет в поддержку, выдай ник вручную.`));
+  ins.bonus = bonus;
+  LAST_BONUS = bonus;
   return true;
 }
 async function ceoSlot(db, uid) {   // выдать один из 3 экземпляров @ceo; false, если все разобраны или он уже у игрока
@@ -227,6 +255,48 @@ async function ceoSlot(db, uid) {   // выдать один из 3 экземп
   return false;
 }
 async function ceoLeft(db) { const n = await db.prepare("SELECT COUNT(*) AS n FROM shop WHERE item IN ('ceo','ceo2','ceo3')").first(); return 3 - n.n; }
+// возврат платежа: деньги (звёзды в Telegram или на баланс игры) и отзыв покупки
+async function refundPurchase(db, env, p) {
+  if (!p) return { error: 'nopurchase' };
+  if (p.ref) return { error: 'already' };
+  const claimU = await db.prepare('UPDATE purchases SET ref=1 WHERE id=? AND ref=0').bind(p.id).run();
+  if (!claimU.meta.changes) return { error: 'already' };
+  const it = STARS_SHOP[p.item] || {};
+  const notes = [];
+  if (p.via === 'tg') {
+    const r = await tgApi(env, 'refundStarPayment', { user_id: Number(p.uid), telegram_payment_charge_id: p.charge });
+    if (!r.ok) { await db.prepare('UPDATE purchases SET ref=0 WHERE id=?').bind(p.id).run(); return { error: 'tg', desc: r.description || '' }; }
+    notes.push('звёзды возвращены в Telegram');
+  } else {
+    await acctGet(db, p.uid);
+    await db.prepare('UPDATE acct SET bal=bal+? WHERE uid=?').bind(p.stars, p.uid).run();
+    notes.push('звёзды вернулись на баланс игры');
+  }
+  if (it.topup) {   // пополнение отзываем с баланса (в минус не уходим)
+    const a = await acctGet(db, p.uid), take = it.topup + (Number(p.meta) || 0);
+    await db.prepare('UPDATE acct SET bal=MAX(0,bal-?) WHERE uid=?').bind(take, p.uid).run();
+    if (a.bal < take) notes.push(`на балансе игрока было меньше (${a.bal} ⭐): часть уже потрачена`);
+  }
+  if (p.item === 'vip') await db.prepare('UPDATE acct SET vip=0 WHERE uid=?').bind(p.uid).run();
+  if (p.item === 'ceo') await db.prepare("DELETE FROM shop WHERE uid=? AND item IN ('ceo','ceo2','ceo3')").bind(p.uid).run();
+  if (['starter', 'pack_pro', 'pack_gold', 'energy60', 'wheel5'].includes(p.item)) notes.push('выданные монеты и энергию вернуть нельзя');
+  return { ok: true, notes };
+}
+const gidOf = (uid) => (Number(uid) % 999999) + 1;
+async function findByGid(db, gid) {
+  const g = String(gid || '').replace(/\D/g, '');
+  if (!g) return null;
+  return await db.prepare('SELECT uid,name FROM players WHERE (CAST(uid AS INTEGER) % 999999) + 1 = CAST(? AS INTEGER) LIMIT 1').bind(g).first();
+}
+async function salesStats(db) {
+  const now = Date.now(), win = async (ms) => (await db.prepare("SELECT COALESCE(SUM(stars),0) AS s, COUNT(*) AS n FROM purchases WHERE ref=0 AND via='tg' AND ts>?").bind(now - ms).first());
+  const all = await db.prepare("SELECT COALESCE(SUM(CASE WHEN via='tg' THEN stars END),0) AS tg, COALESCE(SUM(CASE WHEN via='bal' THEN stars END),0) AS bal, COUNT(*) AS n FROM purchases WHERE ref=0").first();
+  const ref = await db.prepare('SELECT COALESCE(SUM(stars),0) AS s, COUNT(*) AS n FROM purchases WHERE ref=1').first();
+  const items = (await db.prepare("SELECT item, COUNT(*) AS n, SUM(stars) AS s FROM purchases WHERE ref=0 AND item NOT LIKE 'bal%' GROUP BY item ORDER BY s DESC").all()).results;
+  const buyers = (await db.prepare("SELECT p.uid, pl.name, SUM(p.stars) AS s, COUNT(*) AS n FROM purchases p LEFT JOIN players pl ON pl.uid=p.uid WHERE p.ref=0 AND p.via='tg' GROUP BY p.uid ORDER BY s DESC LIMIT 10").all()).results;
+  const users = await db.prepare("SELECT COUNT(DISTINCT uid) AS n FROM purchases WHERE ref=0 AND via='tg'").first();
+  return { paid: { total: all.tg, spentFromBalance: all.bal, count: all.n, buyers: users.n }, refunded: ref, d1: await win(864e5), d7: await win(7 * 864e5), d30: await win(30 * 864e5), items, top: buyers.map((b) => ({ gid: gidOf(b.uid), name: b.name || '', stars: b.s, n: b.n })) };
+}
 async function payRoutes(url, req, env, uid, json) {
   const p = url.pathname;
   if (!p.startsWith('/pay/')) return null;
@@ -235,7 +305,18 @@ async function payRoutes(url, req, env, uid, json) {
     const a = await acctGet(db, uid), have = {};
     for (const id of Object.keys(STARS_SHOP)) if (await owned(db, uid, id)) have[id] = 1;
     const cat = {}; for (const [id, it] of Object.entries(STARS_SHOP)) cat[id] = it.stars;
-    return json({ bal: a.bal, vip: a.vip, vgift: a.vgift, now: Date.now(), ceoLeft: await ceoLeft(db), owned: have, cat, topups: TOPUPS });
+    const fp = await db.prepare("SELECT COUNT(*) AS n FROM purchases WHERE uid=? AND item LIKE 'bal%'").bind(uid).first();
+    const rv = (await db.prepare('SELECT DISTINCT item FROM purchases WHERE uid=? AND ref=1').bind(uid).all()).results, revoked = {};
+    for (const r of rv) if (!have[r.item] && !(r.item === 'vip' && a.vip > Date.now())) revoked[r.item] = 1;
+    return json({ first: fp.n ? 0 : 1, revoked, bal: a.bal, vip: a.vip, vgift: a.vgift, now: Date.now(), ceoLeft: await ceoLeft(db), owned: have, cat, topups: TOPUPS });
+  }
+  if (p === '/pay/history' && req.method === 'GET') {
+    const rows = (await db.prepare('SELECT item,stars,via,ts,ref FROM purchases WHERE uid=? ORDER BY id DESC LIMIT 40').bind(uid).all()).results;
+    return json({ items: rows });
+  }
+  if (p === '/pay/feed' && req.method === 'GET') {
+    const rows = (await db.prepare('SELECT text,ts FROM evfeed WHERE ts>? ORDER BY id DESC LIMIT 12').bind(Date.now() - 3 * 864e5).all()).results;
+    return json({ items: rows });
   }
   if (req.method !== 'POST') return json({ error: 'not found' }, 404);
   let b; try { b = await req.json(); } catch { b = {}; }
@@ -308,7 +389,35 @@ async function tgHook(req, env, json) {
       return json({ ok: true });
     }
     const fresh = await payApply(db, env, uid, id, it.stars, sp.telegram_payment_charge_id, 'tg');
-    if (fresh) bg(tgApi(env, 'sendMessage', { chat_id: m.chat.id, text: it.topup ? `✅ Баланс пополнен на ${it.topup} ⭐. Загляни в магазин игры.` : `✅ Оплата получена: ${it.t}. Открой игру, и покупка уже будет там.`, reply_markup: { inline_keyboard: [[gameBtn(env)]] } }));
+    if (fresh) bg(tgApi(env, 'sendMessage', { chat_id: m.chat.id, text: it.topup ? `✅ Баланс пополнен на ${it.topup} ⭐${LAST_BONUS ? ` и ещё +${LAST_BONUS} ⭐ бонусом за первое пополнение` : ''}. Загляни в магазин игры.` : `✅ Оплата получена: ${it.t}. Открой игру, и покупка уже будет там.`, reply_markup: { inline_keyboard: [[gameBtn(env)]] } }));
+    return json({ ok: true });
+  }
+  if (m && typeof m.text === 'string' && m.chat && m.chat.type === 'private' && isAdmin(m.from.id, env) && /^\/(refund|buyer|ban|unban|stats|help_admin)/.test(m.text)) {
+    const [cmd, a1, a2, ...rest] = m.text.trim().split(/\s+/), say = (t) => tgApi(env, 'sendMessage', { chat_id: m.chat.id, text: t });
+    if (cmd === '/stats') {
+      const s = await salesStats(db);
+      await say(`📊 Продажи за звёзды\nВсего оплачено: ${s.paid.total} ⭐ (${s.paid.count} покупок, ${s.paid.buyers} покупателей)\nПотрачено с баланса: ${s.paid.spentFromBalance} ⭐\nЗа 24 ч: ${s.d1.s} ⭐ (${s.d1.n})\nЗа 7 дней: ${s.d7.s} ⭐ (${s.d7.n})\nЗа 30 дней: ${s.d30.s} ⭐ (${s.d30.n})\nВозвраты: ${s.refunded.s} ⭐ (${s.refunded.n})\n\nТоп товаров:\n${s.items.slice(0, 8).map((x) => `${(STARS_SHOP[x.item] || {}).t || x.item}: ${x.n} шт, ${x.s} ⭐`).join('\n') || 'пока нет'}`);
+    } else if (cmd === '/buyer') {
+      const pl = await findByGid(db, a1);
+      if (!pl) await say('Игрок не найден. Формат: /buyer 123456 (ID из профиля)');
+      else {
+        const rows = (await db.prepare('SELECT id,item,stars,via,ts,ref FROM purchases WHERE uid=? ORDER BY id DESC LIMIT 15').bind(pl.uid).all()).results;
+        await say(`🧾 ${pl.name} (ID ${gidOf(pl.uid)})\n` + (rows.map((r) => `#${r.id} ${new Date(r.ts).toISOString().slice(0, 16).replace('T', ' ')} ${(STARS_SHOP[r.item] || {}).t || r.item} ${r.stars}⭐ ${r.via === 'tg' ? 'Telegram' : 'баланс'}${r.ref ? ' ВОЗВРАТ' : ''}`).join('\n') || 'покупок нет') + '\n\nВозврат: /refund НОМЕР');
+      }
+    } else if (cmd === '/refund') {
+      const pid = Number(a1);
+      const p = pid ? await db.prepare('SELECT * FROM purchases WHERE id=?').bind(pid).first() : null;
+      const r = await refundPurchase(db, env, p);
+      await say(r.ok ? `✅ Возврат #${pid}: ${r.notes.join('; ')}` : `⚠️ Не вышло: ${r.error}${r.desc ? ' (' + r.desc + ')' : ''}`);
+    } else if (cmd === '/ban') {
+      const pl = await findByGid(db, a1), h = Math.max(1, Math.min(24 * 365, Number(a2) || 24));
+      if (!pl) await say('Игрок не найден. Формат: /ban 123456 24 причина');
+      else { await db.prepare('INSERT INTO chat_ban(uid,until,why) VALUES(?,?,?) ON CONFLICT(uid) DO UPDATE SET until=?2, why=?3').bind(pl.uid, Date.now() + h * 3600000, rest.join(' ').slice(0, 80)).run(); await say(`🔨 ${pl.name} (ID ${gidOf(pl.uid)}) в бане чата на ${h} ч`); }
+    } else if (cmd === '/unban') {
+      const pl = await findByGid(db, a1);
+      if (pl) await db.prepare('DELETE FROM chat_ban WHERE uid=?').bind(pl.uid).run();
+      await say(pl ? `✅ ${pl.name} разбанен` : 'Игрок не найден');
+    } else await say('Команды админа:\n/stats: продажи\n/buyer ID: покупки игрока\n/refund НОМЕР: вернуть платёж\n/ban ID часы причина\n/unban ID');
     return json({ ok: true });
   }
   if (m && typeof m.text === 'string' && m.text.startsWith('/start') && m.chat && m.chat.type === 'private') {
@@ -318,6 +427,16 @@ async function tgHook(req, env, json) {
 }
 const gameBtn = (env) => (payUrl(env) ? { text: '🎰 Играть', web_app: { url: payUrl(env) } } : { text: '🎰 Играть', url: env.APP_LINK || 'https://t.me/NumberRollyBot' });
 
+// Запрещённые слова чата. Проверка идёт по корням, буквы-двойники (латиница вместо кириллицы) и разделители убираются.
+// Свои слова можно добавить секретом CHAT_BAD (через запятую), без правки кода.
+const BAD_ROOTS = ['хуй', 'хуя', 'хуе', 'хуи', 'пизд', 'ебат', 'ебан', 'ебал', 'ебуч', 'еблан', 'бляд', 'блят', 'сука', 'сучк', 'мудак', 'мудил', 'гандон', 'пидор', 'пидр', 'педик', 'залуп', 'шлюх', 'нахуй', 'охуе', 'ахуе', 'заеб', 'уебан', 'долбоеб', 'казино', 'ставки на спорт', 'заработок без вложений', 'инвестиц', 'крипто', 'буст аккаунт', 'продам аккаунт', 'жертв'];
+const LOOK = { a: 'а', b: 'в', c: 'с', e: 'е', h: 'н', k: 'к', m: 'м', o: 'о', p: 'р', t: 'т', x: 'х', y: 'у', ё: 'е', '0': 'о', '3': 'з', '4': 'ч', '6': 'б' };
+function chatBad(text, env) {
+  const t = String(text).toLowerCase().replace(/[a-zё0346]/g, (c) => LOOK[c] || c);
+  const flat = t.replace(/[^а-я]/g, '');
+  const extra = String((env && env.CHAT_BAD) || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
+  return [...BAD_ROOTS, ...extra].some((r) => { const rr = r.replace(/[^а-я]/g, ''); return rr && (t.includes(r) || flat.includes(rr)); });
+}
 // Категории рейтинга: net (капитал), best (самый дорогой ник), lvl (уровень), museum (стоимость экспонатов в музее)
 const topBy = (b) => (b === 'best' || b === 'lvl' || b === 'museum' ? b : 'net');
 function topSql(by, tail, full) {
@@ -365,6 +484,27 @@ async function handle(req, env) {
         const id = (url.searchParams.get('id') || '').replace(/\D/g, '');
         if (!id) return json({ error: 'id' }, 400);
         return json({ players: await find(id) });
+      }
+      if (url.pathname === '/admin/sales' && req.method === 'GET') return json(await salesStats(env.DB));
+      if (url.pathname === '/admin/purchases' && req.method === 'GET') {
+        const pl = await findByGid(env.DB, url.searchParams.get('id'));
+        if (!pl) return json({ error: 'nouser' }, 404);
+        const rows = (await env.DB.prepare('SELECT id,item,stars,via,ts,ref FROM purchases WHERE uid=? ORDER BY id DESC LIMIT 30').bind(pl.uid).all()).results;
+        const ban = await env.DB.prepare('SELECT until,why FROM chat_ban WHERE uid=? AND until>?').bind(pl.uid, Date.now()).first();
+        return json({ name: pl.name, gid: gidOf(pl.uid), ban: ban || null, items: rows.map((r) => ({ ...r, title: (STARS_SHOP[r.item] || {}).t || r.item })) });
+      }
+      if (url.pathname === '/admin/refund' && req.method === 'POST') {
+        let b; try { b = await req.json(); } catch { b = {}; }
+        const p = await env.DB.prepare('SELECT * FROM purchases WHERE id=?').bind(Math.floor(Number(b.pid)) || 0).first();
+        return json(await refundPurchase(env.DB, env, p));
+      }
+      if ((url.pathname === '/admin/ban' || url.pathname === '/admin/unban') && req.method === 'POST') {
+        let b; try { b = await req.json(); } catch { b = {}; }
+        const pl = await findByGid(env.DB, b.id);
+        if (!pl) return json({ error: 'nouser' }, 404);
+        if (url.pathname === '/admin/unban') await env.DB.prepare('DELETE FROM chat_ban WHERE uid=?').bind(pl.uid).run();
+        else await env.DB.prepare('INSERT INTO chat_ban(uid,until,why) VALUES(?,?,?) ON CONFLICT(uid) DO UPDATE SET until=?2, why=?3').bind(pl.uid, Date.now() + Math.max(1, Math.min(8760, Number(b.hours) || 24)) * 3600000, String(b.why || '').slice(0, 80)).run();
+        return json({ ok: true, name: pl.name });
       }
       if (url.pathname === '/admin/grant' && req.method === 'POST') {
         let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
@@ -428,7 +568,7 @@ async function handle(req, env) {
     }
     if (url.pathname === '/notify/set' && req.method === 'POST') {
       let b; try { b = await req.json(); } catch { b = {}; }
-      const now = Date.now(), mask = int(b.mask, 63) || 0, wa = int(b.wheelAt, 4e12) || 0, ef = int(b.enFull, 4e12) || 0;
+      const now = Date.now(), mask = int(b.mask, 127) || 0, wa = int(b.wheelAt, 4e12) || 0, ef = int(b.enFull, 4e12) || 0;
       const tz = Math.max(-840, Math.min(840, Math.round(Number(b.tz) || 0)));
       const old = await env.DB.prepare('SELECT mask,bad FROM ntf WHERE uid=?').bind(uid).first();
       const blocked = !!(old && old.bad && !b.fresh && mask && now - old.bad < 7 * 86400000);
@@ -547,25 +687,56 @@ async function handle(req, env) {
       return json({ rank: i + 1, name: r.name, net: r.net, best: r.best, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', tag: r.tag || '', cname: r.cname || '', un: r.un || '', mc: r.mc || 0, mv: r.mv || 0, me: r.uid === uid });
     }
     // ---- LIVE-лента: крупные выпадения игроков ----
-    if (url.pathname === '/chat' && req.method === 'GET') {   // общий чат игры: последние сообщения
+    if (url.pathname === '/chat' && req.method === 'GET') {   // общий чат и личные сообщения
       const after = Math.max(0, Math.floor(Number(url.searchParams.get('after')) || 0));
+      const sel = `SELECT c.id,c.uid,c.name,c.text,c.ts,c.re,c.to_uid,a.vip,p.name AS rn,p.text AS rt,t.name AS tn FROM chat c LEFT JOIN acct a ON a.uid=c.uid LEFT JOIN chat p ON p.id=c.re AND c.re>0 LEFT JOIN players t ON t.uid=c.to_uid AND c.to_uid<>'' WHERE c.hid=0 AND (c.to_uid='' OR c.to_uid=?1 OR c.uid=?1)`;
       const rows = after
-        ? (await env.DB.prepare('SELECT c.id,c.uid,c.name,c.text,c.ts,a.vip FROM chat c LEFT JOIN acct a ON a.uid=c.uid WHERE c.id>? ORDER BY c.id LIMIT 60').bind(after).all()).results
-        : (await env.DB.prepare('SELECT * FROM (SELECT c.id,c.uid,c.name,c.text,c.ts,a.vip FROM chat c LEFT JOIN acct a ON a.uid=c.uid ORDER BY c.id DESC LIMIT 60) ORDER BY id').all()).results;
-      return json({ now: Date.now(), items: rows.map((r) => ({ id: r.id, name: r.name || 'Игрок', text: r.text, ts: r.ts, mine: r.uid === uid ? 1 : 0, vip: r.vip > Date.now() ? 1 : 0 })) });
+        ? (await env.DB.prepare(sel + ' AND c.id>?2 ORDER BY c.id LIMIT 60').bind(uid, after).all()).results
+        : (await env.DB.prepare('SELECT * FROM (' + sel + ' ORDER BY c.id DESC LIMIT 80) ORDER BY id').bind(uid).all()).results;
+      const ban = await env.DB.prepare('SELECT until FROM chat_ban WHERE uid=? AND until>?').bind(uid, Date.now()).first();
+      return json({ now: Date.now(), ban: ban ? ban.until : 0, me: gidOf(uid), items: rows.map((r) => ({
+        id: r.id, name: r.name || 'Игрок', text: r.text, ts: r.ts, mine: r.uid === uid ? 1 : 0, vip: r.vip > Date.now() ? 1 : 0,
+        gid: gidOf(r.uid), re: r.re || 0, rn: r.rn || '', rt: r.rt ? String(r.rt).slice(0, 60) : '', dm: r.to_uid ? 1 : 0, tn: r.tn || '', tg: r.to_uid ? gidOf(r.to_uid) : 0 })) });
     }
     if (url.pathname === '/chat' && req.method === 'POST') {
       let b; try { b = await req.json(); } catch { b = {}; }
       const text = clean(b.text, 200).replace(/\s+/g, ' ');
       if (!text) return json({ error: 'empty' }, 400);
       if (/(https?:\/\/|t\.me\/|www\.|@\w{4,})/i.test(text)) return json({ error: 'link' });
-      const me = await env.DB.prepare('SELECT name,flag FROM players WHERE uid=?').bind(uid).first();
+      if (chatBad(text, env)) return json({ error: 'bad' });
+      const me = await env.DB.prepare('SELECT name,flag,hide FROM players WHERE uid=?').bind(uid).first();
       if (me && me.flag) return json({ error: 'flag' });
+      const ban = await env.DB.prepare('SELECT until FROM chat_ban WHERE uid=? AND until>?').bind(uid, Date.now()).first();
+      if (ban) return json({ error: 'banned', until: ban.until });
       const last = await env.DB.prepare('SELECT ts FROM chat WHERE uid=? ORDER BY id DESC LIMIT 1').bind(uid).first();
       if (last && Date.now() - last.ts < 3000) return json({ error: 'fast' });
-      await env.DB.prepare('INSERT INTO chat(uid,name,text,ts) VALUES(?,?,?,?)').bind(uid, (me && me.name) || 'Игрок', text, Date.now()).run();
-      bg(env.DB.prepare('DELETE FROM chat WHERE id < (SELECT MAX(id) FROM chat) - 400').run());
+      let to = '';
+      if (b.to) {
+        const t = await findByGid(env.DB, b.to);
+        if (!t || t.uid === uid) return json({ error: 'nouser' });
+        to = t.uid;
+      }
+      const re = Math.max(0, Math.floor(Number(b.re)) || 0);
+      if (re) { const pm = await env.DB.prepare('SELECT 1 AS x FROM chat WHERE id=?').bind(re).first(); if (!pm) return json({ error: 'gone' }); }
+      const nm = me && !me.hide && me.name ? me.name : 'Игрок';
+      await env.DB.prepare('INSERT INTO chat(uid,name,text,ts,re,to_uid) VALUES(?,?,?,?,?,?)').bind(uid, nm, text, Date.now(), re, to).run();
+      bg(env.DB.prepare('DELETE FROM chat WHERE id < (SELECT MAX(id) FROM chat) - 600').run());
+      if (to) bg(notifyEvent(env, to, NT.DM || 64, `💬 Личное сообщение от ${nm}: ${text.slice(0, 80)}`));
       return json({ ok: true });
+    }
+    if (url.pathname === '/chat/report' && req.method === 'POST') {   // жалоба на сообщение: после 3 разных жалоб оно скрывается, админам приходит уведомление
+      let b; try { b = await req.json(); } catch { b = {}; }
+      const id = Math.floor(Number(b.id)) || 0;
+      const m = await env.DB.prepare('SELECT id,uid,name,text,hid FROM chat WHERE id=?').bind(id).first();
+      if (!m || m.uid === uid) return json({ error: 'bad' });
+      await env.DB.prepare('INSERT OR IGNORE INTO chat_rep(mid,uid) VALUES(?,?)').bind(id, uid).run();
+      const n = (await env.DB.prepare('SELECT COUNT(*) AS n FROM chat_rep WHERE mid=?').bind(id).first()).n;
+      if (n >= 3 && !m.hid) {
+        await env.DB.prepare('UPDATE chat SET hid=1 WHERE id=?').bind(id).run();
+        for (const a of String(env.ADMIN_IDS || '').split(',').map((x) => x.trim()).filter(Boolean))
+          bg(tgSend(env, a, `🚩 Сообщение скрыто после ${n} жалоб\n${m.name} (ID ${gidOf(m.uid)}): ${String(m.text).slice(0, 120)}\n\nЗабанить: /ban ${gidOf(m.uid)} 24`));
+      }
+      return json({ ok: true, hidden: n >= 3 ? 1 : 0 });
     }
     if (url.pathname === '/feed' && req.method === 'GET') {
       const rows = (await env.DB.prepare('SELECT f.name,f.tier,f.ts,p.name AS who,p.hide FROM feed f LEFT JOIN players p ON p.uid=f.uid WHERE f.ts>? ORDER BY f.id DESC LIMIT 14').bind(Date.now() - 86400000).all()).results;

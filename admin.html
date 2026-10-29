@@ -46,6 +46,15 @@ button.m{background:linear-gradient(145deg,#5B6BFF,#9B5BFF)}button:disabled{opac
     <button class="m" id="go" style="width:100%;margin-top:14px" type="button">Выдать</button>
     <div id="msg"></div>
   </div>
+  <div class="c"><b>Продажи за звёзды</b><div id="sales" style="margin-top:8px"><small style="color:#9A96C8">Загрузка…</small></div></div>
+  <div class="c"><b>Покупки игрока, возврат и бан чата</b>
+    <label for="bid">ID игрока (из профиля)</label>
+    <input id="bid" inputmode="numeric" placeholder="например 123456">
+    <button id="bfind" style="width:100%;margin-top:10px" type="button">Показать покупки</button>
+    <div id="bl" style="margin-top:8px"></div>
+    <div class="r" style="margin-top:10px"><input id="bh" inputmode="numeric" placeholder="часов бана, например 24"><button id="bban" type="button">Бан чата</button><button id="bunban" type="button">Разбан</button></div>
+    <div id="bmsg" style="min-height:20px;margin-top:10px;font-weight:700;font-size:14px"></div>
+  </div>
   <div class="c"><b>Последние выдачи</b><div id="log" style="margin-top:8px"><small style="color:#9A96C8">Загрузка…</small></div></div>
 </div>
 <script>
@@ -89,7 +98,32 @@ async function loadLog(){
   try{const d=await req('/admin/log');$('#log').innerHTML=d.log.length?d.log.map(l=>`<div class="lg"><span>${esc(l.name||'?')}<br><small>${new Date(l.ts).toLocaleString('ru-RU')}</small></span><span style="text-align:right"><b class="${l.amount>0?'ok':'er'}">${l.amount>0?'+':''}${fmt(l.amount)}</b><br><small>${l.claimed?'получено':'ждёт игрока'}</small></span></div>`).join(''):'<small style="color:#9A96C8">Пока пусто</small>'}
   catch(e){$('#log').innerHTML='<small style="color:#9A96C8">'+esc(e.message)+'</small>'}
 }
-loadLog();$('#key').onchange=loadLog;
+loadLog();$('#key').onchange=()=>{loadLog();loadSales()};
+const bsay=(t,ok)=>{$('#bmsg').className=ok?'ok':'er';$('#bmsg').textContent=t};
+async function loadSales(){
+  try{const s=await req('/admin/sales');
+    $('#sales').innerHTML=`<div class="lg"><span>Оплачено в Telegram</span><span><b>${fmt(s.paid.total)} ⭐</b> · ${s.paid.count} покупок · ${s.paid.buyers} покупателей</span></div>
+    <div class="lg"><span>За 24 ч / 7 дн / 30 дн</span><span>${fmt(s.d1.s)} / ${fmt(s.d7.s)} / ${fmt(s.d30.s)} ⭐</span></div>
+    <div class="lg"><span>Потрачено с баланса игры</span><span>${fmt(s.paid.spentFromBalance)} ⭐</span></div>
+    <div class="lg"><span>Возвраты</span><span>${fmt(s.refunded.s)} ⭐ · ${s.refunded.n}</span></div>
+    <div style="margin-top:10px"><b>Товары</b></div>${s.items.map(i=>`<div class="lg"><span>${esc(i.item)}</span><span>${i.n} шт · ${fmt(i.s)} ⭐</span></div>`).join('')||'<small style="color:#9A96C8">пока нет</small>'}
+    <div style="margin-top:10px"><b>Топ покупателей</b></div>${s.top.map(t=>`<div class="lg"><span>${esc(t.name||'?')} <small>ID ${t.gid}</small></span><span>${fmt(t.stars)} ⭐ · ${t.n}</span></div>`).join('')||'<small style="color:#9A96C8">пока нет</small>'}`}
+  catch(e){$('#sales').innerHTML='<small style="color:#9A96C8">'+esc(e.message)+'</small>'}
+}
+async function loadBuyer(){
+  const id=$('#bid').value.replace(/\D/g,'');if(!id)return bsay('Введи ID',0);
+  try{const d=await req('/admin/purchases?id='+id);
+    $('#bl').innerHTML=`<div><b>${esc(d.name)}</b> <small style="color:#9A96C8">ID ${d.gid}${d.ban?' · в бане до '+new Date(d.ban.until).toLocaleString('ru-RU'):''}</small></div>`+
+    (d.items.map(r=>`<div class="lg"><span>#${r.id} ${esc(r.title)}<br><small>${new Date(r.ts).toLocaleString('ru-RU')} · ${r.via==='tg'?'Telegram':'баланс'}${r.ref?' · ВОЗВРАТ':''}</small></span><span>${r.stars} ⭐${r.ref?'':` <button type="button" data-rf="${r.id}" style="padding:6px 10px;font-size:12px">Вернуть</button>`}</span></div>`).join('')||'<small style="color:#9A96C8">покупок нет</small>');
+    bsay('',1)}catch(e){bsay(e.message,0)}
+}
+$('#bfind').onclick=loadBuyer;
+$('#bl').onclick=async e=>{const b=e.target.closest('[data-rf]');if(!b)return;if(!confirm('Вернуть платёж #'+b.dataset.rf+'? Покупка будет отозвана.'))return;
+  try{const r=await req('/admin/refund',{pid:+b.dataset.rf});bsay(r.ok?'Возврат выполнен: '+r.notes.join('; '):'Не вышло: '+r.error+(r.desc?' ('+r.desc+')':''),!!r.ok);loadBuyer();loadSales()}catch(x){bsay(x.message,0)}};
+$('#bban').onclick=async()=>{try{const r=await req('/admin/ban',{id:$('#bid').value,hours:+$('#bh').value||24});bsay('Бан выдан: '+r.name,1);loadBuyer()}catch(e){bsay(e.message,0)}};
+$('#bunban').onclick=async()=>{try{const r=await req('/admin/unban',{id:$('#bid').value});bsay('Разбанен: '+r.name,1);loadBuyer()}catch(e){bsay(e.message,0)}};
+loadSales();
+
 </script>
 </body>
 </html>

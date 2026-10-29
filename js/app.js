@@ -283,7 +283,7 @@ function fixState(){
   num('casen',0);S.casen=Math.max(0,Math.floor(S.casen));
   num('upl',0);S.upl=Math.max(0,Math.floor(S.upl));S.uph=Array.isArray(S.uph)?S.uph.filter(x=>x&&typeof x==='object'&&typeof x.s==='string').slice(0,30):[];
   S.ntfs=S.ntfs?1:0;S.ntfok=S.ntfok?1:0;if(!S.ntfs&&!S.ntf)S.ntf=63;if(!S.ntfv){S.ntfv=1;if(S.ntf===31)S.ntf=63}   // по умолчанию включены все уведомления, пока игрок сам ничего не менял
-  num('ntf',0);S.ntf=Math.max(0,Math.min(63,Math.floor(S.ntf)));
+  num('ntf',0);if(S.ntfv<2){S.ntfv=2;if(S.ntf)S.ntf|=64}S.ntf=Math.max(0,Math.min(127,Math.floor(S.ntf)));
   num('uid',0);num('en',EN_CAP);S.en=Math.max(0,Math.min(999,Math.floor(S.en)));num('enT',0);if(S.src!=='free'&&S.src!=='coin')S.src='free';S.snd=S.snd!==false;num('lvl',1);S.lvl=Math.max(1,Math.floor(S.lvl));num('xp',0);S.xp=Math.max(0,Math.floor(S.xp));
   S.show=Array.isArray(S.show)?[...new Set(S.show.filter(n=>n===0||n===1||n===2))]:[];
   S.cnt=Array.isArray(S.cnt)?Array.from({length:8},(_,i)=>Math.max(0,+S.cnt[i]||0)):[0,0,0,0,0,0,0,0];
@@ -695,7 +695,7 @@ async function spin(){
   const free=S.src==='free'&&count!==5,m=count===5?MODES[mode]:free?MODES[0]:MODES[mode],cost=free?count:count===5?0:m.cost*count;
   if(free){if(S.en<cost){toast(`Не хватает энергии: нужно ${cost}, есть ${S.en}. Следующая через ${mmss(enLeft())}. Можно крутить за монеты.`);return}}
   else if(S.coins<cost){toast('Не хватает монет. Продай ники в коллекции или загляни в бонусы.');return}
-  if(count===5){v5Left();S.v5.n++}
+  if(count===5){v5Left();S.v5.n++;S.v5tot=(S.v5tot||0)+1}
   flushPrev();plHide();sfx('whoosh');addXp(10*count);busy=true;if(free){if(S.en>=EN_CAP)S.enT=Date.now();S.en-=cost}else S.coins-=cost;S.spins+=count;if(count>1)S.tri++;addQuest('spins',count);try{spAdd(3*count)}catch(e){}
   cur=Array.from({length:count},()=>roll(m));const plGot=cur.reduce((a,c)=>a+val(c.t,c.p,c.name),0),plSp=free?0:cost,plEn=free?cost:0;
   cur.forEach(c=>{if(c.t>=3&&c.t<=6)feedPush(c.name,c.t);S.cnt[c.t]++;S.best=Math.max(S.best,c.t);noteBest(val(c.t,c.p,c.name),c.name)});
@@ -1282,6 +1282,7 @@ function renderProf(){
     <button class="ptile" id="cos-open"><span class="pti">✨</span><b>Оформление</b><small>титулы, рамки, ник, тема · куплено ${S.cown.length}</small></button>
     <button class="ptile" id="guide-open"><span class="pti">📖</span><b>Как играть</b><small>видео и 8 шагов</small></button>
     <button class="ptile" id="chat-open"><span class="pti">💬</span><b>Чат игроков</b><small>общий чат игры</small></button>
+    <button class="ptile wide" id="hist-open"><span class="pti">🧾</span><div><b>История покупок</b><small>что и когда куплено за звёзды</small></div></button>
     <button class="ptile" data-craft="1"><span class="pti">⚗️</span><b>Крафт</b><small>3 ника → 1 новый</small></button>
   </div>
   <div class="pcard inv invx"><div><b>Позвать друзей</b><small>За каждого друга: +${fmt(REF_C)} 🪙 и +${REF_E} ⚡ · приглашено ${S.refc} из ${REF_MAX}</small></div><div class="invb">${lb.refn>0?`<button class="btn main" id="ref-claim">Забрать +${fmt(lb.refn*REF_C)} 🪙</button>`:''}<button class="btn${lb.refn>0?'':' main'}" id="invite">Позвать</button></div></div>
@@ -1309,6 +1310,7 @@ $('#tab-prof').onclick=e=>{
   if(e.target.closest('#clan-open'))return tab('clan');
   if(e.target.closest('#dex-claim'))return dexClaim();
   if(e.target.closest('#chat-open'))return chatSheet();
+  if(e.target.closest('#hist-open'))return histSheet();
   if(e.target.closest('#cos-open'))return cosSheet();
   if(e.target.closest('#guide-open'))return tab('guide');
   {const nb=e.target.closest('[data-nt]');if(nb)return ntToggle(+nb.dataset.nt)}
@@ -1321,6 +1323,33 @@ $('#tab-prof').onclick=e=>{
   const me=tgUser().id,base=APP_LINK?(me?APP_LINK+(APP_LINK.includes('?')?'&':'?')+'startapp=r'+me:APP_LINK):location.href.split('#')[0].split('?')[0];
   openTg(`https://t.me/share/url?url=${encodeURIComponent(base)}&text=${encodeURIComponent('Заходи в Нейм-рулетку: выбивай редкие юзернеймы и собирай коллекцию!')}`);
 };
+
+// ---------- Срочные задания: 3 дня, потом набор меняется ----------
+const TQP=[
+  {id:'chat',i:'💬',n:'Живой разговор',d:'Напиши 5 сообщений в чате',k:()=>S.chm||0,g:5,r:60000,e:3},
+  {id:'buy',i:'⭐',n:'Поддержи игру',d:'Купи любой товар за ⭐',k:()=>S.sbuys||0,g:1,r:150000,e:10},
+  {id:'v5',i:'👑',n:'Королевская крутка',d:'Сделай VIP-крутку ×5',k:()=>S.v5tot||0,g:1,r:100000,e:5,vip:1},
+  {id:'gift',i:'🎁',n:'Подарок короны',d:'Забери подарок VIP',k:()=>S.vgn||0,g:1,r:80000,e:5,vip:1},
+  {id:'spins',i:'🎰',n:'Горячие руки',d:'Сделай 50 круток',k:()=>S.spins,g:50,r:90000,e:5},
+  {id:'upw',i:'⚡',n:'Удачный апгрейд',d:'Выиграй 3 апгрейда',k:()=>S.upw,g:3,r:120000,e:5},
+  {id:'epic',i:'💎',n:'Редкая добыча',d:'Выбей 3 ника Эпик и выше',k:()=>S.cnt[3]+S.cnt[4]+S.cnt[5]+S.cnt[6]+S.cnt[7],g:3,r:130000,e:5}];
+const TQD=3*864e5,tqWin=()=>Math.floor((Date.now()-new Date().getTimezoneOffset()*60000)/TQD);
+function tqState(){
+  const w=tqWin();
+  if(!S.tq||S.tq.w!==w){S.tq={w,b:Object.fromEntries(TQP.map(t=>[t.id,t.k()])),got:[]};save()}
+  return S.tq;
+}
+const tqList=()=>{const w=tqWin();return [0,1,2,3].map(k=>TQP[(w*3+k*2)%TQP.length])};
+function tqReady(){try{const z=tqState();return tqList().filter(t=>!z.got.includes(t.id)&&Math.max(0,t.k()-(z.b[t.id]||0))>=t.g).length}catch(e){return 0}}
+function tqHtml(){
+  const z=tqState(),left=(z.w+1)*TQD+new Date().getTimezoneOffset()*60000-Date.now(),d=Math.floor(left/864e5),h=Math.floor(left%864e5/36e5);
+  return `<div class="pcard tqc"><div class="tqh"><b>⏳ Срочные задания</b><small>меняются через ${d?d+' д ':''}${h} ч</small></div>`+tqList().map(t=>{
+    const p=Math.min(t.g,Math.max(0,t.k()-(z.b[t.id]||0))),done=z.got.includes(t.id),ok=p>=t.g;
+    return `<div class="tqr${done?' done':''}"><span class="tqi">${t.i}</span><div><b>${t.n}${t.vip&&!vipOn()?' <em>нужен VIP</em>':''}</b><small>${t.d}</small><div class="qbar"><i style="width:${p/t.g*100}%"></i></div></div>${done?'<span class="arw got">✓</span>':ok?`<button class="btn main sm arw" data-tq="${t.id}">+${kfmt(t.r)} 🪙</button>`:`<span class="arw">${p}/${t.g}</span>`}</div>`}).join('')+`</div>`;
+}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-tq]');if(!b)return;
+  const z=tqState(),t=TQP.find(x=>x.id===b.dataset.tq);if(!t||z.got.includes(t.id)||t.k()-(z.b[t.id]||0)<t.g)return;
+  z.got.push(t.id);S.coins=Math.min(CAP,S.coins+t.r);tickEn();S.en+=t.e;addXp(40);sfx('coins');hap('n','success');save();toast(`Задание выполнено: +${fmt(t.r)} 🪙 и +${t.e} ⚡`);render();renderAch()});
 function renderAch(){
   const n=ACH.filter(achOk).length,tot=ACH.length,C=2*Math.PI*54,rd=achReady().length,got=achEarned();
   const near=ACH.map((x,i)=>({x,i,ok:achOk(x,i)})).filter(o=>!o.ok).sort((p,q)=>Math.min(q.x.cur()/q.x.goal,1)-Math.min(p.x.cur()/p.x.goal,1))[0];
@@ -1329,6 +1358,7 @@ function renderAch(){
   const h=`<div class="ahead"><h2>Достижения</h2></div>
   <div class="asum"><div class="ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" class="rb"/><circle cx="60" cy="60" r="54" class="rf" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-n/tot)}"/></svg><div><b>${n}</b><small>из ${tot}</small></div></div>
     <div class="ainfo"><small class="cap2">Получено наград</small><b class="big">${fmt(got)} 🪙</b><div class="chips"><span class="chip2">🏆 ${n} открыто</span><span class="chip2">🔒 ${tot-n} осталось</span></div>${near?`<p>Ближайшее: ${near.x.n}, ${fmt(Math.min(near.x.cur(),near.x.goal))} из ${fmt(near.x.goal)}</p>`:'<p>Все достижения открыты!</p>'}</div></div>
+  ${(()=>{try{return tqHtml()}catch(e){return ''}})()}
   ${rd?`<button class="btn main cwide" data-claim="all">Забрать все награды · +${fmt(achReady().reduce((s,i)=>s+ACH[i].r,0))} 🪙</button>`:''}
   <div class="alist">`+list.map(({x,i,ok})=>{const c=Math.min(x.cur(),x.goal),cl=S.achGot.includes(i);
     const side=ok&&!cl?`<button class="btn main sm arw" data-claim="${i}">+${fmt(x.r)} 🪙</button>`:`<span class="arw${cl?' got':''}">${cl?'✓ ':''}+${fmt(x.r)} 🪙</span>`;
@@ -2314,7 +2344,7 @@ function renderBon(){
       return `<div class="lcell ${st}${i===6?' big':''}"><small>День ${i+1}</small><b>${kfmt(r)}</b>${st==='done'?'<i>✓</i>':''}</div>`}).join('')+`</div>`+
     (li.done?`<button class="btn" disabled>Получено · следующая через <span data-t="day"></span></button>`
       :`<button class="btn main" data-b="login">Забрать день ${li.idx+1}: ${fmt(Math.round(LOGIN[li.idx]*evC()))} 🪙${evC()>1?' ×'+evF(evC()):''}</button>`)+
-    (!li.done&&!li.alive&&S.login.n>0?`<p class="sum">Серия прервалась, награды идут с первого дня.</p>`:'')+`</details>`;
+    (!li.done&&!li.alive&&S.login.n>0?`<p class="sum">Серия прервалась, награды идут с первого дня.</p>`:streakLine(li.alive?li.n:0))+`</details>`;
   h+=`<details class="pcard fold" data-fold="wheel"${fo('wheel',1)}><summary class="bhead"><h3>Ежедневная рулетка</h3><span class="bsub">${S.wheelx?`1 в сутки + ${S.wheelx} докупленных`:'1 попытка в сутки'}</span></summary>
     ${wheelHtml()}<p class="sum" hidden>${fmt(Math.min(...WHEEL.filter(p=>p.k==='c').map(p=>p.v)))} до ${fmt(Math.max(...WHEEL.filter(p=>p.k==='c').map(p=>p.v)))} 🪙 и ники от «${T[Math.min(...WHEEL.filter(p=>p.k==='n').map(p=>p.t))].n}» до «${T[Math.max(...WHEEL.filter(p=>p.k==='n').map(p=>p.t))].n}».</p>`+
     (can?`<button class="spin" data-b="wheel">Крутить рулетку${S.wheelx?` · ещё ×${S.wheelx}`:''}</button>`:S.wheelx?`<button class="spin" data-b="wheel">Крутить ещё · осталось ${S.wheelx}</button>`:`<button class="spin" disabled>Уже крутили · ещё <span data-t="day"></span></button>`)+
@@ -2335,10 +2365,13 @@ function renderBon(){
   }
   updTimers();
 }
+const STRK=[[3,50000,5],[7,200000,10],[14,500000,15],[30,1500000,30],[60,4000000,50]];   // награды за серию дней входа: монеты и энергия (у VIP ×2)
+function streakLine(n){const nx=STRK.find(x=>x[0]>n);return `<p class="sum streakl">🔥 Серия ${n} ${dw(n)}.${nx?` До награды за ${nx[0]}-й день: ещё ${nx[0]-n} (+${kfmt(nx[1]*(vipOn()?2:1))} 🪙 и +${nx[2]*(vipOn()?2:1)} ⚡).`:' Все награды за серию получены.'} ${vipOn()?'👑 VIP: вход ×1,5, награды серии ×2.':'С VIP: вход ×1,5, награды серии ×2.'}</p>`}
 function claimLogin(){
   const i=loginInfo();if(i.done)return;
-  const r=Math.round(LOGIN[i.idx]*evC());S.login={n:i.n+1,last:todayK()};S.maxStreak=Math.max(S.maxStreak,S.login.n);S.coins+=r;S.en+=Math.round(5*evE());addXp(30);sfx(r>=10000?'coins':'coin');save();
-  toast(`День ${i.idx+1}: +${fmt(r)} 🪙 и +5 ⚡`);hap('n','success');if(r>=20000)boom('#FFC933',4);render();
+  const r=Math.round(LOGIN[i.idx]*evC()*(vipOn()?1.5:1));S.login={n:i.n+1,last:todayK()};S.maxStreak=Math.max(S.maxStreak,S.login.n);S.coins+=r;S.en+=Math.round(5*evE());addXp(30);sfx(r>=10000?'coins':'coin');
+  const ms=STRK.find(x=>x[0]===S.login.n);let ex='';if(ms){const k=vipOn()?2:1;S.coins=Math.min(CAP,S.coins+ms[1]*k);S.en+=ms[2]*k;ex=` · 🔥 серия ${ms[0]} дн.: +${fmt(ms[1]*k)} 🪙 и +${ms[2]*k} ⚡${vipOn()?' (VIP ×2)':''}`;boom('#FF8A3D',5)}
+  save();toast(`День ${i.idx+1}: +${fmt(r)} 🪙 и +5 ⚡${ex}`);hap('n','success');if(r>=20000)boom('#FFC933',4);render();
 }
 function claimQuest(i){
   const q=S.q.list[i];if(!q||q.got||q.p<q.n)return;
@@ -2580,9 +2613,11 @@ var stPr=id=>(st.cat&&st.cat[id])||STC[id][3];
 var stHave=id=>{const c=STC[id];if(!c)return false;if(id==='vip')return vipOn();if(id==='ceo')return !!(S.exc.ceo||st.owned.ceo||(sh.ex&&sh.ex.ceo&&sh.ex.ceo.mine));if(id==='pass'){try{return !!(st.owned.pass||szState().paid)}catch(e){return !!st.owned.pass}}return !!(c[4]&&(S.sx[id]||st.owned[id]))};
 function goStar(id){try{sessionStorage.setItem('nr_st',id)}catch(e){}if(PAGE==='shop'){sh.tab='stars';st.sel=id;renderShop()}else tab('shop')}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-stgo]');if(b)goStar(b.dataset.stgo)});
+var agoT=ts=>{const m=Math.max(1,Math.floor((Date.now()-ts)/60000));return m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':Math.floor(m/1440)+' дн назад'};
 function stHtml(){
   const vip=vipOn(),bal=st.bal!=null?st.bal:S.sbal;
   let h='';
+  if(st.feed&&st.feed.length)h+=`<div class="pcard stfeed"><b>Недавно в магазине</b>${st.feed.slice(0,4).map(x=>`<div><span>${escH(x.text)}</span><small>${agoT(x.ts)}</small></div>`).join('')}</div>`;
   if(st.msg==='nochat')h+=`<div class="pcard lbmsg"><b>Бот не смог отправить счёт</b><small>Открой чат с ботом, нажми «Старт» и повтори покупку.</small><button class="btn main" id="st-chat">Открыть чат</button></div>`;
   if(st.sent)h+=`<div class="pcard lbmsg"><b>Счёт отправлен в чат с ботом</b><small>Оплати его в Telegram и вернись в игру: покупка придёт сама через несколько секунд.</small><button class="btn main" id="st-chat">Открыть чат с ботом</button></div>`;
   if(S.sx.custom>0)h+=`<div class="pcard lbmsg"><b>✏️ Именной юзернейм оплачен</b><small>Напиши в поддержку @ddwwks и назови желаемый юзернейм. Это можно сделать сейчас.</small><button class="btn main" id="st-sup">Написать в поддержку</button><button class="btn" id="st-done">Ник выдали, скрыть</button></div>`;
@@ -2592,7 +2627,7 @@ function stHtml(){
       const out=id==='ceo'&&!own&&sh.ex&&sh.ex.ceo&&sh.ex.ceo.left<1,ds=id==='ceo'&&sh.ex&&sh.ex.ceo?c[2]+` · осталось ${sh.ex.ceo.left} из ${sh.ex.ceo.total}`:c[2],dis=own||out;
       return `<div class="pcard svc stit${dis?' own':''}"${dis?'':` data-st="${id}"`}><span class="svi">${c[0]}</span><div><b>${c[1]}</b><small>${ds}</small></div><button class="btn ${dis?'':'main '}sm"${dis?' disabled':` data-st="${id}"`}>${own?'Куплено ✓':out?'Раскуплен':'⭐ '+fmt(stPr(id))}</button></div>`}).join('');
   }
-  h+=`<div class="stbh"><b><i></i>Звёздный баланс</b><span>на балансе ⭐ ${fmt(bal)}</span></div><div class="stgrid">${STUP.map(n=>`<button class="stp${n===100?' hot':''}${n===1000?' wide':''}" data-stup="${n}">${n===100?'<em>выбор игроков</em>':''}<b>+${fmt(n)} ⭐</b><small>${fmt(n)} звёзд Telegram</small></button>`).join('')}</div>`;
+  h+=`<div class="stbh"><b><i></i>Звёздный баланс</b><span>на балансе ⭐ ${fmt(bal)}</span></div>${st.first?'<div class="stfirst">🎁 Первое пополнение: +10% звёзд в подарок</div>':''}<div class="stgrid">${STUP.map(n=>`<button class="stp${n===100?' hot':''}${n===1000?' wide':''}" data-stup="${n}">${n===100?'<em>выбор игроков</em>':''}<b>+${fmt(n)} ⭐</b><small>${fmt(n)} звёзд Telegram${st.first?` · +${Math.floor(n/10)} ⭐ бонус`:''}</small></button>`).join('')}</div>`;
   return h+`<small class="sum">Оплата идёт через Telegram Stars. Звёзды покупаются в самом Telegram, их можно потратить на баланс игры или на любой товар напрямую.</small>`;
 }
 function stSheet(){
@@ -2606,9 +2641,10 @@ function stSheet(){
 }
 async function stLoad(){
   if(!API||!tg||!tg.initData)return;
-  const r=await lbReq('/pay/state');st.bal=r.bal;S.sbal=r.bal;st.owned=r.owned||{};st.cat=r.cat||null;
+  const [r,f]=await Promise.all([lbReq('/pay/state'),lbReq('/pay/feed').catch(()=>({items:[]}))]);
+  st.bal=r.bal;S.sbal=r.bal;st.owned=r.owned||{};st.cat=r.cat||null;st.first=!!r.first;st.feed=f.items||[];
   if(r.vip&&r.vip>S.vip)S.vip=r.vip;else if(!r.vip)S.vip=0;
-  stOwned();save();setMax();
+  stOwned();if(r.revoked)stRevoke(r.revoked);save();setMax();
 }
 function stOwned(){   // восстановить разовые покупки, если на устройстве потерялось локальное состояние
   const o=st.owned||{};
@@ -2620,38 +2656,64 @@ function stOwned(){   // восстановить разовые покупки,
   if(o.vip){S.sx.vip=1;S.vip=VIP_FOREVER}
   if(o.ceo){S.exc.ceo=1;if(!S.items.some(i=>i.n==='ceo'))addItem('ceo',7,0)}
 }
-function stGive(min){const c=roll({min,cost:0});if(S.items.length<MAX){addItem(c.name,c.t,c.p);return `ник @${c.name}`}const v=val(c.t,c.p,c.name);S.coins=Math.min(CAP,S.coins+v);return `ник @${c.name} продан за ${fmt(v)} 🪙 (коллекция полна)`}
-function stApply(r,out){
+function stGive(min){const c=roll({min,cost:0});let sold=0;if(S.items.length<MAX)addItem(c.name,c.t,c.p);else{sold=val(c.t,c.p,c.name);S.coins=Math.min(CAP,S.coins+sold)}return{c,sold}}
+function stApply(r,out,fx){
   const id=r.item;tickEn();
-  const pk=(coins,en,min,frame)=>{S.coins=Math.min(CAP,S.coins+coins);S.en+=en;out.push(`+${fmt(coins)} 🪙, +${en} ⚡, ${stGive(min)}`);if(frame&&!S.cown.includes('f_gold')){S.cown.push('f_gold');if(!S.cf)S.cf='f_gold'}};
+  const card=(i,t,s2,c)=>fx.push({i,t,s:s2,c:c||'#9B8CFF'});
+  const pk=(coins,en,min,frame)=>{S.coins=Math.min(CAP,S.coins+coins);S.en+=en;card('🪙','+'+fmt(coins),'монет','#FFC933');card('⚡','+'+en,'энергии','#FFB62E');
+    const g=stGive(min);card('@','@'+g.c.name,T[g.c.t].n+(g.sold?`, коллекция полна: продан за ${fmt(g.sold)} 🪙`:''),T[g.c.t].c);
+    if(frame&&!S.cown.includes('f_gold')){S.cown.push('f_gold');if(!S.cf)S.cf='f_gold';card('🖼️','Золотая рамка','новое оформление','#FFC933')}};
+  if(!/^bal/.test(id))S.sbuys=(S.sbuys||0)+1;
   if(id==='starter'){S.sx.starter=1;pk(4e5,20,2)}
   else if(id==='pack_pro')pk(2.5e6,60,3);
   else if(id==='pack_gold')pk(7e6,150,4,1);
-  else if(id==='energy60'){S.en+=60;out.push('+60 ⚡')}
-  else if(id==='vip'){S.sx.vip=1;S.vip=VIP_FOREVER;out.push('👑 VIP навсегда включён')}
-  else if(id==='ceo'){S.exc.ceo=1;if(!S.items.some(i=>i.n==='ceo'))addItem('ceo',7,0);out.push('эксклюзивный ник @ceo')}
-  else if(id==='museum'){S.sx.museum=1;S.hall=1;out.push('🏛️ зал музея открыт')}
-  else if(id==='collector'){S.sx.collector=1;S.slots=MAXSLOTS;out.push('все места в коллекции')}
-  else if(id==='wheel5'){S.wheelx+=5;out.push('+5 кручений колеса')}
-  else if(id==='title_oligarch'){S.sx.title_oligarch=1;if(!S.cown.includes('oligarch'))S.cown.push('oligarch');S.ct='oligarch';out.push('титул «Олигарх»')}
-  else if(id==='custom_nick'){S.sx.custom=(S.sx.custom||0)+1;out.push('напиши в поддержку @ddwwks')}
-  else if(id==='pass'){try{const z=szState();if(String(z.id)===String(r.meta)||!r.meta){z.paid=1}}catch(e){}out.push('платная дорожка открыта')}
-  else if(id==='top'){S.topfree=(S.topfree||0)+1;S.toppick=1;out.push('лот в топ: выбери лот на рынке')}
+  else if(id==='energy60'){S.en+=60;card('⚡','+60','энергии в запас','#FFB62E')}
+  else if(id==='vip'){S.sx.vip=1;S.vip=VIP_FOREVER;card('👑','VIP навсегда','все преимущества открыты','#FFC933')}
+  else if(id==='ceo'){S.exc.ceo=1;if(!S.items.some(i=>i.n==='ceo'))addItem('ceo',7,0);card('🟣','@ceo','эксклюзивный ник','#B455FF')}
+  else if(id==='museum'){S.sx.museum=1;S.hall=1;card('🏛️','Свой зал','музей открыт','#9B7BFF')}
+  else if(id==='collector'){if(!S.sx.collector)S.sx.slots0=S.slots;S.sx.collector=1;S.slots=MAXSLOTS;setMax();card('🗂️','Все места','30 мест в коллекции','#27D9BD')}
+  else if(id==='wheel5'){S.wheelx+=5;card('🎡','+5','кручений колеса','#FF5FA2')}
+  else if(id==='title_oligarch'){S.sx.title_oligarch=1;if(!S.cown.includes('oligarch'))S.cown.push('oligarch');S.ct='oligarch';card('🏆','Олигарх','титул уже надет','#FFD34E')}
+  else if(id==='custom_nick'){S.sx.custom=(S.sx.custom||0)+1;card('✏️','Именной юзернейм','напиши в поддержку @ddwwks','#FFFFFF')}
+  else if(id==='pass'){try{const z=szState();if(String(z.id)===String(r.meta)||!r.meta){z.paid=1}}catch(e){}card('🎫','Платный пропуск','дорожка наград открыта','#FFB62E')}
+  else if(id==='top'){S.topfree=(S.topfree||0)+1;S.toppick=1;card('🔝','Лот в топ','выбери лот на рынке','#FF8A3D')}
+  out.push(id);
+}
+// эффектное окно после покупки: награды появляются по очереди
+function buyFx(list){
+  const old=document.getElementById('buyfx');if(old)old.remove();
+  const o=document.createElement('div');o.id='buyfx';o.className='bfx';
+  o.innerHTML=`<div class="bfx-bg"></div><div class="bfx-rays"></div><div class="bfx-in"><div class="bfx-t">Покупка получена</div><div class="bfx-l">${list.map((c,i)=>`<div class="bfx-c" style="--i:${i};--c:${c.c}"><span class="bfx-i">${c.i==='@'?'@':c.i}</span><div><b>${escH(c.t)}</b><small>${escH(c.s)}</small></div></div>`).join('')}</div><button class="btn main cwide bfx-ok">Забрать</button></div>`;
+  document.body.append(o);
+  try{sfx('ach');hap('n','success')}catch(e){}
+  list.forEach((_,i)=>setTimeout(()=>{try{sfx('coin');hap('i','light')}catch(e){}},450+i*320));
+  o.querySelector('.bfx-ok').onclick=()=>{o.classList.add('out');setTimeout(()=>o.remove(),320)};
+}
+function stRevoke(rv){   // админ вернул платёж: отзываем купленное на устройстве
+  let ch=0;
+  if(rv.vip&&S.vip){S.vip=0;S.sx.vip=0;ch=1}
+  if(rv.title_oligarch&&(S.sx.title_oligarch||S.cown.includes('oligarch'))){S.sx.title_oligarch=0;S.cown=S.cown.filter(x=>x!=='oligarch');if(S.ct==='oligarch')S.ct='';ch=1}
+  if(rv.ceo&&(S.exc.ceo||S.items.some(i=>i.n==='ceo'))){S.exc.ceo=0;S.items=S.items.filter(i=>i.n!=='ceo');ch=1}
+  if(rv.museum&&S.sx.museum){S.sx.museum=0;S.hall=0;ch=1}
+  if(rv.collector&&S.sx.collector){S.sx.collector=0;S.slots=Math.max(MAX0,Math.min(MAXSLOTS,+S.sx.slots0||MAX0));ch=1}
+  if(ch){setMax();save();render();toast('Платёж возвращён: покупка отозвана')}
 }
 async function payClaim(){
   if(!API||!tg||!tg.initData||payClaim.b)return;payClaim.b=1;
   try{
-    const r=await lbReq('/pay/claim',{});st.bal=r.bal;S.sbal=r.bal;if(typeof r.vip==='number'&&r.vip>0)S.vip=Math.max(S.vip,r.vip);
-    const out=[];(r.items||[]).forEach(it=>{try{stApply(it,out)}catch(e){}});
-    if(r.items&&r.items.length){st.sent='';st.msg='';st.sel='';cosFix();setMax();save();render();lb.sent='';try{sfx('ach');hap('n','success')}catch(e){}toast('✅ Покупка получена: '+out.join(' · '));
-      if(r.items.some(x=>x.item==='top')&&PAGE==='shop')setTimeout(()=>tab('market'),900)}
+    const r=await lbReq('/pay/claim',{}),pb=S.sbal;st.bal=r.bal;S.sbal=r.bal;if(typeof r.vip==='number'&&r.vip>0)S.vip=Math.max(S.vip,r.vip);
+    const out=[],fx=[];(r.items||[]).forEach(it=>{try{stApply(it,out,fx)}catch(e){}});
+    if(r.items&&r.items.length){st.sent='';st.msg='';st.sel='';cosFix();setMax();save();render();lb.sent='';
+      if(fx.length)buyFx(fx);
+      if(r.items.some(x=>x.item==='top')&&PAGE==='shop')setTimeout(()=>{const b=document.getElementById('buyfx');if(b)b.remove();tab('market')},4200)}
+    else if(r.bal>pb&&pb!=null&&st.sent){st.sent='';save();try{sfx('ach')}catch(e){}toast(`✅ Баланс пополнен: ⭐ ${fmt(r.bal)}`)}
     if(PAGE==='shop'&&!shEl().hidden)renderShop();
   }catch(e){}
   payClaim.b=0;
 }
 async function stGift(){
   if(!vipOn()||!API||!tg||!tg.initData)return;
-  try{const r=await lbReq('/pay/vipgift',{});if(r&&r.ok){tickEn();S.coins=Math.min(CAP,S.coins+r.c);S.en+=r.e;save();render();try{sfx('coins')}catch(e){}toast(`👑 Подарок VIP: +${fmt(r.c)} 🪙 и +${r.e} ⚡`)}}catch(e){}
+  try{const r=await lbReq('/pay/vipgift',{});if(r&&r.ok){tickEn();S.vgn=(S.vgn||0)+1;S.coins=Math.min(CAP,S.coins+r.c);S.en+=r.e;save();render();try{sfx('coins')}catch(e){}toast(`👑 Подарок VIP: +${fmt(r.c)} 🪙 и +${r.e} ⚡`)}}catch(e){}
 }
 function stPoll(){clearInterval(stPoll.t);let n=0;stPoll.t=setInterval(async()=>{n++;await payClaim();if(!st.sent||n>60)clearInterval(stPoll.t)},3000)}
 async function stInvoice(id){
@@ -2687,45 +2749,77 @@ setTimeout(async()=>{await payClaim();try{await stLoad()}catch(e){}stGift()},500
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(payClaim,600)});
 
 
-// ---------- Общий чат игры ----------
-var chat={items:[],last:0,t:0,busy:0,err:''};
+
+// ---------- История покупок ----------
+async function histSheet(){
+  let o=document.getElementById('hissh');if(o)o.remove();
+  o=document.createElement('div');o.id='hissh';o.className='usheet';
+  o.innerHTML=`<div class="sbg" data-hx="1"></div><div class="sbox"><div class="shead"><b>🧾 История покупок</b><button class="btn sm" data-hx="1">✕</button></div><div class="hislist"><p class="sum">Загружаю…</p></div></div>`;
+  o.onclick=e=>{if(e.target.closest('[data-hx]'))o.remove()};document.body.append(o);
+  const box=o.querySelector('.hislist');
+  if(!API||!tg||!tg.initData){box.innerHTML='<p class="sum">История доступна в Telegram.</p>';return}
+  try{const r=await lbReq('/pay/history');
+    box.innerHTML=r.items.length?r.items.map(x=>{const c=STC[x.item],nm=c?c[1]:/^bal/.test(x.item)?'Пополнение баланса '+x.item.slice(3)+' ⭐':x.item;
+      return `<div class="hrow${x.ref?' ref':''}"><span class="hi2">${c?c[0]:'⭐'}</span><div><b>${escH(nm)}</b><small>${fmtDate(x.ts)} · ${x.via==='tg'?'Telegram Stars':'с баланса'}${x.ref?' · возврат':''}</small></div><span class="hs2">${x.ref?'↩ ':''}${fmt(x.stars)} ⭐</span></div>`}).join(''):'<p class="sum">Покупок пока нет.</p>'}
+  catch(e){box.innerHTML='<p class="sum">Не удалось загрузить историю.</p>'}
+}
+
+// ---------- Общий чат игры: ответы, личные сообщения, жалобы ----------
+var chat={items:[],last:0,t:0,busy:0,err:'',tab:'all',re:null,to:null,me:0,ban:0};
+const chErr={bad:'В сообщении запрещённые слова',link:'Ссылки и @юзернеймы в чате запрещены',fast:'Не так быстро: подожди пару секунд',flag:'Чат закрыт: данные не прошли проверку',nouser:'Игрок с таким ID не найден',gone:'Сообщение уже удалено',empty:'Пустое сообщение'};
 function chatRender(stick){
   const o=document.getElementById('chatsh');if(!o)return;
   const box=o.querySelector('.chlist');if(!box)return;
   const near=box.scrollHeight-box.scrollTop-box.clientHeight<80;
-  box.innerHTML=chat.items.length?chat.items.map(m=>`<div class="chm${m.mine?' me':''}"><b>${m.vip?'👑 ':''}${escH(m.name)}</b><span>${escH(m.text)}</span><small>${new Date(m.ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</small></div>`).join(''):'<p class="sum" style="text-align:center">Пока никто не писал. Начни первым.</p>';
+  const dmN=chat.items.filter(m=>m.dm).length,list=chat.items.filter(m=>chat.tab==='dm'?m.dm:!m.dm);
+  const t=o.querySelectorAll('[data-cht]');t.forEach(b=>b.setAttribute('aria-pressed',b.dataset.cht===chat.tab));
+  box.innerHTML=list.length?list.map(m=>`<div class="chm${m.mine?' me':''}${m.dm?' dm':''}" data-mid="${m.id}"><b>${m.vip?'👑 ':''}${escH(m.name)}${m.dm?` <em>→ ${m.mine?escH(m.tn||'игрок'):'тебе'}</em>`:''}</b>${m.re?`<div class="chq"><b>${escH(m.rn||'сообщение')}</b> ${escH(m.rt||'')}</div>`:''}<span>${escH(m.text)}</span><small><i>${new Date(m.ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</i>${m.mine?'':`<span class="cha"><button data-chr="${m.id}" title="Ответить">↩</button><button data-chd="${m.gid}" data-n="${escH(m.name)}" title="Написать лично">✉</button><button data-chf="${m.id}" title="Пожаловаться">⚑</button></span>`}</small></div>`).join(''):`<p class="sum" style="text-align:center">${chat.tab==='dm'?'Личных сообщений пока нет. Нажми ✉ у сообщения игрока.':'Пока никто не писал. Начни первым.'}</p>`;
   if(stick||near)box.scrollTop=box.scrollHeight;
-  const er=o.querySelector('.cher');if(er)er.textContent=chat.err;
+  const er=o.querySelector('.cher');if(er)er.textContent=chat.ban>Date.now()?'Ты в бане чата до '+fmtDate(chat.ban):chat.err;
+  const ct=o.querySelector('.chctx');if(ct)ct.innerHTML=chat.to?`<span>✉ Лично для <b>${escH(chat.to.n)}</b></span><button data-chc="1">✕</button>`:chat.re?`<span>↩ Ответ для <b>${escH(chat.re.n)}</b>: ${escH(chat.re.t)}</span><button data-chc="1">✕</button>`:'';
+  const dt=o.querySelector('[data-cht="dm"]');if(dt)dt.textContent='Личные'+(dmN?' ('+dmN+')':'');
 }
 async function chatPull(first){
   if(!API||!tg||!tg.initData||!document.getElementById('chatsh'))return;
-  try{const r=await lbReq('/chat'+(chat.last&&!first?'?after='+chat.last:''));
-    if(first){chat.items=r.items}else{const nw=r.items.filter(m=>m.id>chat.last);if(nw.length)chat.items=chat.items.concat(nw).slice(-120);r.items=nw}
+  try{const r=await lbReq('/chat'+(chat.last&&!first?'?after='+chat.last:''));chat.ban=r.ban||0;chat.me=r.me||0;
+    if(first){chat.items=r.items}else if(r.items.length){const nw=r.items.filter(m=>m.id>chat.last);if(nw.length)chat.items=chat.items.concat(nw).slice(-160)}
     if(chat.items.length)chat.last=chat.items[chat.items.length-1].id;
-    if(first||r.items.length)chatRender(first)}catch(e){}
+    chatRender(first)}catch(e){}
 }
 async function chatSend(){
   const i=document.getElementById('chin');if(!i||chat.busy)return;const text=i.value.trim();if(!text)return;
   chat.busy=1;chat.err='';
-  try{const r=await lbReq('/chat',{text});
-    if(r.ok){i.value='';await chatPull(false);const b=document.querySelector('#chatsh .chlist');if(b)b.scrollTop=b.scrollHeight}
-    else chat.err=r.error==='link'?'Ссылки и @юзернеймы в чате запрещены':r.error==='fast'?'Не так быстро: подожди пару секунд':r.error==='flag'?'Чат закрыт: данные не прошли проверку':'Не отправилось'}
+  try{const body={text};if(chat.to){body.to=chat.to.g}if(chat.re)body.re=chat.re.id;
+    const r=await lbReq('/chat',body);
+    if(r.ok){i.value='';S.chm=(S.chm||0)+1;save();chat.re=null;if(chat.to)chat.tab='dm';await chatPull(false);const b=document.querySelector('#chatsh .chlist');if(b)b.scrollTop=b.scrollHeight}
+    else if(r.error==='banned'){chat.ban=r.until;chat.err=''}
+    else chat.err=chErr[r.error]||'Не отправилось'}
   catch(e){chat.err='Нет связи, попробуй ещё раз'}
   chat.busy=0;chatRender(false);
 }
 function chatSheet(){
   let o=document.getElementById('chatsh');if(o)o.remove();
+  chat.re=null;chat.to=null;chat.tab='all';
   o=document.createElement('div');o.id='chatsh';o.className='usheet';
   o.innerHTML=`<div class="sbg" data-chx="1"></div><div class="sbox chbox"><div class="shead"><b>💬 Чат игроков</b><button class="btn sm" data-chx="1">✕</button></div>
-  ${API&&tg&&tg.initData?`<div class="chlist"><p class="sum" style="text-align:center">Загружаю…</p></div><div class="cher"></div>
-  <div class="chrow"><input id="chin" maxlength="200" placeholder="Сообщение…" autocomplete="off"><button class="btn main" id="chsend">➤</button></div>`:'<p class="sum">Чат доступен в Telegram: открой игру через бота.</p>'}</div>`;
-  o.onclick=e=>{if(e.target.closest('[data-chx]')){clearInterval(chat.t);return o.remove()}if(e.target.closest('#chsend'))chatSend()};
+  ${API&&tg&&tg.initData?`<div class="seg chtabs"><button data-cht="all" aria-pressed="true">Общий</button><button data-cht="dm" aria-pressed="false">Личные</button></div><div class="chlist"><p class="sum" style="text-align:center">Загружаю…</p></div><div class="cher"></div><div class="chctx"></div>
+  <div class="chrow"><input id="chin" maxlength="200" placeholder="Сообщение…" autocomplete="off"><button class="btn main" id="chsend">➤</button></div><small class="chrule">Без мата, ссылок и рекламы. Жалобы (⚑) проверяют админы.</small>`:'<p class="sum">Чат доступен в Telegram: открой игру через бота.</p>'}</div>`;
+  o.onclick=e=>{
+    if(e.target.closest('[data-chx]')){clearInterval(chat.t);return o.remove()}
+    if(e.target.closest('#chsend'))return chatSend();
+    const tb=e.target.closest('[data-cht]');if(tb){chat.tab=tb.dataset.cht;if(chat.tab==='all')chat.to=null;return chatRender(true)}
+    if(e.target.closest('[data-chc]')){chat.re=null;chat.to=null;return chatRender(false)}
+    const rb=e.target.closest('[data-chr]');if(rb){const m=chat.items.find(x=>x.id==rb.dataset.chr);if(m){chat.re={id:m.id,n:m.name,t:m.text.slice(0,40)};chat.to=m.dm?{g:m.gid,n:m.name}:null;chatRender(false);const i=document.getElementById('chin');if(i)i.focus()}return}
+    const db=e.target.closest('[data-chd]');if(db){chat.to={g:+db.dataset.chd,n:db.dataset.n};chat.re=null;chat.tab='dm';chatRender(true);const i=document.getElementById('chin');if(i)i.focus();return}
+    const fb=e.target.closest('[data-chf]');if(fb){const id=+fb.dataset.chf;if(!confirm('Пожаловаться на это сообщение? После трёх жалоб оно скроется, админ проверит автора.'))return;
+      lbReq('/chat/report',{id}).then(r=>{toast(r.hidden?'Сообщение скрыто, спасибо':'Жалоба отправлена');if(r.hidden){chat.items=chat.items.filter(x=>x.id!==id);chatRender(false)}}).catch(()=>toast('Не вышло, попробуй позже'));return}
+  };
   o.onkeydown=e=>{if(e.key==='Enter'&&e.target.id==='chin'){e.preventDefault();chatSend()}};
   document.body.append(o);chat.last=0;chatPull(true);clearInterval(chat.t);chat.t=setInterval(()=>{if(!document.getElementById('chatsh'))return clearInterval(chat.t);if(!document.hidden)chatPull(false)},4000);
 }
 
 // ---- уведомления от бота ----
-const NTF=[[1,'🔨','Аукцион','ставку перебили, лот продан или выигран'],[2,'💰','Рынок','твой ник купили'],[4,'🎡','Бесплатное колесо','когда оно снова доступно'],[8,'⚡','Полная энергия','можно крутить бесплатно'],[16,'👋','Давно не заходил','напомнит через 3 дня'],[32,'🎉','События и сезоны','×2…×10 к наградам и новый сезон']];
+const NTF=[[1,'🔨','Аукцион','ставку перебили, лот продан или выигран'],[2,'💰','Рынок','твой ник купили'],[4,'🎡','Бесплатное колесо','когда оно снова доступно'],[8,'⚡','Полная энергия','можно крутить бесплатно'],[16,'👋','Давно не заходил','напомнит через 3 дня'],[32,'🎉','События и сезоны','×2…×10 к наградам и новый сезон'],[64,'💬','Личные сообщения','кто-то написал тебе в чате']];
 function ntfCard(){
   if(!tg||!tg.initData)return '';
   return `<div class="pcard ntfc"><div class="ntfh"><b>Уведомления от бота</b><small>Бот пришлёт сообщение в Telegram, даже когда игра закрыта.</small></div>
