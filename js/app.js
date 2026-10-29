@@ -794,10 +794,6 @@ function boom(col,tr=3){
 }
 function rareFx(col,tr){
   const f=document.createElement('div');f.className='rfl';f.style.setProperty('--rc',col);document.body.append(f);setTimeout(()=>f.remove(),1100);
-  const E=hwOn()?['🎃','👻','🦇','🕸️']:tr>=6?['🕶️','💎','✨','🔮']:tr===5?['🔥','✨','💎']:['✨','⭐','💫'];
-  const box=document.createElement('div');box.className='rrain';box.setAttribute('aria-hidden','true');
-  box.innerHTML=Array.from({length:tr>=5?22:14},(_,i)=>`<span style="left:${R(96)}%;font-size:${16+R(18)}px;animation-delay:${R(700)}ms;animation-duration:${1400+R(1200)}ms">${P(E)}</span>`).join('');
-  document.body.append(box);setTimeout(()=>box.remove(),3200);
   if(tr>=5){document.body.classList.add('shk');setTimeout(()=>document.body.classList.remove('shk'),550)}
 }
 function tick(){
@@ -2444,6 +2440,7 @@ function holClaim(){
 // декор Хэллоуина: плавающие тыквы и призраки на фоне
 function hwFx(){
   try{let el=document.getElementById('hwfx');
+    if(el)el.remove();return;   // летающий декор отключён
     if(!hwOn()||reduce){if(el)el.remove();return}
     if(el)return;el=document.createElement('div');el.id='hwfx';el.setAttribute('aria-hidden','true');
     const E=['🎃','👻','🦇','🕸️','🎃','👻'];el.innerHTML=Array.from({length:9},(_,i)=>`<span style="left:${8+i*10.5}%;animation-duration:${14+(i*5)%9}s;animation-delay:-${(i*3)%13}s;font-size:${18+(i*7)%16}px">${E[i%E.length]}</span>`).join('');
