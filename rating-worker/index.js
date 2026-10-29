@@ -49,6 +49,10 @@ async function migrate(db) {   // добавляем новые столбцы �
   await db.prepare('CREATE TABLE IF NOT EXISTS promos (code TEXT PRIMARY KEY, kind TEXT NOT NULL, val TEXT NOT NULL DEFAULT \'\', n INTEGER NOT NULL DEFAULT 1, max INTEGER NOT NULL DEFAULT 0, exp INTEGER NOT NULL DEFAULT 0, uses INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS promo_use (code TEXT NOT NULL, uid TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (code, uid))').run();
   await db.prepare("INSERT OR IGNORE INTO promos(code,kind,val,n,max,exp,uses,ts) VALUES('NAMEROULETTE','case','star',1,0,0,0,0)").run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS chat (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, name TEXT NOT NULL DEFAULT \'\', text TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0)').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS acct (uid TEXT PRIMARY KEY, bal INTEGER NOT NULL DEFAULT 0, vip INTEGER NOT NULL DEFAULT 0, vgift TEXT NOT NULL DEFAULT \'\')').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, item TEXT NOT NULL, meta TEXT NOT NULL DEFAULT \'\', stars INTEGER NOT NULL DEFAULT 0, charge TEXT UNIQUE, via TEXT NOT NULL DEFAULT \'tg\', ts INTEGER NOT NULL DEFAULT 0, claimed INTEGER NOT NULL DEFAULT 0)').run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_purch_uid ON purchases(uid, claimed)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS shop (item TEXT PRIMARY KEY, uid TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS ntf (uid TEXT PRIMARY KEY, mask INTEGER NOT NULL DEFAULT 0, wheel_at INTEGER NOT NULL DEFAULT 0, en_full INTEGER NOT NULL DEFAULT 0, tz INTEGER NOT NULL DEFAULT 0, seen INTEGER NOT NULL DEFAULT 0, nw INTEGER NOT NULL DEFAULT 0, ne INTEGER NOT NULL DEFAULT 0, nl INTEGER NOT NULL DEFAULT 0, nlast INTEGER NOT NULL DEFAULT 0, bad INTEGER NOT NULL DEFAULT 0, tst INTEGER NOT NULL DEFAULT 0)').run();
   try {
@@ -122,7 +126,7 @@ async function cron(env) {
   await migrate(env.DB);
   const db = env.DB, now = Date.now(), LIM = 8, DAY = 86400000;
   await auSettle(db, env);
-  const quiet = (r) => { const h = new Date(now + r.tz * 60000).getUTCHours(); return h < 10 || h >= 22; };
+  const quiet = (r) => { const h = new Date(now + r.tz * 60000).getUTCHours(); return false; };   // тихих часов нет: бот может писать в любое время
   const sendTo = async (r, text, col, val) => {
     if (quiet(r)) return;
     await db.prepare(`UPDATE ntf SET ${col}=?, nlast=? WHERE uid=?`).bind(val, now, r.uid).run();
@@ -150,6 +154,148 @@ async function cron(env) {
     }
   }
 }
+
+// ================= Оплата звёздами Telegram (XTR) =================
+// Каталог лежит на сервере: цену и состав клиент не определяет. Счёт приходит в чат с ботом, платёж подтверждает вебхук /tg.
+// Баланс звёзд (acct.bal) пополняется отдельными счетами bal25…bal1500 и тратится на любые товары одним нажатием.
+const VIP_MS = 30 * 864e5, VIP_FEE = 0.02;
+const TOPUPS = [25, 50, 100, 150, 250, 500, 750, 1000, 1500];
+const STARS_SHOP = {
+  starter: { t: 'Стартовый пак', d: '400 000 🪙, 20 ⚡ и ник «Редкий+»', stars: 19, once: 1, allow: 3e6 },
+  pack_pro: { t: 'Набор «Профи»', d: '2 500 000 🪙, 60 ⚡ и ник «Эпик+»', stars: 99, allow: 6e6 },
+  pack_gold: { t: 'Золотой набор', d: '7 000 000 🪙, 150 ⚡, ник «Легендарный+» и золотая рамка', stars: 249, allow: 12e6 },
+  energy60: { t: 'Энергия ×60', d: '+60 ⚡ в запас', stars: 39 },
+  vip: { t: 'VIP на 30 дней', d: 'Крутка ×5 бесплатно с выбором редкости, энергия быстрее, +10 мест, комиссия ниже, музей +30% и другое', stars: 299 },
+  museum: { t: 'Музей', d: 'Открывает зал музея без монет', stars: 115, once: 1 },
+  collector: { t: 'Коллекционер', d: 'Открывает все места в коллекции', stars: 399, once: 1 },
+  wheel5: { t: 'Мульти-крутка ×5', d: '5 дополнительных кручений ежедневного колеса', stars: 29 },
+  title_oligarch: { t: 'Титул «Олигарх»', d: 'Эксклюзивный титул, его нельзя купить за монеты', stars: 349, once: 1 },
+  custom_nick: { t: 'Именной юзернейм', d: 'Любой свободный юзернейм по твоему выбору через поддержку', stars: 349 },
+  pass: { t: 'Платный пропуск', d: 'Платная дорожка наград текущего сезона', stars: 99, season: 1 },
+  top: { t: 'Лот в топ', d: 'Твой лот будет первым на рынке 24 часа', stars: 19 },
+};
+for (const n of TOPUPS) STARS_SHOP['bal' + n] = { t: `Баланс +${n} ⭐`, d: 'Пополнение звёздного баланса в игре', stars: n, topup: n };
+const payUrl = (env) => env.GAME_URL || '';
+async function tgApi(env, method, body) {
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/${method}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    return await r.json();
+  } catch (e) { return { ok: false }; }
+}
+async function acctGet(db, uid) {
+  await db.prepare('INSERT OR IGNORE INTO acct(uid) VALUES(?)').bind(uid).run();
+  return await db.prepare('SELECT bal,vip,vgift FROM acct WHERE uid=?').bind(uid).first();
+}
+async function feeOf(db, uid, base) {   // комиссия продавца: у VIP она ниже
+  try { const a = await db.prepare('SELECT vip FROM acct WHERE uid=?').bind(uid).first(); if (a && a.vip > Date.now()) return Math.min(base, VIP_FEE); } catch (e) {}
+  return base;
+}
+async function owned(db, uid, id) {   // «разовые» товары: куплено ли уже
+  const it = STARS_SHOP[id];
+  if (!it || !it.once && !it.season) return false;
+  const q = it.season ? await db.prepare('SELECT 1 AS x FROM purchases WHERE uid=? AND item=? AND meta=?').bind(uid, id, String(seasonId(Date.now()))).first()
+    : await db.prepare('SELECT 1 AS x FROM purchases WHERE uid=? AND item=?').bind(uid, id).first();
+  return !!q;
+}
+// записать покупку и применить серверную часть (баланс, VIP); возвращает true, если это новая покупка
+async function payApply(db, env, uid, id, stars, charge, via) {
+  const it = STARS_SHOP[id];
+  const meta = it.season ? String(seasonId(Date.now())) : '';
+  const ins = await db.prepare('INSERT OR IGNORE INTO purchases(uid,item,meta,stars,charge,via,ts,claimed) VALUES(?,?,?,?,?,?,?,?)').bind(uid, id, meta, stars, charge, via, Date.now(), it.topup ? 1 : 0).run();
+  if (!ins.meta.changes) return false;
+  await acctGet(db, uid);
+  if (it.topup) await db.prepare('UPDATE acct SET bal=bal+? WHERE uid=?').bind(it.topup, uid).run();
+  if (id === 'vip') await db.prepare('UPDATE acct SET vip=MAX(vip,?)+? WHERE uid=?').bind(Date.now(), VIP_MS, uid).run();
+  if (id === 'custom_nick' && env) for (const a of String(env.ADMIN_IDS || '').split(',').map((x) => x.trim()).filter(Boolean)) bg(tgSend(env, a, `🛒 Заказ именного юзернейма: игрок ${uid} оплатил ${stars} ⭐. Он напишет в поддержку, выдай ник вручную.`));
+  return true;
+}
+async function payRoutes(url, req, env, uid, json) {
+  const p = url.pathname;
+  if (!p.startsWith('/pay/')) return null;
+  const db = env.DB;
+  if (p === '/pay/state' && req.method === 'GET') {
+    const a = await acctGet(db, uid), have = {};
+    for (const id of Object.keys(STARS_SHOP)) if (await owned(db, uid, id)) have[id] = 1;
+    const cat = {}; for (const [id, it] of Object.entries(STARS_SHOP)) cat[id] = it.stars;
+    return json({ bal: a.bal, vip: a.vip, vgift: a.vgift, now: Date.now(), owned: have, cat, topups: TOPUPS });
+  }
+  if (req.method !== 'POST') return json({ error: 'not found' }, 404);
+  let b; try { b = await req.json(); } catch { b = {}; }
+  const id = String(b.item || ''), it = STARS_SHOP[id];
+  if (p === '/pay/invoice') {
+    if (!it) return json({ error: 'bad' }, 400);
+    if (await owned(db, uid, id)) return json({ error: 'owned' });
+    const r = await tgApi(env, 'sendInvoice', {
+      chat_id: uid, title: it.t, description: it.d, payload: id + ':' + uid, currency: 'XTR',
+      prices: [{ label: it.t, amount: it.stars }],
+    });
+    return json(r.ok ? { ok: true } : { error: 'nochat' });
+  }
+  if (p === '/pay/balance') {
+    if (!it || it.topup) return json({ error: 'bad' }, 400);
+    if (await owned(db, uid, id)) return json({ error: 'owned' });
+    await acctGet(db, uid);
+    const d = await db.prepare('UPDATE acct SET bal=bal-? WHERE uid=? AND bal>=?').bind(it.stars, uid, it.stars).run();
+    if (!d.meta.changes) return json({ error: 'poor' });
+    await payApply(db, env, uid, id, it.stars, 'bal:' + uid + ':' + Date.now() + ':' + Math.random().toString(36).slice(2, 8), 'bal');
+    const a = await acctGet(db, uid);
+    return json({ ok: true, bal: a.bal, vip: a.vip });
+  }
+  if (p === '/pay/claim') {
+    const a = await acctGet(db, uid);
+    const rows = (await db.prepare('SELECT id,item,meta FROM purchases WHERE uid=? AND claimed=0 ORDER BY id LIMIT 30').bind(uid).all()).results, out = [];
+    let allow = 0;
+    for (const r of rows) {
+      const u = await db.prepare('UPDATE purchases SET claimed=1 WHERE id=? AND claimed=0').bind(r.id).run();
+      if (!u.meta.changes) continue;
+      out.push({ id: r.id, item: r.item, meta: r.meta });
+      allow += (STARS_SHOP[r.item] && STARS_SHOP[r.item].allow) || 0;
+    }
+    if (allow > 0) await db.prepare('UPDATE players SET allow = allow + ? WHERE uid=?').bind(allow, uid).run();
+    return json({ items: out, bal: a.bal, vip: a.vip });
+  }
+  if (p === '/pay/vipgift') {   // подарок дня для VIP (одна выдача за сутки по времени сервера)
+    const a = await acctGet(db, uid), day = new Date().toISOString().slice(0, 10);
+    if (!(a.vip > Date.now())) return json({ error: 'novip' });
+    const u = await db.prepare("UPDATE acct SET vgift=? WHERE uid=? AND vgift<>?").bind(day, uid, day).run();
+    if (!u.meta.changes) return json({ error: 'done' });
+    await db.prepare('UPDATE players SET allow = allow + ? WHERE uid=?').bind(VIP_GIFT_C, uid).run();
+    return json({ ok: true, c: VIP_GIFT_C, e: VIP_GIFT_E });
+  }
+  return json({ error: 'not found' }, 404);
+}
+const VIP_GIFT_C = 100000, VIP_GIFT_E = 5;
+// вебхук Telegram: /start, подтверждение платежа и зачисление. Подключается командой setWebhook (см. README).
+async function tgHook(req, env, json) {
+  if (!env.TG_SECRET || req.headers.get('X-Telegram-Bot-Api-Secret-Token') !== env.TG_SECRET) return json({ error: 'forbidden' }, 403);
+  let u; try { u = await req.json(); } catch { return json({ ok: true }); }
+  await migrate(env.DB);
+  const db = env.DB;
+  if (u.pre_checkout_query) {
+    const q = u.pre_checkout_query, [id, who] = String(q.invoice_payload || '').split(':'), it = STARS_SHOP[id];
+    let ok = !!it && q.currency === 'XTR' && q.total_amount === it.stars && String(q.from.id) === who;
+    let msg = 'Товар недоступен';
+    if (ok && await owned(db, String(q.from.id), id)) { ok = false; msg = 'Это уже куплено'; }
+    await tgApi(env, 'answerPreCheckoutQuery', ok ? { pre_checkout_query_id: q.id, ok: true } : { pre_checkout_query_id: q.id, ok: false, error_message: msg });
+    return json({ ok: true });
+  }
+  const m = u.message;
+  if (m && m.successful_payment) {
+    const sp = m.successful_payment, uid = String(m.from.id), [id] = String(sp.invoice_payload || '').split(':'), it = STARS_SHOP[id];
+    if (!it || sp.currency !== 'XTR' || sp.total_amount !== it.stars) {   // не должно случаться: возвращаем звёзды
+      await tgApi(env, 'refundStarPayment', { user_id: m.from.id, telegram_payment_charge_id: sp.telegram_payment_charge_id });
+      return json({ ok: true });
+    }
+    const fresh = await payApply(db, env, uid, id, it.stars, sp.telegram_payment_charge_id, 'tg');
+    if (fresh) bg(tgApi(env, 'sendMessage', { chat_id: m.chat.id, text: it.topup ? `✅ Баланс пополнен на ${it.topup} ⭐. Загляни в магазин игры.` : `✅ Оплата получена: ${it.t}. Открой игру, и покупка уже будет там.`, reply_markup: { inline_keyboard: [[gameBtn(env)]] } }));
+    return json({ ok: true });
+  }
+  if (m && typeof m.text === 'string' && m.text.startsWith('/start') && m.chat && m.chat.type === 'private') {
+    await tgApi(env, 'sendMessage', { chat_id: m.chat.id, text: '👋 Добро пожаловать в Нейм-рулетку!\n\nКрути рулетку, выбивай редкие юзернеймы, собирай коллекцию, торгуй с игроками и поднимайся в рейтинге.\n\nЖми «Играть».', reply_markup: { inline_keyboard: [[gameBtn(env)]] } });
+  }
+  return json({ ok: true });
+}
+const gameBtn = (env) => (payUrl(env) ? { text: '🎰 Играть', web_app: { url: payUrl(env) } } : { text: '🎰 Играть', url: env.APP_LINK || 'https://t.me/NumberRollyBot' });
 
 // Категории рейтинга: net (капитал), best (самый дорогой ник), lvl (уровень), museum (стоимость экспонатов в музее)
 const topBy = (b) => (b === 'best' || b === 'lvl' || b === 'museum' ? b : 'net');
@@ -185,6 +331,7 @@ async function handle(req, env) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
 
     const url = new URL(req.url);
+    if (url.pathname === '/tg' && req.method === 'POST') return await tgHook(req, env, json);
     // ---- админка: выдача монет по ID (пароль ADMIN_KEY или Telegram-владелец) ----
     if (url.pathname.startsWith('/admin/')) {
       const key = req.headers.get('X-Admin-Key') || '';
@@ -379,6 +526,26 @@ async function handle(req, env) {
       return json({ rank: i + 1, name: r.name, net: r.net, best: r.best, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', tag: r.tag || '', cname: r.cname || '', un: r.un || '', mc: r.mc || 0, mv: r.mv || 0, me: r.uid === uid });
     }
     // ---- LIVE-лента: крупные выпадения игроков ----
+    if (url.pathname === '/chat' && req.method === 'GET') {   // общий чат игры: последние сообщения
+      const after = Math.max(0, Math.floor(Number(url.searchParams.get('after')) || 0));
+      const rows = after
+        ? (await env.DB.prepare('SELECT c.id,c.uid,c.name,c.text,c.ts,a.vip FROM chat c LEFT JOIN acct a ON a.uid=c.uid WHERE c.id>? ORDER BY c.id LIMIT 60').bind(after).all()).results
+        : (await env.DB.prepare('SELECT * FROM (SELECT c.id,c.uid,c.name,c.text,c.ts,a.vip FROM chat c LEFT JOIN acct a ON a.uid=c.uid ORDER BY c.id DESC LIMIT 60) ORDER BY id').all()).results;
+      return json({ now: Date.now(), items: rows.map((r) => ({ id: r.id, name: r.name || 'Игрок', text: r.text, ts: r.ts, mine: r.uid === uid ? 1 : 0, vip: r.vip > Date.now() ? 1 : 0 })) });
+    }
+    if (url.pathname === '/chat' && req.method === 'POST') {
+      let b; try { b = await req.json(); } catch { b = {}; }
+      const text = clean(b.text, 200).replace(/\s+/g, ' ');
+      if (!text) return json({ error: 'empty' }, 400);
+      if (/(https?:\/\/|t\.me\/|www\.|@\w{4,})/i.test(text)) return json({ error: 'link' });
+      const me = await env.DB.prepare('SELECT name,flag FROM players WHERE uid=?').bind(uid).first();
+      if (me && me.flag) return json({ error: 'flag' });
+      const last = await env.DB.prepare('SELECT ts FROM chat WHERE uid=? ORDER BY id DESC LIMIT 1').bind(uid).first();
+      if (last && Date.now() - last.ts < 3000) return json({ error: 'fast' });
+      await env.DB.prepare('INSERT INTO chat(uid,name,text,ts) VALUES(?,?,?,?)').bind(uid, (me && me.name) || 'Игрок', text, Date.now()).run();
+      bg(env.DB.prepare('DELETE FROM chat WHERE id < (SELECT MAX(id) FROM chat) - 400').run());
+      return json({ ok: true });
+    }
     if (url.pathname === '/feed' && req.method === 'GET') {
       const rows = (await env.DB.prepare('SELECT f.name,f.tier,f.ts,p.name AS who,p.hide FROM feed f LEFT JOIN players p ON p.uid=f.uid WHERE f.ts>? ORDER BY f.id DESC LIMIT 14').bind(Date.now() - 86400000).all()).results;
       return json({ items: rows.map((r) => ({ name: r.name, tier: r.tier, ts: r.ts, who: r.hide ? 'Игрок' : (r.who || 'Игрок') })) });
@@ -438,6 +605,8 @@ async function handle(req, env) {
     if (mr) return mr;
     const au = await auctionRoutes(url, req, env, uid, json);
     if (au) return au;
+    const py = await payRoutes(url, req, env, uid, json);
+    if (py) return py;
     const mu = await museumRoutes(url, req, env, uid, json);
     if (mu) return mu;
     return json({ error: 'not found' }, 404);
@@ -614,20 +783,22 @@ async function marketRoutes(url, req, env, uid, json) {
   }
 
   if (p === '/market/history' && req.method === 'GET') {
+    const mfe = await feeOf(db, uid, MARKET_FEE);
     const rows = (await db.prepare(`SELECT m.name,m.price,m.seller,m.buyer,m.sold_ts,ps.name AS sname,ps.hide AS shide,pb.name AS bname,pb.hide AS bhide
       FROM market m LEFT JOIN players ps ON ps.uid=m.seller LEFT JOIN players pb ON pb.uid=m.buyer
       WHERE m.status=1 AND (m.seller=?1 OR m.buyer=?1) ORDER BY m.sold_ts DESC LIMIT 40`).bind(uid).all()).results;
     return json({ items: rows.map((r) => {
       const sold = r.seller === uid;
       const who = sold ? (r.bhide ? 'Игрок' : (r.bname || 'Игрок')) : (r.shide ? 'Игрок' : (r.sname || 'Игрок'));
-      return { name: r.name, price: r.price, kind: sold ? 'sold' : 'bought', who, ts: r.sold_ts, get: Math.floor(r.price * (1 - MARKET_FEE)) };
+      return { name: r.name, price: r.price, kind: sold ? 'sold' : 'bought', who, ts: r.sold_ts, get: Math.floor(r.price * (1 - mfe)) };
     }) });
   }
 
   if (p === '/market/my' && req.method === 'GET') {
+    const mfe = await feeOf(db, uid, MARKET_FEE);
     const act = (await db.prepare('SELECT id,name,price,top FROM market WHERE seller=? AND status=0 ORDER BY id DESC').bind(uid).all()).results;
     const sold = (await db.prepare('SELECT id,name,price FROM market WHERE seller=? AND status=1 AND claimed=0 ORDER BY id DESC').bind(uid).all()).results;
-    return json({ now: Date.now(), active: act, sold: sold.map((s) => ({ ...s, get: Math.floor(s.price * (1 - MARKET_FEE)) })), fee: MARKET_FEE, max: MARKET_MAX_LOTS });
+    return json({ now: Date.now(), active: act, sold: sold.map((s) => ({ ...s, get: Math.floor(s.price * (1 - mfe)) })), fee: mfe, max: MARKET_MAX_LOTS });
   }
 
   if (req.method !== 'POST') return json({ error: 'not found' }, 404);
@@ -678,16 +849,18 @@ async function marketRoutes(url, req, env, uid, json) {
     // атомарно: лот достаётся только тому, кто первым сменил статус
     const r = await db.prepare('UPDATE market SET status=1,buyer=?,sold_ts=? WHERE id=? AND status=0').bind(uid, Date.now(), id).run();
     if (!r.meta.changes) return json({ error: 'gone' }, 404);
-    bg(notifyEvent(env, lot.seller, NT.MKT, `💰 Твой ник @${lot.name} купили на рынке за ${nf(lot.price)} 🪙. Выручка (минус ${Math.round(MARKET_FEE * 100)}%) придёт в игре.`));
+    const sfe = await feeOf(db, lot.seller, MARKET_FEE);
+    bg(notifyEvent(env, lot.seller, NT.MKT, `💰 Твой ник @${lot.name} купили на рынке за ${nf(lot.price)} 🪙. Выручка (минус ${Math.round(sfe * 100)}%) придёт в игре.`));
     return json({ ok: true, name: lot.name, price: lot.price });
   }
 
   if (p === '/market/claim') {
     const rows = (await db.prepare('SELECT id,price FROM market WHERE seller=? AND status=1 AND claimed=0').bind(uid).all()).results;
     let sum = 0, n = 0;
+    const cfe = await feeOf(db, uid, MARKET_FEE);
     for (const r of rows) {
       const u = await db.prepare('UPDATE market SET claimed=1 WHERE id=? AND claimed=0').bind(r.id).run();
-      if (u.meta.changes) { sum += Math.floor(r.price * (1 - MARKET_FEE)); n++; }
+      if (u.meta.changes) { sum += Math.floor(r.price * (1 - cfe)); n++; }
     }
     // выручка с рынка не считается накруткой: добавляем её к разрешённому росту капитала
     if (sum > 0) await db.prepare('UPDATE players SET allow = allow + ? WHERE uid=?').bind(sum, uid).run();
@@ -742,10 +915,11 @@ async function auSettle(db, env) {
     if (r.bidder) {
       const u = await db.prepare('UPDATE auctions SET status=1 WHERE id=? AND status=0').bind(r.id).run();
       if (u.meta.changes) {
-        await db.prepare('INSERT INTO grants(uid,amount,claimed,ts) VALUES(?,?,0,?)').bind(r.seller, Math.floor(r.cur * (1 - AU_FEE)), now).run();
+        const afe = await feeOf(db, r.seller, AU_FEE);
+        await db.prepare('INSERT INTO grants(uid,amount,claimed,ts) VALUES(?,?,0,?)').bind(r.seller, Math.floor(r.cur * (1 - afe)), now).run();
         if (env) {
           bg(notifyEvent(env, r.bidder, NT.AUC, `🏆 Ты выиграл аукцион: @${r.name} за ${nf(r.cur)} 🪙. Ник уже ждёт в игре.`));
-          bg(notifyEvent(env, r.seller, NT.AUC, `💰 Лот @${r.name} продан за ${nf(r.cur)} 🪙. Тебе придёт ${nf(r.cur * (1 - AU_FEE))} 🪙.`));
+          bg(notifyEvent(env, r.seller, NT.AUC, `💰 Лот @${r.name} продан за ${nf(r.cur)} 🪙. Тебе придёт ${nf(r.cur * (1 - afe))} 🪙.`));
         }
       }
     } else {
@@ -793,13 +967,14 @@ async function auctionRoutes(url, req, env, uid, json) {
     const lots = (await db.prepare('SELECT id,name,start,cur,bids,end_ts FROM auctions WHERE seller=? AND status=0 ORDER BY end_ts ASC').bind(uid).all()).results;
     const lead = (await db.prepare('SELECT id,name,cur,end_ts FROM auctions WHERE bidder=? AND status=0 ORDER BY end_ts ASC').bind(uid).all()).results;
     const pend = await db.prepare('SELECT COUNT(*) AS n FROM auctions WHERE done=0 AND ((status=1 AND bidder=?1) OR (status=2 AND seller=?1))').bind(uid).first();
-    return json({ now, lots: lots.map((r) => ({ id: r.id, name: r.name, start: r.start, cur: r.cur, bids: r.bids, end: r.end_ts })), lead: lead.map((r) => ({ id: r.id, name: r.name, cur: r.cur, end: r.end_ts })), pend: pend.n, fee: AU_FEE, max: AU_MAX_LOTS });
+    return json({ now, lots: lots.map((r) => ({ id: r.id, name: r.name, start: r.start, cur: r.cur, bids: r.bids, end: r.end_ts })), lead: lead.map((r) => ({ id: r.id, name: r.name, cur: r.cur, end: r.end_ts })), pend: pend.n, fee: await feeOf(db, uid, AU_FEE), max: AU_MAX_LOTS });
   }
   if (p === '/auction/history' && req.method === 'GET') {
+    const hfe = await feeOf(db, uid, AU_FEE);
     const rows = (await db.prepare(`SELECT a.id,a.name,a.cur,a.status,a.seller,a.bidder,a.end_ts,ps.name AS sn,pb.name AS bn FROM auctions a LEFT JOIN players ps ON ps.uid=a.seller LEFT JOIN players pb ON pb.uid=a.bidder WHERE a.status IN (1,2) AND (a.seller=?1 OR a.bidder=?1) ORDER BY a.end_ts DESC LIMIT 30`).bind(uid).all()).results;
     return json({ items: rows.map((r) => {
       const sell = r.seller === uid;
-      return { name: r.name, price: r.cur, kind: sell ? (r.status === 1 ? 'sold' : 'unsold') : 'won', who: sell ? (r.bn || 'Игрок') : (r.sn || 'Игрок'), ts: r.end_ts, get: Math.floor(r.cur * (1 - AU_FEE)) };
+      return { name: r.name, price: r.cur, kind: sell ? (r.status === 1 ? 'sold' : 'unsold') : 'won', who: sell ? (r.bn || 'Игрок') : (r.sn || 'Игрок'), ts: r.end_ts, get: Math.floor(r.cur * (1 - hfe)) };
     }) });
   }
   if (req.method !== 'POST') return json({ error: 'not found' }, 404);
