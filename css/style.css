@@ -1453,3 +1453,6 @@ body.shk{animation:none!important}
 .casebox>*{flex-shrink:0}
 .crodds b{color:#2b2113}.crodds span{background:rgba(255,255,255,.45);border:1px solid var(--tc);border-radius:99px;padding:4px 10px}
 .crgrid{max-height:none;overflow:visible}
+.slist{grid-auto-rows:max-content;align-content:start}
+.hrow{min-height:54px;flex:none}
+.hrow small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
