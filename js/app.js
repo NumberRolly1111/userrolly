@@ -4,8 +4,8 @@ addEventListener('unhandledrejection',e=>{try{console.error(e.reason)}catch(x){}
 const $=s=>document.querySelector(s),tg=window.Telegram&&Telegram.WebApp;
 // если на хостинге лежит старый html без новых разделов (файлы загрузили не все) — создаём недостающие, чтобы игра не падала
 ['ach','show','top','clan','market','museum','shop','auction','help','guide','season'].forEach(k=>{if(!$('#tab-'+k)){const s=document.createElement('section');s.id='tab-'+k;s.className='list';s.hidden=true;($('#tab-bon')||document.body).after(s)}});
-// Вкладки-«таблетки» внутри разделов: Склад (ники, апгрейд, крафт, витрины, музей) и Магазин (магазин, рынок, аукцион)
-const SUBS={stock:[['col','Ники'],['up','Апгрейд'],['craft','Крафт'],['show','Витрины'],['museum','Музей']],shop:[['shop','Магазин'],['market','Рынок'],['auction','Аукцион']]};
+// Вкладки-«таблетки» внутри разделов: Склад (ники, апгрейд, контракт, витрины, музей) и Магазин (магазин, рынок, аукцион)
+const SUBS={stock:[['col','Ники'],['up','Апгрейд'],['craft','Контракт'],['show','Витрины'],['museum','Музей']],shop:[['shop','Магазин'],['market','Рынок'],['auction','Аукцион']]};
 const subTabs=(g,a)=>`<div class="ptabs" role="tablist">${SUBS[g].filter(([k])=>g!=='stock'||k!=='up'||a==='up').map(([k,l])=>`<button role="tab" data-sub="${k}"${k==='craft'?' data-craft="1"':''} aria-selected="${k===a}">${l}</button>`).join('')}</div>`;
 function ptFix(){document.querySelectorAll('.ptabs').forEach(p=>{const b=p.querySelector('[aria-selected=true]');if(b&&p.scrollWidth>p.clientWidth){p.style.scrollBehavior='auto';p.scrollLeft=b.offsetLeft-(p.clientWidth-b.offsetWidth)/2;p.style.scrollBehavior=''}})}
 try{const g=document.getElementById('gsub');if(g)g.innerHTML=SUBS.stock.filter(([k])=>k!=='show'&&k!=='museum').map(([k,l])=>`<button role="tab" data-sub="${k}"${k==='craft'?' data-craft="1"':''} aria-selected="false">${l}</button>`).join('')}catch(e){}
@@ -361,7 +361,7 @@ const HINTS={
   risk:['🎲 Крутка с риском','Выбери ставку и запусти: указатель остановится на множителе, до ×20. Выигрыш можно сразу забрать или рискнуть им: удвоение 48%, до 4 раз подряд. До 30 игр в сутки.'],
   season:['🏅 Что такое сезон','Сезон идёт 3 недели. За крутки, кейсы и апгрейды копятся очки: каждый уровень даёт награду, а платная дорожка даёт ещё больше. Лучшие по очкам получают призы в конце.'],
   events:['🎉 События','Каждый день в случайный час включается событие на 1 час: ×1,5…×10 к монетным наградам, очкам сезона, опыту или энергии. Плашка на главной покажет, когда оно начнётся.'],
-  craft:['🧪 Крафт','Выбери три ника любой редкости: они сгорят, а взамен придёт новый. Чем реже выбранные ники, тем выше шанс получить редкий. Стоит небольшая плата.'],
+  craft:['🧪 Контракт','Выбери три ника любой редкости: они сгорят, а взамен придёт новый. Чем реже выбранные ники, тем выше шанс получить редкий. Стоит небольшая плата.'],
   museum:['🏛️ Музей','Купи зал и ставь туда ники: они остаются навсегда и приносят монеты за просмотры. Экспонаты видят все игроки.'],
 };
 function hintCard(id){
@@ -896,7 +896,7 @@ const GUIDE=[
   ['🎰','Крути рулетку','Вкладка «Крутить»: выбери режим («Любой», «Редкий+», «Эпик+») и нажми кнопку. Можно открыть 1, 3 или 5 ников. Платить можно монетами или бесплатной энергией: её запас до 15 единиц, одна восстанавливается за 15 минут.'],
   ['💎','Узнай редкость','Ник получает редкость от «Обычного» до «Эксклюзивного» и цену по своим баллам. Чем короче, чище и необычнее ник, тем он дороже. Секретные ники выпадают только из апгрейда, кейсов и бонус-рулетки.'],
   ['📦','Собирай склад','Понравившийся ник нажми «Сохранить», он попадёт в «Склад». Лишнее можно сразу «Продать» за монеты. Место в складе ограничено, его можно расширять.'],
-  ['⚡','Апгрейд и крафт','«Склад» → «Апгрейд»: поставь до 5 ников и попробуй получить ник получше, чем больше ставка, тем выше шанс. «Крафт» (тоже в «Складе»): три ника превращаются в один новый, шансы зависят от выбранных.'],
+  ['⚡','Апгрейд и контракт','«Склад» → «Апгрейд»: поставь до 5 ников и попробуй получить ник получше, чем больше ставка, тем выше шанс. «Контракт» (тоже в «Складе»): три ника превращаются в один новый, шансы зависят от выбранных.'],
   ['🎁','Забирай бонусы каждый день','Кнопка подарка вверху: награда за вход (серия из 7 дней), бесплатное колесо раз в день, задания и сезон. Не пропускай дни, серия даёт больше.'],
   ['🗂️','Витрины и музей','«Склад» → «Витрины»: собери набор из ников и получи награду, ники при этом не тратятся. «Музей»: поставь ник навсегда, он приносит монеты.'],
   ['🔨','Магазин, рынок и аукцион','Вкладка «Магазин»: услуги, рынок игроков и аукцион. Выставляй свои ники и покупай чужие. Продажа приносит монеты, а бот пришлёт уведомление, когда ник купят.'],
@@ -912,7 +912,7 @@ function renderGuide(){
 $('#tab-guide').onclick=e=>{if(e.target.closest('#guide-back')){try{$('#guide-vid').pause()}catch(x){}return tab('prof')}};
 function showPlate(){
   const r=showReady(),d=S.show.length;
-  return `<button class="pcard achbtn" id="show-open" style="margin-bottom:16px"><div><b>Витрины</b><small>Собрано ${d} из ${SHOW.length}${r?` · наград к получению: ${r}`:''}</small></div><span class="mini" style="--p:${d/SHOW.length*100}"><i>${d}</i></span></button>`+`<button class="pcard achbtn" id="market-open" style="margin-bottom:16px"><div><b>Рынок игроков</b><small>Покупай и продавай ники за монеты</small></div><span class="trophy">🛒</span></button>`+`<button class="pcard achbtn" id="shop-open" style="margin-bottom:16px"><div><b>Магазин</b><small>Услуги и эксклюзивный @ceo</small></div><span class="trophy">🏷️</span></button>`+`<button class="pcard achbtn" id="museum-open" style="margin-bottom:16px"><div><b>Музей</b><small>Навсегда поставь ник на витрину славы</small></div><span class="trophy">🏛️</span></button>`+`<button class="pcard achbtn" data-craft="1" style="margin-bottom:16px"><div><b>Крафт</b><small>Три любых ника → один новый, шансы зависят от выбранных</small></div><span class="trophy">🧪</span></button>`;
+  return `<button class="pcard achbtn" id="show-open" style="margin-bottom:16px"><div><b>Витрины</b><small>Собрано ${d} из ${SHOW.length}${r?` · наград к получению: ${r}`:''}</small></div><span class="mini" style="--p:${d/SHOW.length*100}"><i>${d}</i></span></button>`+`<button class="pcard achbtn" id="market-open" style="margin-bottom:16px"><div><b>Рынок игроков</b><small>Покупай и продавай ники за монеты</small></div><span class="trophy">🛒</span></button>`+`<button class="pcard achbtn" id="shop-open" style="margin-bottom:16px"><div><b>Магазин</b><small>Услуги и эксклюзивный @ceo</small></div><span class="trophy">🏷️</span></button>`+`<button class="pcard achbtn" id="museum-open" style="margin-bottom:16px"><div><b>Музей</b><small>Навсегда поставь ник на витрину славы</small></div><span class="trophy">🏛️</span></button>`+`<button class="pcard achbtn" data-craft="1" style="margin-bottom:16px"><div><b>Контракт</b><small>Три любых ника → один новый, шансы зависят от выбранных</small></div><span class="trophy">🧪</span></button>`;
 }
 function renderShow(){
   setHtml($('#tab-show'),`${subTabs('stock','show')}<p class="sum">Собери набор из ников коллекции и забери награду. Ники не тратятся, награда выдаётся один раз.</p>`+showHtml());
@@ -1364,7 +1364,7 @@ function renderProf(){
     <button class="ptile" id="guide-open"><span class="pti">📖</span><b>Как играть</b><small>видео и 8 шагов</small></button>
     <button class="ptile" id="chat-open"><span class="pti">💬</span><b>Чат игроков</b><small>общий и личные</small></button>
     <button class="ptile" id="hist-open"><span class="pti">🧾</span><b>Покупки</b><small>история за звёзды</small></button>
-    <button class="ptile" data-craft="1"><span class="pti">🧪</span><b>Крафт</b><small>3 ника → 1 новый</small></button>
+    <button class="ptile" data-craft="1"><span class="pti">🧪</span><b>Контракт</b><small>3 ника → 1 новый</small></button>
   </div>
   <div class="pcard inv invx"><div><b>Позвать друзей</b><small>За каждого друга: +${fmt(REF_C)} 🪙 и +${REF_E} ⚡ · приглашено ${S.refc} из ${REF_MAX}</small></div><div class="invb">${lb.refn>0?`<button class="btn main" id="ref-claim">Забрать +${fmt(lb.refn*REF_C)} 🪙</button>`:''}<button class="btn${lb.refn>0?'':' main'}" id="invite">Позвать</button></div></div>
   <div class="pcard"><h3>Статистика</h3>
@@ -1892,8 +1892,8 @@ function gsSheet(close){
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#gs-open')){if(!gs.run){gs.lost=gs.taken=gs.maxed=false;gs.r=null}gsSheet()}});
 
 
-// ---------- Крафт: три ника одной редкости → один ник редкостью выше ----------
-var CRM=4,CRF=.2,cr={sel:[],res:null,busy:false};   // в крафт идут ники до легендарного; комиссия 20% от стоимости трёх ников
+// ---------- Контракт: три ника одной редкости → один ник редкостью выше ----------
+var CRM=4,CRF=.2,cr={sel:[],res:null,busy:false};   // в контракт идут ники до легендарного; комиссия 20% от стоимости трёх ников
 function crItems(){return cr.sel.map(id=>S.items.find(i=>i.id===id)).filter(Boolean)}
 function crSum(){return crItems().reduce((a,x)=>a+val(x.t,x.p,x.n),0)}
 // шансы зависят от выбранных ников: цель = средняя редкость + 1, дробная часть делит шанс между двумя соседними редкостями
@@ -1921,12 +1921,12 @@ function crSheet(close){
   const slots=[0,1,2].map(i=>{const x=its[i];return `<div class="crslot${x?' fl':''}"${x?` style="--tc:${T[x.t].c}"`:''}>${x?'@'+eh(x.n):'?'}</div>`}).join('');
   const oddsH=odds.length?`<div class="crodds">${odds.map(([t,w])=>`<span style="--tc:${T[t].c}"><i></i>${T[t].n} <b>${Math.round(w*100)}%</b></span>`).join('')}</div>`:'<div class="crodds"><small>Выбери три ника — здесь появятся шансы</small></div>';
   const res=cr.res?`<div class="cresc" style="--tc:${T[cr.res.t].c}"><small>${T[cr.res.t].n}</small><b>@${eh(cr.res.name)}</b><span>${fmt(cr.res.price)} 🪙</span></div>`:'';
-  sh.innerHTML=`<div class="sbg" data-crx="1"></div><div class="sbox casebox"><div class="shead"><b>🧪 Крафт</b><button class="btn sm" data-crx="1">✕</button></div>
+  sh.innerHTML=`<div class="sbg" data-crx="1"></div><div class="sbox casebox"><div class="shead"><b>🧪 Контракт</b><button class="btn sm" data-crx="1">✕</button></div>
   ${hintCard('craft')}<p class="cdesc3">Выбери три любых ника, можно разной редкости: они сгорят, а взамен придёт случайный ник. Чем выше редкость выбранных, тем выше шанс на лучший результат. Комиссия — ${Math.round(CRF*100)}% от их стоимости.</p>
   <div class="crslots">${slots}<i>→</i><div class="crslot out">?</div></div>
   ${oddsH}${res}
-  <div class="slist mpick">${list.length?list.map(x=>`<button class="item wpk${cr.sel.includes(x.id)?' crsel':''}" data-cri="${x.id}" style="--tc:${T[x.t].c}"><div><b>@${eh(x.n)}</b><small>${T[x.t].n}</small></div><span>${fmt(val(x.t,x.p,x.n))} 🪙</span></button>`).join(''):'<div class="pcard lbmsg"><small>Нет ников для крафта (легендарные и выше не берём).</small></div>'}</div>
-  <button class="btn main" id="cr-go"${ok?'':' disabled'}>${its.length<3?`Выбрано ${its.length} из 3`:S.coins<fee?`Не хватает ${fmt(fee-S.coins)} 🪙`:`Скрафтить · ${fmt(fee)} 🪙`}</button></div>`;
+  <div class="slist mpick">${list.length?list.map(x=>`<button class="item wpk${cr.sel.includes(x.id)?' crsel':''}" data-cri="${x.id}" style="--tc:${T[x.t].c}"><div><b>@${eh(x.n)}</b><small>${T[x.t].n}</small></div><span>${fmt(val(x.t,x.p,x.n))} 🪙</span></button>`).join(''):'<div class="pcard lbmsg"><small>Нет ников для контракта (легендарные и выше не берём).</small></div>'}</div>
+  <button class="btn main" id="cr-go"${ok?'':' disabled'}>${its.length<3?`Выбрано ${its.length} из 3`:S.coins<fee?`Не хватает ${fmt(fee-S.coins)} 🪙`:`Заключить контракт · ${fmt(fee)} 🪙`}</button></div>`;
   const nb=sh.querySelector('.sbox');if(nb&&keep)nb.scrollTop=keep;
 }
 function crGo(){
