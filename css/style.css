@@ -1217,3 +1217,8 @@ section .usheet .sbox{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 .stp.hot{border-color:#ffb62e;background:linear-gradient(180deg,#2a2112,var(--paper))}
 .stp em{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,#ffd34e,#ff9f2e);color:#2a1a00;border-radius:99px;padding:3px 12px;font:800 11px system-ui,sans-serif;font-style:normal;white-space:nowrap}
 .stgrid+.sum{display:block;margin-top:14px}
+/* окно покупки: кнопки ближе друг к другу */
+#stsheet .sbox{gap:8px}
+#stsheet .sbox .cwide{margin:0}
+#stsheet #st-bal{margin-top:4px}
+#stsheet .stprice{margin:4px 0 6px}
