@@ -2655,7 +2655,7 @@ function stSheet(){
   const id=st.sel,c=STC[id];if(!c)return '';
   const p=stPr(id),bal=st.bal!=null?st.bal:S.sbal,poor=bal<p;
   return `<div class="usheet" id="stsheet"><div class="sbg" data-stx="1"></div><div class="sbox"><div class="shead"><b>${c[0]} ${c[1]}</b><button class="btn sm" data-stx="1">✕</button></div>
-  <p class="sum">${c[2]}</p>${id==='vip'?`<ul class="stperk">${VIPPERK.map(x=>`<li>${x[0]}</li>`).join('')}</ul>`:''}
+  ${id==='vip'?`<div class="vipcrown"><span>👑</span><b>Навсегда, без подписки</b><small>Один платёж — все бонусы остаются с тобой</small></div><div class="vperks">${VIPPERK.map((x,i)=>`<div class="vpk"><i>${['🎰','⚡','🗂','💸','🏛','🎁','👑'][i]||'✨'}</i><div><b>${x[0].replace(' 👑','')}</b><small>${x[1]}</small></div></div>`).join('')}</div>`:`<p class="sum">${c[2]}</p>`}
   <div class="stprice">⭐ ${p}</div>
   <button class="btn main cwide" id="st-bal"${poor?' disabled':''}>${poor?`На балансе ⭐ ${fmt(bal)}, не хватает ${p-bal}`:`Оплатить с баланса · ⭐ ${p}`}</button>
   <button class="btn cwide" id="st-inv">Счёт в чат с ботом · ⭐ ${p}</button></div></div>`;
