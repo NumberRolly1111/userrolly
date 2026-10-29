@@ -685,7 +685,18 @@ const vigOff=()=>$('#vig').classList.remove('on');
 // стили анимации крутки на выбор: [старт, шаг между буквами] в мс
 const ANIM={classic:[1000,260],slot:[1250,330],wave:[1400,80],flip:[900,240],matrix:[800,220],ghost:[900,260],pop:[800,240],rain:[900,200]},
   ANIMN=[['classic','Классика','буквы-барабаны слева направо'],['slot','Слот','с отскоком, как в автомате'],['wave','Волна','все сразу, падают волной'],['flip','Флип','буквы переворачиваются'],['matrix','Матрица','шифр, который расшифровывается'],['ghost','Призрак','буквы проявляются из тумана'],['pop','Хлопок','буквы вылетают крупно и встают на место'],['rain','Дождь','буквы падают сверху с отскоком']];
-const animMode=()=>ANIM[S.anim]?S.anim:'classic';
+var ANIMP={ghost:500000,pop:1000000,rain:1600000};   // платные стили прокрутки
+const animOwn=id=>!ANIMP[id]||(S.cown||[]).includes('a_'+id);
+const animMode=()=>ANIM[S.anim]&&animOwn(S.anim)?S.anim:'classic';
+const animSub=x=>animOwn(x[0])?x[2]:'🔒 '+fmt(ANIMP[x[0]])+' 🪙 · '+x[2];
+function animPick(id,after){
+  if(!ANIM[id])return;
+  const done=()=>{S.anim=id;save();after&&after()};
+  if(animOwn(id))return done();
+  ask(`Купить стиль «${ANIMN.find(x=>x[0]===id)[1]}» за ${fmt(ANIMP[id])} 🪙?`,()=>{
+    if(S.coins<ANIMP[id])return toast('Не хватает монет: нужно '+fmt(ANIMP[id])+' 🪙');
+    S.coins-=ANIMP[id];S.cown.push('a_'+id);sfx('ach');hap('n','success');toast('Куплено: '+ANIMN.find(x=>x[0]===id)[1]);try{setCoins()}catch(e){}done()});
+}
 function build(name,animate,reel=$('#reel'),kind=0){
   reel.innerHTML='';reel.dataset.name=name;reel.classList.toggle('idle',!animate&&name.includes('?'));
   reel.style.fontSize=Math.max(14,Math.min(46,Math.floor((reel.parentElement.clientWidth-24-(name.length+1)*6)/(name.length*.94+.6))))+'px';
@@ -1266,7 +1277,7 @@ const cosOwn=id=>S.cown.includes(id);
 const nickHtml=(name,id)=>`<span class="nk${cosNick(id)?' nk-'+id:''}">${escH(name)}</span>`;
 const titleHtml=id=>{const t=cosTitle(id);return t?`<span class="ttl" style="--tc:${t.c}">${t.n}</span>`:''};
 const cosKey=()=>(cosOwn(S.cn)&&cosNick(S.cn)?S.cn:'')+'|'+(cosOwn(S.ct)&&cosTitle(S.ct)?S.ct:'')+'|'+(cosOwn(S.cf)&&cosFrame(S.cf)?S.cf:'');
-function cosFix(){const ol=S.sx&&S.sx.title_oligarch;S.cown=[...new Set(S.cown.map(x=>x==='oligarch'&&!ol?'biz':OLDT[x]||x))].filter(x=>cosNick(x)||cosTitle(x)||cosFrame(x)||cosTheme(x));if(OLDT[S.ct])S.ct=OLDT[S.ct];if(S.ct==='oligarch'&&!ol)S.ct='biz';if(S.cn&&!cosOwn(S.cn))S.cn='';if(S.ct&&!cosOwn(S.ct))S.ct='';if(S.cf&&!cosOwn(S.cf))S.cf='';if(S.theme&&!S.cown.includes('t_'+S.theme))S.theme=''}
+function cosFix(){const ol=S.sx&&S.sx.title_oligarch;S.cown=[...new Set(S.cown.map(x=>x==='oligarch'&&!ol?'biz':OLDT[x]||x))].filter(x=>cosNick(x)||cosTitle(x)||cosFrame(x)||cosTheme(x)||/^a_(ghost|pop|rain)$/.test(x));if(OLDT[S.ct])S.ct=OLDT[S.ct];if(S.ct==='oligarch'&&!ol)S.ct='biz';if(S.cn&&!cosOwn(S.cn))S.cn='';if(S.ct&&!cosOwn(S.ct))S.ct='';if(S.cf&&!cosOwn(S.cf))S.cf='';if(S.theme&&!S.cown.includes('t_'+S.theme))S.theme=''}
 cosFix();
 try{avaKey='';updAva()}catch(e){}
 var cosTab='t';
@@ -1320,10 +1331,10 @@ function albumCard(){
   ${ready.length?`<button class="btn main cwide" id="dex-claim">Забрать награды · +${fmt(ready.reduce((a,i)=>a+DEXS[i][1],0))} 🪙</button>`:''}</div>`}
 function dexClaim(){dexSeed();const n=dexCount();if(!Array.isArray(S.dexg))S.dexg=[];let sum=0;DEXS.forEach((x,i)=>{if(n>=x[0]&&!S.dexg.includes(i)){S.dexg.push(i);sum+=x[1]}});if(!sum)return;S.coins=Math.min(CAP,S.coins+sum);save();render();sfx('coins');toast('📖 Альбом: +'+fmt(sum)+' 🪙');renderProf()}
 function anBtn(){const b=document.getElementById('anpk');if(!b)return;const a=ANIMN.find(x=>x[0]===animMode());b.innerHTML=`<span>🎞</span><b>${a[1]}</b><i>▾</i>`;
-  const m=document.getElementById('anmenu');m.innerHTML=ANIMN.map(x=>`<button data-anm="${x[0]}" aria-pressed="${animMode()===x[0]}"><b>${x[1]}</b><small>${x[2]}</small></button>`).join('')}
+  const m=document.getElementById('anmenu');m.innerHTML=ANIMN.map(x=>`<button data-anm="${x[0]}" aria-pressed="${animMode()===x[0]}"><b>${x[1]}</b><small>${animSub(x)}</small></button>`).join('')}
 document.addEventListener('click',e=>{const b=document.getElementById('anpk'),m=document.getElementById('anmenu');if(!b||!m)return;
   if(e.target.closest('#anpk')){m.hidden=!m.hidden;b.setAttribute('aria-expanded',String(!m.hidden));return}
-  const o=e.target.closest('[data-anm]');if(o){S.anim=o.dataset.anm;save();anBtn();m.hidden=true;b.setAttribute('aria-expanded','false');toast('Анимация: '+ANIMN.find(x=>x[0]===S.anim)[1]);return}
+  const o=e.target.closest('[data-anm]');if(o){const id=o.dataset.anm;m.hidden=true;b.setAttribute('aria-expanded','false');animPick(id,()=>{anBtn();toast('Анимация: '+ANIMN.find(x=>x[0]===id)[1])});return}
   if(!m.hidden&&!e.target.closest('#anmenu')){m.hidden=true;b.setAttribute('aria-expanded','false')}});
 setTimeout(anBtn,0);
 function anPrev(){const r=document.getElementById('anreel');if(!r)return;const w=['hjaajh','kingvx','stormy','nova_x','blazer'];build(P(w),true,r,0)}
@@ -1356,7 +1367,7 @@ function renderProf(){
     <div class="pt"><small>В игре за всё время</small><b id="tm-all">${fmtT(S.time)}</b></div><div class="pt"><small>В игре сегодня</small><b id="tm-day">${fmtT(todaySec())}</b></div></div>
     <div class="pgrid tiers">${T.map((t,i)=>`<div class="pt${i===99?' last':''}" style="--tc:${t.c}"><small>${TN[i]}</small><b>${fmt(S.cnt[i])}</b></div>`).join('')}</div></div>
   <div class="pcard sndrow"><div><b>Звуки</b><small>Эффекты рулетки, наград и колеса</small></div><button class="sw${S.snd?' on':''}" id="snd-tg" role="switch" aria-checked="${S.snd}" aria-label="Звуки"><i></i></button></div>
-  <div class="pcard anrow"><b>Анимация крутки</b><small>Как открываются буквы ника. Выбери стиль, он сразу покажется ниже.</small><div class="anopts">${ANIMN.map(a=>`<button class="anb" data-an="${a[0]}" aria-pressed="${animMode()===a[0]}"><b>${a[1]}</b><small>${a[2]}</small></button>`).join('')}</div><div class="stage anprev"><div class="reel" id="anreel"></div></div></div>${ntfCard()}`;
+  <div class="pcard anrow"><b>Анимация крутки</b><small>Как открываются буквы ника. Выбери стиль, он сразу покажется ниже.</small><div class="anopts">${ANIMN.map(a=>`<button class="anb" data-an="${a[0]}" aria-pressed="${animMode()===a[0]}"><b>${a[1]}</b><small>${animSub(a)}</small></button>`).join('')}</div><div class="stage anprev"><div class="reel" id="anreel"></div></div></div>${ntfCard()}`;
   requestAnimationFrame(()=>{const r=document.getElementById('anreel');if(r)build('hjaajh',false,r)});
 }
 setInterval(()=>{
@@ -1382,7 +1393,7 @@ $('#tab-prof').onclick=e=>{
   if(e.target.closest('#guide-open'))return tab('guide');
   {const nb=e.target.closest('[data-nt]');if(nb)return ntToggle(+nb.dataset.nt)}
   if(e.target.closest('#nt-test'))return ntTest();
-  const anb=e.target.closest('[data-an]');if(anb){S.anim=anb.dataset.an;save();document.querySelectorAll('[data-an]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.an===S.anim));anPrev();anBtn();return}
+  const anb=e.target.closest('[data-an]');if(anb){animPick(anb.dataset.an,()=>{document.querySelectorAll('[data-an]').forEach(x=>{x.setAttribute('aria-pressed',x.dataset.an===S.anim);const a=ANIMN.find(y=>y[0]===x.dataset.an);x.querySelector('small').textContent=animSub(a)});anPrev();anBtn()});return}
   if(e.target.closest('#snd-tg')){S.snd=!S.snd;save();renderProf();if(S.snd){sfx('ach')}return}
   if(e.target.closest('#idcopy')){(async()=>{try{await navigator.clipboard.writeText(String(S.uid).padStart(6,'0'));toast('ID скопирован')}catch(x){toast('Не удалось скопировать ID')}})();return}
   if(e.target.closest('#ref-claim'))return claimRefs();
