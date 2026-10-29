@@ -1173,3 +1173,26 @@ details.taxl>small{display:block;color:var(--mute);font-size:12px;line-height:1.
 .vipbig .vbh small{color:#d8d3ff;font-size:13px}
 .vipbig .stperk{font-size:14px;line-height:1.6;margin:14px 0 16px}
 .vipbig .btn{font-size:16px;padding:14px}
+/* окна внутри разделов не прячутся под нижним меню */
+section .usheet{z-index:30}
+section .usheet .sbox{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+/* VIP-карточка */
+.vipc{padding:14px 14px 16px;border-color:#6b5420;background:linear-gradient(180deg,#1d1a2c,#14121f)}
+.vipc .vch{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.vipc .vci{flex:none;width:44px;height:44px;border-radius:12px;background:#3a2f12;display:grid;place-items:center;font-size:24px}
+.vipc .vch b{display:block;font:800 17px 'Unbounded',system-ui,sans-serif;color:#fff}
+.vipc .vch small{color:var(--mute);font-size:12px;line-height:1.3}
+.vipl{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.vipl li{position:relative;padding-left:22px}
+.vipl li::before{content:"♛";position:absolute;left:0;top:0;color:#ffb62e;font-size:15px;line-height:1.2}
+.vipl b{display:block;font:700 14px var(--head);color:#fff;line-height:1.25}
+.vipl small{display:block;font-size:12px;color:var(--mute);line-height:1.35;margin-top:2px}
+.vbuy{width:100%;margin-top:16px;padding:12px;border-radius:16px;border:0;background:linear-gradient(180deg,#ffd34e,#ff9f2e);color:#2a1a00;display:grid;gap:2px;justify-items:center;cursor:pointer}
+.vbuy small{font-size:12px;color:#5a3a00;font-weight:600}
+.vbuy b{font:800 20px 'Unbounded',system-ui,sans-serif}
+.vcd{margin-top:16px;padding:12px;border-radius:14px;background:#3a2f12;color:#ffd34e;text-align:center;font-weight:700}
+/* иконки вместо эмодзи (js/icons.js) */
+.ic{display:inline-block;width:1.15em;height:1.15em;vertical-align:-.2em;line-height:1;font-style:normal;flex:none}
+.ic svg{display:block;width:100%;height:100%}
+.pti .ic,.svi .ic,.vci .ic{width:1em;height:1em;vertical-align:middle}
+.vbuy .ic path{fill:#fff6c9}
