@@ -1599,7 +1599,7 @@ const pctw=w=>w%1?w.toFixed(1).replace('.',','):String(w);
 function rollTier(c){let r=Math.random()*c.w.reduce((s,x)=>s+x[1],0);for(const [t,w] of c.w){r-=w;if(r<0)return t}return c.w[c.w.length-1][0]}
 const cdLeft=c=>c&&c.cd?Math.max(0,(+(S.cdt&&S.cdt[c.id])||0)+c.cd-Date.now()):0;
 const dClaimed=()=>cdLeft(CASES[0])>0;
-function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${(c.id==='week'||S.coins<c.price)&&!(S.cfree&&S.cfree[c.id]>0)?' poor':''}${cdLeft(c)?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.cd?(cdLeft(c)?'Через '+leftT(cdLeft(c)):'Бесплатно · раз в '+(c.daily?'сутки':'неделю')):(S.cfree&&S.cfree[c.id]>0?'Бесплатно · промокод':fmt(c.price)+' 🪙')}</span></button>`).join('')+'</div>'}
+function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${(c.id==='week'||S.coins<c.price)&&!(S.cfree&&S.cfree[c.id]>0)?' poor':''}${cdLeft(c)?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.cd?(cdLeft(c)?'Через '+leftT(cdLeft(c)):'Бесплатно · раз в '+(c.daily?'сутки':'неделю')):(S.cfree&&S.cfree[c.id]>0?'Бесплатно · '+(S.cfree[c.id]|0)+' шт.':fmt(c.price)+' 🪙')}</span></button>`).join('')+'</div>'}
 function renderCases(){
   let el=$('#cases');if(!el){const st=document.querySelector('#tab-game .stats');if(!st)return;el=document.createElement('div');el.id='cases';st.after(el)}
   setHtml(el,'');
