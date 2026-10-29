@@ -2563,7 +2563,7 @@ var STC={
   pack_pro:['📦','Набор «Профи»','2 500 000 🪙 · 60 ⚡ · ник «Эпик+»',99,0],
   pack_gold:['💎','Золотой набор','7 000 000 🪙 · 150 ⚡ · ник «Легендарный+» · золотая рамка',249,0],
   energy60:['⚡','Энергия ×60','+60 ⚡ в запас, копится даже сверх лимита',39,0],
-  vip:['👑','VIP на 30 дней','Крутка ×5 бесплатно, энергия быстрее, +10 мест, комиссия 2%, музей +30%, подарок каждый день',299,0],
+  vip:['👑','VIP навсегда','Крутка ×5 бесплатно, энергия за 8 минут, +10 мест, комиссия 2%, музей +30%, подарок каждый день',999,1],
   ceo:['🟣','Эксклюзивный ник @ceo','Фиолетовый эксклюзивный ник, редкость выше секретных. Всего 3 на весь сервер',2499,1],
   title_oligarch:['🏆','Титул «Олигарх»','Эксклюзивный титул, за монеты его не купить',349,1],
   collector:['🗂️','Коллекционер','Открывает все 30 мест в коллекции',399,1],
@@ -2574,32 +2574,32 @@ var STC={
   custom_nick:['✏️','Именной юзернейм','Любой свободный юзернейм по твоему выбору. Выдаёт поддержка @ddwwks',349,0]
 };
 var STG=[['Наборы',['starter','pack_pro','pack_gold','energy60']],['Статус',['ceo','title_oligarch','collector','museum']],['Услуги',['wheel5','top','pass','custom_nick']]];
-var STUP=[25,50,100,150,250,500,750,1000,1500];
-var VIPPERK=['Крутка ×5 бесплатно с выбором редкости (до '+V5_DAY+' в сутки), обычным игрокам ×5 недоступна','Энергия восстанавливается за 8 минут вместо 15','+10 мест в коллекции','Комиссия рынка и аукциона 2% вместо 5%','Доход музея +30%','Подарок каждый день: 100 000 🪙 и 5 ⚡','Значок 👑 VIP в профиле'];
+var STUP=[50,100,250,500,1000],VIP_FOREVER=4102444800000;
+var VIPPERK=[['Крутка ×5','Пять ников одной кнопкой, бесплатно и с выбором редкости. До '+V5_DAY+' раз в сутки. Обычным игрокам ×5 недоступна.'],['Энергия быстрее','Новая энергия за 8 минут вместо 15.'],['+10 мест в коллекции','Сверх обычных 30 мест, навсегда.'],['Комиссия 2% вместо 5%','На продажах на рынке и в аукционе.'],['Доход музея +30%','Ко всем экспонатам в твоём зале.'],['Подарок каждый день','100 000 🪙 и 5 ⚡ просто за заход.'],['Корона 👑 в профиле','Значок VIP рядом с именем и в чате.']];
 var stPr=id=>(st.cat&&st.cat[id])||STC[id][3];
-var stHave=id=>{const c=STC[id];if(!c)return false;if(id==='ceo')return !!(S.exc.ceo||st.owned.ceo||(sh.ex&&sh.ex.ceo&&sh.ex.ceo.mine));if(id==='pass'){try{return !!(st.owned.pass||szState().paid)}catch(e){return !!st.owned.pass}}return !!(c[4]&&(S.sx[id]||st.owned[id]))};
+var stHave=id=>{const c=STC[id];if(!c)return false;if(id==='vip')return vipOn();if(id==='ceo')return !!(S.exc.ceo||st.owned.ceo||(sh.ex&&sh.ex.ceo&&sh.ex.ceo.mine));if(id==='pass'){try{return !!(st.owned.pass||szState().paid)}catch(e){return !!st.owned.pass}}return !!(c[4]&&(S.sx[id]||st.owned[id]))};
 function goStar(id){try{sessionStorage.setItem('nr_st',id)}catch(e){}if(PAGE==='shop'){sh.tab='stars';st.sel=id;renderShop()}else tab('shop')}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-stgo]');if(b)goStar(b.dataset.stgo)});
 function stHtml(){
   const vip=vipOn(),bal=st.bal!=null?st.bal:S.sbal;
-  let h=`<div class="pcard stbal"><div><small>Звёздный баланс</small><b>⭐ ${fmt(bal)}</b></div><small>Пополни один раз и покупай всё в игре одним нажатием. Баланс не сгорает.</small></div>
-  <div class="mchips stup">${STUP.map(n=>`<button class="btn sm" data-stup="${n}">+${n} ⭐</button>`).join('')}</div>`;
+  let h=`<div class="pcard stbal"><div><small>Звёздный баланс</small><b>⭐ ${fmt(bal)}</b></div><small>Пополни один раз и покупай всё в игре одним нажатием. Баланс не сгорает.</small></div>`;
   if(st.msg==='nochat')h+=`<div class="pcard lbmsg"><b>Бот не смог отправить счёт</b><small>Открой чат с ботом, нажми «Старт» и повтори покупку.</small><button class="btn main" id="st-chat">Открыть чат</button></div>`;
   if(st.sent)h+=`<div class="pcard lbmsg"><b>Счёт отправлен в чат с ботом</b><small>Оплати его в Telegram и вернись в игру: покупка придёт сама через несколько секунд.</small><button class="btn main" id="st-chat">Открыть чат с ботом</button></div>`;
   if(S.sx.custom>0)h+=`<div class="pcard lbmsg"><b>✏️ Именной юзернейм оплачен</b><small>Напиши в поддержку @ddwwks и назови желаемый юзернейм. Это можно сделать сейчас.</small><button class="btn main" id="st-sup">Написать в поддержку</button><button class="btn" id="st-done">Ник выдали, скрыть</button></div>`;
-  h+=`<div class="pcard vipbig"><div class="vbh"><span class="vbi">👑</span><div><b>VIP на 30 дней</b><small>${vip?'Активен до '+fmtDate(S.vip)+'. Продли, дни добавятся.':'Все преимущества сразу'}</small></div></div><ul class="stperk">${VIPPERK.map(x=>`<li>${x}</li>`).join('')}</ul><button class="btn main cwide" data-st="vip">${vip?'Продлить':'Купить'} · ⭐ ${stPr('vip')}</button></div>`;
+  h+=`<div class="pcard vipc"><div class="vch"><span class="vci">👑</span><div><b>VIP</b><small>${vip?'Активен навсегда':'Для тех, кто играет каждый день. Покупка один раз, навсегда.'}</small></div></div><ul class="vipl">${VIPPERK.map(x=>`<li><b>${x[0]}</b><small>${x[1]}</small></li>`).join('')}</ul>${vip?'<div class="vcd">✓ VIP у тебя навсегда</div>':`<button class="vbuy" data-st="vip"><small>Навсегда</small><b>⭐ ${fmt(stPr('vip'))}</b></button>`}</div>`;
   for(const [g,ids] of STG){
     h+=`<h3 class="ch3">${g}</h3>`+ids.map(id=>{const c=STC[id],own=stHave(id);
       const out=id==='ceo'&&!own&&sh.ex&&sh.ex.ceo&&sh.ex.ceo.left<1,ds=id==='ceo'&&sh.ex&&sh.ex.ceo?c[2]+` · осталось ${sh.ex.ceo.left} из ${sh.ex.ceo.total}`:c[2],dis=own||out;
       return `<div class="pcard svc stit${dis?' own':''}"${dis?'':` data-st="${id}"`}><span class="svi">${c[0]}</span><div><b>${c[1]}</b><small>${ds}</small></div><button class="btn ${dis?'':'main '}sm"${dis?' disabled':` data-st="${id}"`}>${own?'Куплено ✓':out?'Раскуплен':'⭐ '+fmt(stPr(id))}</button></div>`}).join('');
   }
+  h+=`<h3 class="ch3">Пополнить звёздный баланс</h3><div class="mchips stup">${STUP.map(n=>`<button class="btn sm" data-stup="${n}">+${n} ⭐</button>`).join('')}</div>`;
   return h+`<small class="sum">Оплата идёт через Telegram Stars. Звёзды покупаются в самом Telegram, их можно потратить на баланс игры или на любой товар напрямую.</small>`;
 }
 function stSheet(){
   const id=st.sel,c=STC[id];if(!c)return '';
   const p=stPr(id),bal=st.bal!=null?st.bal:S.sbal,poor=bal<p;
   return `<div class="usheet" id="stsheet"><div class="sbg" data-stx="1"></div><div class="sbox"><div class="shead"><b>${c[0]} ${c[1]}</b><button class="btn sm" data-stx="1">✕</button></div>
-  <p class="sum">${c[2]}</p>${id==='vip'?`<ul class="stperk">${VIPPERK.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}
+  <p class="sum">${c[2]}</p>${id==='vip'?`<ul class="stperk">${VIPPERK.map(x=>`<li>${x[0]}</li>`).join('')}</ul>`:''}
   <div class="stprice">⭐ ${p}</div>
   <button class="btn main cwide" id="st-bal"${poor?' disabled':''}>${poor?`На балансе ⭐ ${fmt(bal)}, не хватает ${p-bal}`:`Оплатить с баланса · ⭐ ${p}`}</button>
   <button class="btn cwide" id="st-inv">Счёт в чат с ботом · ⭐ ${p}</button></div></div>`;
@@ -2617,6 +2617,7 @@ function stOwned(){   // восстановить разовые покупки,
   if(o.collector){S.sx.collector=1;if(S.slots<MAXSLOTS)S.slots=MAXSLOTS}
   if(o.pass){try{szState().paid=1}catch(e){}}
   if(o.starter)S.sx.starter=1;
+  if(o.vip){S.sx.vip=1;S.vip=VIP_FOREVER}
   if(o.ceo){S.exc.ceo=1;if(!S.items.some(i=>i.n==='ceo'))addItem('ceo',7,0)}
 }
 function stGive(min){const c=roll({min,cost:0});if(S.items.length<MAX){addItem(c.name,c.t,c.p);return `ник @${c.name}`}const v=val(c.t,c.p,c.name);S.coins=Math.min(CAP,S.coins+v);return `ник @${c.name} продан за ${fmt(v)} 🪙 (коллекция полна)`}
@@ -2627,7 +2628,7 @@ function stApply(r,out){
   else if(id==='pack_pro')pk(2.5e6,60,3);
   else if(id==='pack_gold')pk(7e6,150,4,1);
   else if(id==='energy60'){S.en+=60;out.push('+60 ⚡')}
-  else if(id==='vip'){out.push('👑 VIP включён')}
+  else if(id==='vip'){S.sx.vip=1;S.vip=VIP_FOREVER;out.push('👑 VIP навсегда включён')}
   else if(id==='ceo'){S.exc.ceo=1;if(!S.items.some(i=>i.n==='ceo'))addItem('ceo',7,0);out.push('эксклюзивный ник @ceo')}
   else if(id==='museum'){S.sx.museum=1;S.hall=1;out.push('🏛️ зал музея открыт')}
   else if(id==='collector'){S.sx.collector=1;S.slots=MAXSLOTS;out.push('все места в коллекции')}
