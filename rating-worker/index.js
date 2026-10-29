@@ -175,7 +175,7 @@ const FIRST_BONUS = 0.1;   // бонус к первому пополнению 
 let LAST_BONUS = 0;
 const FEED_TXT = { vip: 'купил(а) VIP 👑', ceo: 'купил(а) эксклюзивный ник @ceo 🟣', title_oligarch: 'стал(а) Олигархом 🏆', pack_gold: 'купил(а) Золотой набор 💎', collector: 'стал(а) Коллекционером', museum: 'открыл(а) свой зал в музее' };
 const VIP_FOREVER = 4102444800000, VIP_FEE = 0.02;   // VIP навсегда (до 2100 года)
-const TOPUPS = [50, 100, 250, 500, 1000];
+const TOPUPS = [1, 50, 100, 250, 500, 1000];
 const STARS_SHOP = {
   starter: { t: 'Стартовый пак', d: '400 000 🪙, 20 ⚡ и ник «Редкий+»', stars: 19, once: 1, allow: 3e6 },
   pack_pro: { t: 'Набор «Профи»', d: '2 500 000 🪙, 60 ⚡ и ник «Эпик+»', stars: 99, allow: 6e6 },
