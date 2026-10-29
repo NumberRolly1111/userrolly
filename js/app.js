@@ -2472,10 +2472,19 @@ function rkPlay(){
   if(q.n>=RK_DAY)return toast('На сегодня попытки закончились');
   if(S.coins<stake)return toast('Не хватает монет на ставку');
   const w=rkRoll();S.coins-=stake;q.n++;S.rkN=(S.rkN|0)+1;save();setCoins();bon.busy=true;rk.res='';rk.last=stake;
-  const tiles=[...document.querySelectorAll('#tab-bon .rkt')];let step=0,pos=0;const total=16+w;
-  const go=()=>{tiles.forEach((t,i)=>t.classList.toggle('on',i===pos%5));sfx('tick',pos);hap('i','light');
-    if(step>=total-1&&pos%5===w){return fin()}
-    step++;pos++;setTimeout(go,70+step*step*.5)};
+  const tiles=[...document.querySelectorAll('#tab-bon .rkt')],grid=document.querySelector('#tab-bon .rkg');
+  if(reduce||!grid||tiles.length<5){setTimeout(()=>fin(),50)}
+  else{
+    const box=document.createElement('div');box.className='rkbox';grid.append(box);
+    const st=tiles[1].offsetLeft-tiles[0].offsetLeft,dist=5*4+w,dur=4200,t0=performance.now();let lastTile=-1;
+    const ease=k=>1-Math.pow(1-k,4);
+    const frame=now=>{
+      const k=Math.min(1,(now-t0)/dur),u=dist*ease(k),x=((u%5)+5)%5,ti=Math.floor(x+.5)%5;
+      box.style.transform=`translateX(${(x<4.5?x:x-5)*st}px)`;box.style.opacity=x>4.5?0:1;
+      if(ti!==lastTile){lastTile=ti;tiles.forEach((t,n)=>t.classList.toggle('on',n===ti));if(k<1){sfx('tick',Math.floor(u));hap('i','light')}}
+      if(k<1)requestAnimationFrame(frame);else{box.style.transform=`translateX(${w*st}px)`;box.style.opacity=1;tiles.forEach((t,n)=>t.classList.toggle('on',n===w));setTimeout(()=>{box.remove();fin()},350)}
+    };requestAnimationFrame(frame);
+  }
   const fin=()=>{
     const m=RKS[w][0],pay=Math.round(stake*m);
     S.rkH=[...(Array.isArray(S.rkH)?S.rkH:[]),m].slice(-10);
@@ -2483,7 +2492,6 @@ function rkPlay(){
       rk.res=`${RKS[w][2]} ${RKS[w][3]}: выигрыш ${fmt(pay)} 🪙`;sfx(m>=5?'ach':'coins');hap('n','success');if(m>=2)boom('#FFC933',m>=20?5:m>=5?4:3)}
     else{S.rkStr=0;rk.res=`💀 Не повезло: −${fmt(stake)} 🪙`;sfx('tap');hap('n','error')}
     save();bon.busy=false;setCoins();rkRefresh()};
-  go();
 }
 function rkCash(){
   if(!(S.rkp>0))return;const v=S.rkp;S.rkp=0;S.coins=Math.min(CAP,S.coins+v);const net=v-(rk.last||0);S.rkS=0;

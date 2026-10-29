@@ -1362,3 +1362,7 @@ body.shk{animation:shk .5s}
 .rkh i{font:800 11px var(--head);font-style:normal;padding:3px 7px;border-radius:8px;background:var(--tile)}.rkh i.w{background:#1d4a30;color:#7dffb0}.rkh i.l{background:#4a1d28;color:#ff8a9c}.rkh i.big{background:#5a4a14;color:#ffd34e}
 .rkst{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:8px 0}
 .rkst div{display:grid;justify-items:center;padding:7px 2px;border-radius:12px;background:var(--tile)}.rkst b{font:800 14px var(--head)}.rkst small{font-size:10px;color:var(--mute)}
+
+.rkg{position:relative}
+.rkbox{position:absolute;top:0;left:0;bottom:0;width:calc((100% - 24px)/5);border:2.5px solid #FFC933;border-radius:12px;box-shadow:0 0 18px rgba(255,201,51,.65),inset 0 0 12px rgba(255,201,51,.25);pointer-events:none;will-change:transform}
+.rkt{transition:transform .12s,border-color .12s,background .12s}
