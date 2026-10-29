@@ -1052,7 +1052,6 @@ function upSkeleton(){
     <div class="hist"><div class="hstrip" id="hstrip"></div><button class="hlink" id="up-hist">История ›</button></div>
     <p class="hint">Выбери ники из коллекции и цель. Шанс = цена ставки ÷ цена цели × 0,9. Не повезёт — ставка сгорит.</p>
   </div>
-  <div class="pcard adc"><b>Хотите разместить рекламу?</b><small>Напишите в поддержку: @ddwwks</small><button class="btn main cwide" id="ad-sup">Написать</button></div>
   <div class="pcard sndrow"><div><b>Страховка</b><small id="ins-sub"></small></div><button class="sw" id="up-ins" role="switch" aria-checked="false" aria-label="Страховка"><i></i></button></div>
   <button class="spin" id="up-main">Выбрать из коллекции</button>
   <div class="upres" id="upres"></div>
