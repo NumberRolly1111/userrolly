@@ -733,8 +733,8 @@ function playStage(st,reel,r,fresh){
   const sid=st.id,rid=reel.id;
   const fx2=()=>{st=(sid&&document.getElementById(sid))||st;st.classList.add('hit');st.classList.toggle('shake',r.t>=3);st.classList.toggle('mythic',r.t===5);st.classList.toggle('secret',r.t===6)};
   if(fresh&&r.t>=5&&!reduce){
-    build('??????',false,reel);
-    epic(r).then(()=>{const rl=(rid&&document.getElementById(rid))||reel;build(r.name,false,rl);fx2();hap('n','success');boom(T[r.t].c,r.t)});return;
+    const w0=build('??????',true,reel,0);   // сначала обычная прокрутка (останавливается на «??????»), потом сцена мифика или секретки
+    sleep(w0+150).then(()=>epic(r)).then(()=>{const rl=(rid&&document.getElementById(rid))||reel;build(r.name,false,rl);fx2();hap('n','success');boom(T[r.t].c,r.t)});return;
   }
   const wait=build(r.name,fresh,reel,0);
   if(fresh)setTimeout(()=>{fx2();hap('n','success');rareHap(r.t);sfx('tier',r.t);if(r.t>=3)boom(T[r.t].c,r.t)},wait);else fx2();
@@ -770,7 +770,7 @@ async function spin(){
   $('#idle').hidden=true;render();
   const box=$('#reels');box.innerHTML='';const row=mkRow();box.append(row);
   const c=cur[sel],reel=row.querySelector('.reel');
-  if(c.t>=5&&!reduce){build('??????',false,reel);await epic(c);build(c.name,false,reel)}
+  if(c.t>=5&&!reduce){await sleep(build('??????',true,reel,0)+150);await epic(c);build(c.name,false,reel)}
   else{await sleep(build(c.name,true,reel,0))}
   showSel(sel,true);plShow(plGot,plSp,plEn);
   busy=false;render();
