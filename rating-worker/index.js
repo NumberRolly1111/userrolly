@@ -158,14 +158,14 @@ async function cron(env) {
 // ================= Оплата звёздами Telegram (XTR) =================
 // Каталог лежит на сервере: цену и состав клиент не определяет. Счёт приходит в чат с ботом, платёж подтверждает вебхук /tg.
 // Баланс звёзд (acct.bal) пополняется отдельными счетами bal25…bal1500 и тратится на любые товары одним нажатием.
-const VIP_MS = 30 * 864e5, VIP_FEE = 0.02;
-const TOPUPS = [25, 50, 100, 150, 250, 500, 750, 1000, 1500];
+const VIP_FOREVER = 4102444800000, VIP_FEE = 0.02;   // VIP навсегда (до 2100 года)
+const TOPUPS = [50, 100, 250, 500, 1000];
 const STARS_SHOP = {
   starter: { t: 'Стартовый пак', d: '400 000 🪙, 20 ⚡ и ник «Редкий+»', stars: 19, once: 1, allow: 3e6 },
   pack_pro: { t: 'Набор «Профи»', d: '2 500 000 🪙, 60 ⚡ и ник «Эпик+»', stars: 99, allow: 6e6 },
   pack_gold: { t: 'Золотой набор', d: '7 000 000 🪙, 150 ⚡, ник «Легендарный+» и золотая рамка', stars: 249, allow: 12e6 },
   energy60: { t: 'Энергия ×60', d: '+60 ⚡ в запас', stars: 39 },
-  vip: { t: 'VIP на 30 дней', d: 'Крутка ×5 бесплатно с выбором редкости, энергия за 8 минут, +10 мест, комиссия 2%, музей +30%, подарок каждый день', stars: 299 },
+  vip: { t: 'VIP навсегда', d: 'Крутка ×5 бесплатно, энергия за 8 минут, +10 мест, комиссия 2%, музей +30%, подарок каждый день', stars: 999, once: 1 },
   museum: { t: 'Музей', d: 'Открывает зал музея без монет', stars: 115, once: 1 },
   collector: { t: 'Коллекционер', d: 'Открывает все места в коллекции', stars: 399, once: 1 },
   wheel5: { t: 'Мульти-крутка ×5', d: '5 дополнительных кручений ежедневного колеса', stars: 29 },
@@ -211,7 +211,7 @@ async function payApply(db, env, uid, id, stars, charge, via) {
     return false;
   }
   if (it.topup) await db.prepare('UPDATE acct SET bal=bal+? WHERE uid=?').bind(it.topup, uid).run();
-  if (id === 'vip') await db.prepare('UPDATE acct SET vip=MAX(vip,?)+? WHERE uid=?').bind(Date.now(), VIP_MS, uid).run();
+  if (id === 'vip') await db.prepare('UPDATE acct SET vip=? WHERE uid=?').bind(VIP_FOREVER, uid).run();
   if (id === 'custom_nick' && env) for (const a of String(env.ADMIN_IDS || '').split(',').map((x) => x.trim()).filter(Boolean)) bg(tgSend(env, a, `🛒 Заказ именного юзернейма: игрок ${uid} оплатил ${stars} ⭐. Он напишет в поддержку, выдай ник вручную.`));
   return true;
 }
