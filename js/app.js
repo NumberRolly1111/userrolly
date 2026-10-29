@@ -640,6 +640,10 @@ function vigOn(reel){
   place();setTimeout(place,450);v.classList.add('on');
 }
 const vigOff=()=>$('#vig').classList.remove('on');
+// стили анимации крутки на выбор: [старт, шаг между буквами] в мс
+const ANIM={classic:[1000,260],slot:[1250,330],wave:[1400,80],flip:[900,240],matrix:[800,220]},
+  ANIMN=[['classic','Классика','буквы-барабаны слева направо'],['slot','Слот','с отскоком, как в автомате'],['wave','Волна','все сразу, падают волной'],['flip','Флип','буквы переворачиваются'],['matrix','Матрица','шифр, который расшифровывается']];
+const animMode=()=>ANIM[S.anim]?S.anim:'classic';
 function build(name,animate,reel=$('#reel'),kind=0){
   reel.innerHTML='';reel.dataset.name=name;reel.classList.toggle('idle',!animate&&name.includes('?'));
   reel.style.fontSize=Math.max(14,Math.min(46,Math.floor((reel.parentElement.clientWidth-24-(name.length+1)*6)/(name.length*.94+.6))))+'px';
@@ -648,9 +652,14 @@ function build(name,animate,reel=$('#reel'),kind=0){
   if(sec)vigOn(reel);
   [...name].forEach((ch,i)=>{
     const c=document.createElement('div'),st=document.createElement('div');c.className='cell'+(sec?' sec':myt?' myt':'');st.className='strip'+(animate&&!sec&&!myt?' go':'');c.style.setProperty('--i',i);
-    const n=animate&&!sec&&!myt?12+i*3:0,chars=Array.from({length:n},()=>P(POOL));chars.push(ch);
+    const m=animate&&!sec&&!myt&&!reduce?animMode():'classic',ap=ANIM[m],shuf=m==='flip'||m==='matrix';
+    const n=animate&&!sec&&!myt&&!shuf?(m==='wave'?14:12+i*(m==='slot'?4:3)):0,chars=Array.from({length:n},()=>P(POOL));chars.push(ch);
     st.innerHTML=chars.map(x=>`<span>${x}</span>`).join('');c.append(st);reel.append(c);
-    if(n){const d=reduce?1:Math.round((1000+i*260)*FK());st.style.transitionDuration=d+'ms';
+    if(animate&&!sec&&!myt&&shuf){   // буквы меняются на месте и фиксируются слева направо
+      st.className='strip';st.innerHTML=`<span>${P(POOL)}</span>`;const sp=st.firstChild,d=Math.round((ap[0]+i*ap[1])*FK());c.classList.add(m==='flip'?'flpc':'mtx');
+      const iv=setInterval(()=>{sp.textContent=P(POOL);if(m==='flip'){c.classList.remove('flp');void c.offsetWidth;c.classList.add('flp')}},m==='flip'?90:55);
+      setTimeout(()=>{clearInterval(iv);sp.textContent=ch;c.classList.remove('mtx','flpc','flp');c.classList.add('land');hap('i','light');sfx('land',i)},d)}
+    else if(n){const d=reduce?1:Math.round((ap[0]+i*ap[1])*FK());st.style.transitionDuration=d+'ms';if(m==='slot')st.style.transitionTimingFunction='cubic-bezier(.3,1.4,.45,1)';
       requestAnimationFrame(()=>requestAnimationFrame(()=>st.style.transform=`translateY(${-n*1.5}em)`));
       setTimeout(()=>{st.classList.remove('go');c.classList.add('land');if(!reduce){hap('i','light');sfx('land',i)}},d)}
     if(myt){c.style.animationDelay=(MYT.start+i*MYT.step)+'ms';setTimeout(()=>{hap('i','light');sfx('myt',i)},MYT.start+i*MYT.step)}
@@ -661,7 +670,7 @@ function build(name,animate,reel=$('#reel'),kind=0){
     const total=SEC.start+(name.length-1)*SEC.step+SEC.dur+250;setTimeout(vigOff,total+500);return total;
   }
   if(myt)return MYT.start+(name.length-1)*MYT.step+MYT.dur+100;
-  return reduce?60:Math.round((1000+(name.length-1)*260)*FK())+150;
+  if(reduce||!animate)return 60;const ap=ANIM[animMode()];return Math.round((ap[0]+(name.length-1)*ap[1])*FK())+150;
 }
 // показать результат на табло и включить эффекты редкости
 function playStage(st,reel,r,fresh){
@@ -1263,6 +1272,7 @@ function albumCard(){
   <div class="algrid">${DEXS.map((x,i)=>{const ok=n>=x[0],cl=got.includes(i),w=Math.min(100,n/x[0]*100);return `<div class="alm${cl?' cl':ok?' ok':''}${i===nxt?' nx':''}"><b>${fmt(x[0])}</b><span class="alr">${short(x[1])} 🪙</span><div class="alb"><i style="width:${w}%"></i></div><em>${cl?'✓ получено':ok?'можно забрать':'ещё '+fmt(x[0]-n)}</em></div>`}).join('')}</div>
   ${ready.length?`<button class="btn main cwide" id="dex-claim">Забрать награды · +${fmt(ready.reduce((a,i)=>a+DEXS[i][1],0))} 🪙</button>`:''}</div>`}
 function dexClaim(){dexSeed();const n=dexCount();if(!Array.isArray(S.dexg))S.dexg=[];let sum=0;DEXS.forEach((x,i)=>{if(n>=x[0]&&!S.dexg.includes(i)){S.dexg.push(i);sum+=x[1]}});if(!sum)return;S.coins=Math.min(CAP,S.coins+sum);save();render();sfx('coins');toast('📖 Альбом: +'+fmt(sum)+' 🪙');renderProf()}
+function anPrev(){const r=document.getElementById('anreel');if(!r)return;const w=['hjaajh','kingvx','stormy','nova_x','blazer'];build(P(w),true,r,0)}
 function renderProf(){
   if(typeof refPoll==='function'&&!renderProf.t){renderProf.t=1;setTimeout(()=>{renderProf.t=0;refPoll()},0)}
   const u=tgUser(),name=u.first_name||'Игрок',need=xpNeed(S.lvl),pct=S.xp/need*100,rk=rankOf(S.lvl),nx=RANKS.find(x=>x[0]>S.lvl),nr=lvReward(S.lvl+1);
@@ -1291,7 +1301,9 @@ function renderProf(){
     <div class="pgrid"><div class="pt"><small>Круток</small><b>${fmt(S.spins)}</b></div><div class="pt"><small>Удачных апгрейдов</small><b>${fmt(S.upw)}</b></div>
     <div class="pt"><small>В игре за всё время</small><b id="tm-all">${fmtT(S.time)}</b></div><div class="pt"><small>В игре сегодня</small><b id="tm-day">${fmtT(todaySec())}</b></div></div>
     <div class="pgrid tiers">${T.map((t,i)=>`<div class="pt${i===99?' last':''}" style="--tc:${t.c}"><small>${TN[i]}</small><b>${fmt(S.cnt[i])}</b></div>`).join('')}</div></div>
-  <div class="pcard sndrow"><div><b>Звуки</b><small>Эффекты рулетки, наград и колеса</small></div><button class="sw${S.snd?' on':''}" id="snd-tg" role="switch" aria-checked="${S.snd}" aria-label="Звуки"><i></i></button></div>${ntfCard()}`;
+  <div class="pcard sndrow"><div><b>Звуки</b><small>Эффекты рулетки, наград и колеса</small></div><button class="sw${S.snd?' on':''}" id="snd-tg" role="switch" aria-checked="${S.snd}" aria-label="Звуки"><i></i></button></div>
+  <div class="pcard anrow"><b>Анимация крутки</b><small>Как открываются буквы ника. Выбери стиль, он сразу покажется ниже.</small><div class="anopts">${ANIMN.map(a=>`<button class="anb" data-an="${a[0]}" aria-pressed="${animMode()===a[0]}"><b>${a[1]}</b><small>${a[2]}</small></button>`).join('')}</div><div class="stage anprev"><div class="reel" id="anreel"></div></div></div>${ntfCard()}`;
+  requestAnimationFrame(()=>{const r=document.getElementById('anreel');if(r)build('hjaajh',false,r)});
 }
 setInterval(()=>{
   if(document.hidden)return;
@@ -1316,6 +1328,7 @@ $('#tab-prof').onclick=e=>{
   if(e.target.closest('#guide-open'))return tab('guide');
   {const nb=e.target.closest('[data-nt]');if(nb)return ntToggle(+nb.dataset.nt)}
   if(e.target.closest('#nt-test'))return ntTest();
+  const anb=e.target.closest('[data-an]');if(anb){S.anim=anb.dataset.an;save();document.querySelectorAll('[data-an]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.an===S.anim));anPrev();return}
   if(e.target.closest('#snd-tg')){S.snd=!S.snd;save();renderProf();if(S.snd){sfx('ach')}return}
   if(e.target.closest('#idcopy')){(async()=>{try{await navigator.clipboard.writeText(String(S.uid).padStart(6,'0'));toast('ID скопирован')}catch(x){toast('Не удалось скопировать ID')}})();return}
   if(e.target.closest('#ref-claim'))return claimRefs();

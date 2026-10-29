@@ -1275,3 +1275,12 @@ section .usheet .sbox{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 #adb .adx{width:26px;height:26px;opacity:.6;flex:none}
 @keyframes adup{from{opacity:0;transform:translateY(40px)}}@keyframes addn{to{opacity:0;transform:translateY(40px)}}
 .adc{margin-top:12px;display:grid;gap:4px}.adc small{opacity:.75}
+/* ---- стили анимации крутки ---- */
+.anrow{display:grid;gap:8px}.anrow>small{opacity:.75}
+.anopts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.anb{display:grid;gap:2px;text-align:left;padding:10px 12px;border-radius:14px;background:var(--tile);border:2px solid transparent}
+.anb small{font-size:11px;opacity:.7}.anb[aria-pressed=true]{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 18%,var(--tile))}
+.anprev{min-height:92px;display:grid;place-items:center;margin:0}
+.cell.flpc{perspective:300px}.cell.flp{animation:flipt .09s linear}
+@keyframes flipt{0%{transform:rotateX(75deg);opacity:.4}100%{transform:none;opacity:1}}
+.cell.mtx{color:#4DFFB0;text-shadow:0 0 10px #4DFFB0;filter:blur(.6px)}
