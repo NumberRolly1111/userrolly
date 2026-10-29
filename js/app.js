@@ -2764,7 +2764,7 @@ function adShow(){
   const close=()=>{o.classList.add('out');setTimeout(()=>o.remove(),300)};
   o.querySelector('.adx').onclick=e=>{e.stopPropagation();close()};
   o.onclick=()=>{lbReq('/ads/hit',{id:a.id,k:'c'}).catch(()=>{});try{/^https:\/\/t\.me\//.test(a.url)&&tg.openTelegramLink?tg.openTelegramLink(a.url):tg.openLink?tg.openLink(a.url):window.open(a.url,'_blank')}catch(e){window.open(a.url,'_blank')}close()};
-  document.body.append(o);lbReq('/ads/hit',{id:a.id,k:'v'}).catch(()=>{});setTimeout(()=>{if(o.isConnected)close()},9000);
+  document.body.append(o);lbReq('/ads/hit',{id:a.id,k:'v'}).catch(()=>{});
 }
 setTimeout(async()=>{await adLoad();setTimeout(adShow,2000);setInterval(adShow,240000);setInterval(adLoad,60000)},25000);
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#ad-sup')){try{tg.openTelegramLink('https://t.me/ddwwks')}catch(x){window.open('https://t.me/ddwwks','_blank')}}});
