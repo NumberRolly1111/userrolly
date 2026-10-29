@@ -1134,3 +1134,35 @@ details.taxl>small{display:block;color:var(--mute);font-size:12px;line-height:1.
 .ptabs.sm button{padding:9px 8px}
 .crow2{grid-template-columns:minmax(0,1.3fr) minmax(0,.9fr) auto}
 .crow2 .ttl{font-size:9.5px;padding:2px 7px}
+
+/* ---- Магазин за звёзды ---- */
+.stbal{display:flex;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(135deg,#2b2370,#4b2f8f);border-color:#7c6bff}
+.stbal b{display:block;font:800 26px 'Unbounded',system-ui,sans-serif;color:#ffe08a}
+.stbal small{color:#c9c2f5;max-width:150px;text-align:right}
+.stup{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px}
+.stup .btn{flex:1 1 56px;min-width:56px}
+.stit{cursor:pointer}
+.stit.own{opacity:.55;cursor:default}
+.stvip{border-color:#ffc933;background:linear-gradient(135deg,#3a2f12,#2a2150)}
+.stvip b{color:#ffd34e}
+.stperk{margin:8px 0;padding-left:18px;color:#d8d3ff;font-size:13px;line-height:1.55}
+.stprice{font:800 24px 'Unbounded',system-ui,sans-serif;color:#ffe08a;text-align:center;margin:10px 0}
+.vipb{display:inline-block;padding:2px 8px;border-radius:99px;background:linear-gradient(135deg,#ffd34e,#ff9f2e);color:#2a1a00;font:800 11px system-ui,sans-serif;margin-right:4px}
+
+/* налог: плашка всегда раскрыта */
+.taxh{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.taxh h3{margin:0}
+.taxh .bsub{font-size:12px;color:var(--mute);text-align:right}
+/* достижения: награда в монетах компактнее */
+.ach .arw{font-size:11px}
+.ach .btn.arw{padding:6px 9px;font-size:11px;min-height:0;border-radius:10px}
+/* чат */
+.chbox{display:flex;flex-direction:column;max-height:82vh}
+.chlist{flex:1;min-height:220px;max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:4px 0 8px}
+.chm{background:var(--tile);border-radius:12px;padding:7px 10px;max-width:86%;align-self:flex-start;font-size:13px;line-height:1.35;word-break:break-word}
+.chm.me{align-self:flex-end;background:#2b2a63}
+.chm b{display:block;font:700 11px var(--head);color:#9AA5DB;margin-bottom:1px}
+.chm small{display:block;font-size:10px;color:var(--mute);text-align:right}
+.chrow{display:flex;gap:8px;padding-top:6px}
+.chrow input{flex:1;min-width:0;padding:11px 12px;border-radius:12px;border:2px solid var(--line);background:var(--paper);color:inherit;font:inherit}
+.cher{color:#ff8a8a;font-size:12px;min-height:14px}
