@@ -361,7 +361,7 @@ const HINTS={
   risk:['🎲 Крутка с риском','Выбери ставку и запусти: указатель остановится на множителе, до ×20. Выигрыш можно сразу забрать или рискнуть им: удвоение 48%, до 4 раз подряд. До 30 игр в сутки.'],
   season:['🏅 Что такое сезон','Сезон идёт 3 недели. За крутки, кейсы и апгрейды копятся очки: каждый уровень даёт награду, а платная дорожка даёт ещё больше. Лучшие по очкам получают призы в конце.'],
   events:['🎉 События','Каждый день в случайный час включается событие на 1 час: ×1,5…×10 к монетным наградам, очкам сезона, опыту или энергии. Плашка на главной покажет, когда оно начнётся.'],
-  craft:['🧪 Контракт','Выбери три ника любой редкости: они сгорят, а взамен придёт новый. Чем реже выбранные ники, тем выше шанс получить редкий. Стоит небольшая плата.'],
+  craft:['🧪 Контракт','Сдай от 3 до 20 ников любой редкости: они сгорят, а взамен придёт новый. Чем реже выбранные ники, тем выше шанс получить редкий. Стоит небольшая плата.'],
   museum:['🏛️ Музей','Купи зал и ставь туда ники: они остаются навсегда и приносят монеты за просмотры. Экспонаты видят все игроки.'],
 };
 function hintCard(id){
@@ -1893,13 +1893,13 @@ document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#gs
 
 
 // ---------- Контракт: три ника одной редкости → один ник редкостью выше ----------
-var CRM=4,CRF=.2,cr={sel:[],res:null,busy:false};   // в контракт идут ники до легендарного; комиссия 20% от стоимости трёх ников
+var CRM=4,CRF=.2,CRMAX=20,cr={sel:[],res:null,busy:false,f:-1};   // в контракт идут ники до легендарного; комиссия 20% от суммы
 function crItems(){return cr.sel.map(id=>S.items.find(i=>i.id===id)).filter(Boolean)}
 function crSum(){return crItems().reduce((a,x)=>a+val(x.t,x.p,x.n),0)}
 // шансы зависят от выбранных ников: цель = средняя редкость + 1, дробная часть делит шанс между двумя соседними редкостями
 function crOdds(items){
-  if(items.length!==3)return[];
-  const m=items.reduce((a,x)=>a+x.t,0)/3+1,lo=Math.floor(m+1e-9),fr=m-lo,r=Math.round(fr*100)/100;
+  const n=items.length;if(n<3)return[];
+  const m=items.reduce((a,x)=>a+x.t,0)/n+1,lo=Math.floor(m+1e-9),fr=m-lo,r=Math.round(fr*100)/100;
   const o=[];if(r<1)o.push([Math.min(5,lo),1-r]);if(r>0)o.push([Math.min(5,lo+1),r]);
   const mg={};o.forEach(([t,w])=>mg[t]=(mg[t]||0)+w);return Object.entries(mg).map(([t,w])=>[+t,w]).sort((a,b)=>a[0]-b[0]);
 }
@@ -1909,32 +1909,52 @@ function crSheet(close){
   if(!sh){sh=document.createElement('div');sh.id='crsh';sh.className='usheet';document.body.append(sh);
     sh.onclick=e=>{
       if(e.target.closest('[data-crx]'))return crSheet(true);
+      const ch=e.target.closest('[data-crf]');if(ch&&!cr.busy){const v=+ch.dataset.crf;cr.f=cr.f===v?-1:v;return crSheet()}
+      if(e.target.closest('#cr-cheap')&&!cr.busy){
+        const pool=S.items.filter(i=>i.t<=CRM&&(cr.f<0||i.t===cr.f)).sort((a,b)=>val(a.t,a.p,a.n)-val(b.t,b.p,b.n)).slice(0,3);
+        cr.sel=pool.map(x=>x.id);cr.res=null;sfx('tick');return crSheet()}
+      if(e.target.closest('#cr-clear')&&!cr.busy){cr.sel=[];cr.res=null;return crSheet()}
       const it=e.target.closest('[data-cri]');
-      if(it&&!cr.busy){const id=it.dataset.cri,k=cr.sel.indexOf(id);if(k>=0)cr.sel.splice(k,1);else if(cr.sel.length<3)cr.sel.push(id);cr.res=null;sfx('tick');return crSheet()}
+      if(it&&!cr.busy){const id=it.dataset.cri,k=cr.sel.indexOf(id);if(k>=0)cr.sel.splice(k,1);else if(cr.sel.length<CRMAX)cr.sel.push(id);cr.res=null;sfx('tick');return crSheet()}
       if(e.target.closest('#cr-go'))return crGo();
     }}
   const oldBox=sh.querySelector('.sbox'),keep=oldBox?oldBox.scrollTop:0;
   const eh=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   cr.sel=cr.sel.filter(id=>S.items.some(i=>i.id===id&&i.t<=CRM));
-  const list=S.items.filter(i=>i.t<=CRM).sort((a,b)=>a.t-b.t||val(b.t,b.p,b.n)-val(a.t,a.p,a.n)),its=crItems();
-  const fee=Math.round(crSum()*CRF),ok=its.length===3&&S.coins>=fee,odds=crOdds(its);
-  const slots=[0,1,2].map(i=>{const x=its[i];return `<div class="crslot${x?' fl':''}"${x?` style="--tc:${T[x.t].c}"`:''}>${x?'@'+eh(x.n):'?'}</div>`}).join('');
-  const oddsH=odds.length?`<div class="crodds">${odds.map(([t,w])=>`<span style="--tc:${T[t].c}"><i></i>${T[t].n} <b>${Math.round(w*100)}%</b></span>`).join('')}</div>`:'<div class="crodds"><small>Выбери три ника — здесь появятся шансы</small></div>';
+  const all=S.items.filter(i=>i.t<=CRM),list=all.filter(i=>cr.f<0||i.t===cr.f).sort((a,b)=>a.t-b.t||val(b.t,b.p,b.n)-val(a.t,a.p,a.n)),its=crItems();
+  const sum=crSum(),fee=Math.round(sum*CRF),n=its.length,ok=n>=3&&S.coins>=fee,odds=crOdds(its);
+  const chips=[0,1,2,3,4].map(t=>{const c=all.filter(i=>i.t===t).length;return `<button class="crch${cr.f===t?' on':''}" data-crf="${t}" style="--tc:${T[t].c}"><i></i>${T[t].n} <b>${c}</b></button>`}).join('');
+  const sl=its.map(x=>`<div class="crsl fl" style="--tc:${T[x.t].c}">@${eh(x.n)}</div>`).join('')+Array.from({length:Math.max(0,3-n)},()=>'<div class="crsl"></div>').join('');
+  const top=odds.length?odds.reduce((a,x)=>x[1]>a[1]?x:a,odds[0]):null;
+  const get=top?`<span class="crget" style="--tc:${T[top[0]].c}"><i></i>${T[top[0]].n} ник</span>`:`<span class="crget none"><i></i>Ник новой редкости</span>`;
+  const oddsH=odds.length?`<div class="crodds">${odds.map(([t,w])=>`<span style="--tc:${T[t].c}"><i></i>${T[t].n} <b>${Math.round(w*100)}%</b></span>`).join('')}</div>`:'<div class="crhint">Отметь ниже ники — здесь появятся шансы и стоимость контракта.</div>';
   const res=cr.res?`<div class="cresc" style="--tc:${T[cr.res.t].c}"><small>${T[cr.res.t].n}</small><b>@${eh(cr.res.name)}</b><span>${fmt(cr.res.price)} 🪙</span></div>`:'';
-  sh.innerHTML=`<div class="sbg" data-crx="1"></div><div class="sbox casebox"><div class="shead"><b>🧪 Контракт</b><button class="btn sm" data-crx="1">✕</button></div>
-  ${hintCard('craft')}<p class="cdesc3">Выбери три любых ника, можно разной редкости: они сгорят, а взамен придёт случайный ник. Чем выше редкость выбранных, тем выше шанс на лучший результат. Комиссия — ${Math.round(CRF*100)}% от их стоимости.</p>
-  <div class="crslots">${slots}<i>→</i><div class="crslot out">?</div></div>
-  ${oddsH}${res}
-  <div class="slist mpick">${list.length?list.map(x=>`<button class="item wpk${cr.sel.includes(x.id)?' crsel':''}" data-cri="${x.id}" style="--tc:${T[x.t].c}"><div><b>@${eh(x.n)}</b><small>${T[x.t].n}</small></div><span>${fmt(val(x.t,x.p,x.n))} 🪙</span></button>`).join(''):'<div class="pcard lbmsg"><small>Нет ников для контракта (легендарные и выше не берём).</small></div>'}</div>
-  <button class="btn main" id="cr-go"${ok?'':' disabled'}>${its.length<3?`Выбрано ${its.length} из 3`:S.coins<fee?`Не хватает ${fmt(fee-S.coins)} 🪙`:`Заключить контракт · ${fmt(fee)} 🪙`}</button></div>`;
+  sh.innerHTML=`<div class="sbg" data-crx="1"></div><div class="sbox casebox"><div class="shead"><b>📜 Контракт</b><button class="btn sm" data-crx="1">✕</button></div>
+  ${hintCard('craft')}
+  <div class="crpaper"><div class="crtop"><b>КОНТРАКТ</b><span>№ ${String((S.crN|0)+1).padStart(3,'0')}</span></div>
+    <div class="crrow"><label>СДАЮ</label><em>${n?`${n} ${n<5?'ника':'ников'}`:'от 3 до '+CRMAX+' ников'}</em>${n?'<button class="crclr" id="cr-clear">очистить</button>':''}</div>
+    <div class="crslr">${sl}</div>
+    <div class="crsum"><label>Сумма</label><b>${fmt(sum)} 🪙</b><small>комиссия ${fmt(fee)} 🪙</small></div>
+    <div class="crbar"><i style="width:${Math.min(100,n/CRMAX*100)}%"></i></div>
+    <div class="crarr">⇣</div>
+    <div class="crrow"><label>ПОЛУЧАЮ</label>${get}</div>
+    ${oddsH}
+    <div class="crsig"><label>ПОДПИСЬ</label><span></span></div>
+  </div>
+  ${res}
+  <button class="btn main cwide crgo" id="cr-go"${ok?'':' disabled'}>${n<3?`🔒 Выбрано ${n} из 3`:S.coins<fee?`Не хватает ${fmt(fee-S.coins)} 🪙`:`Подписать контракт · ${fmt(fee)} 🪙`}</button>
+  <div class="crchips">${chips}</div>
+  <div class="crlh"><b>${cr.f<0?'Мои ники':T[cr.f].n}</b><button id="cr-cheap">Подобрать дешёвые</button></div>
+  <div class="crgrid">${list.length?list.map(x=>`<button class="crc${cr.sel.includes(x.id)?' sel':''}" data-cri="${x.id}" style="--tc:${T[x.t].c}"><span class="crk"></span><b>@${eh(x.n)}</b><em>${fmt(val(x.t,x.p,x.n))} 🪙</em><small>${T[x.t].n}</small></button>`).join(''):'<div class="pcard lbmsg"><small>Нет ников для контракта (легендарные и выше не берём).</small></div>'}</div>
+  <p class="crfoot">Сдай от 3 до ${CRMAX} ников: они сгорят, а взамен придёт новый. Чем реже сданные ники, тем выше шанс на лучшую редкость. Комиссия ${Math.round(CRF*100)}% от суммы.</p></div>`;
   const nb=sh.querySelector('.sbox');if(nb&&keep)nb.scrollTop=keep;
 }
 function crGo(){
-  const items=crItems();if(items.length!==3||cr.busy||items.some(x=>x.t>CRM))return;
+  const items=crItems();if(items.length<3||cr.busy||items.some(x=>x.t>CRM))return;
   const fee=Math.round(crSum()*CRF);if(S.coins<fee)return;
   let r=Math.random(),tier=0;const od=crOdds(items);for(const [t,w] of od){tier=t;if(r<w)break;r-=w}
   const pr=P(poolOf(tier));if(!pr)return;
-  S.coins-=fee;S.items=S.items.filter(i=>!cr.sel.includes(i.id));
+  S.coins-=fee;S.items=S.items.filter(i=>!cr.sel.includes(i.id));S.crN=(S.crN|0)+1;
   addItem(pr.name,pr.t,pr.p);S.best=Math.max(S.best,pr.t);try{noteBest(pr.price,pr.name)}catch(e){}addXp(10+pr.t*6);
   cr.res=pr;cr.sel=[];save();render();sfx('tier',pr.t);hap('n','success');rareHap(pr.t);try{if(!$('#tab-prof').hidden)renderProf()}catch(e){}
   crSheet();
