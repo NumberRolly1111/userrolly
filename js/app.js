@@ -2777,16 +2777,17 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 var adv={list:[],i:0,t:0};
 async function adLoad(){if(!API||!tg||!tg.initData)return;try{const r=await lbReq('/ads');adv.list=r.ads||[]}catch(e){}}
 function adShow(){
-  if(document.hidden||document.getElementById('adb')||!adv.list.length)return;
-  if(document.querySelector('.usheet:not([hidden]),#buyfx'))return;
+  if(document.hidden||document.getElementById('adb')||!adv.list.length)return false;
+  if(document.querySelector('.usheet:not([hidden]),#buyfx'))return false;
   const a=adv.list[adv.i++%adv.list.length],o=document.createElement('div');o.id='adb';
   o.innerHTML=`<span class="adl">Реклама</span><div class="adt">${a.title?`<b>${escH(a.title)}</b>`:''}<span>${escH(a.text)}</span></div><button class="adg" aria-label="Открыть">↗</button><button class="adx" aria-label="Закрыть">✕</button>`;
   const close=()=>{o.classList.add('out');setTimeout(()=>o.remove(),300)};
   o.querySelector('.adx').onclick=e=>{e.stopPropagation();close()};
   o.onclick=()=>{lbReq('/ads/hit',{id:a.id,k:'c'}).catch(()=>{});try{/^https:\/\/t\.me\//.test(a.url)&&tg.openTelegramLink?tg.openTelegramLink(a.url):tg.openLink?tg.openLink(a.url):window.open(a.url,'_blank')}catch(e){window.open(a.url,'_blank')}close()};
-  document.body.append(o);lbReq('/ads/hit',{id:a.id,k:'v'}).catch(()=>{});
+  document.body.append(o);lbReq('/ads/hit',{id:a.id,k:'v'}).catch(()=>{});return true;
 }
-setTimeout(async()=>{await adLoad();setTimeout(adShow,2000);setInterval(adShow,240000);setInterval(adLoad,60000)},25000);
+const AD_EVERY=25*60000;   // реклама: первый показ через 25 с после запуска, дальше раз в 25 минут (если момент занят, повтор через 30 с)
+setTimeout(async()=>{await adLoad();adv.t=Date.now()-AD_EVERY;setInterval(()=>{if(Date.now()-adv.t>=AD_EVERY&&adShow())adv.t=Date.now()},30000);if(adShow())adv.t=Date.now();setInterval(adLoad,60000)},25000);
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#ad-sup')){try{tg.openTelegramLink('https://t.me/ddwwks')}catch(x){window.open('https://t.me/ddwwks','_blank')}}});
 // ---------- История покупок ----------
 async function histSheet(){
