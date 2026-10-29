@@ -234,12 +234,12 @@ const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 fixState();
 // Темы оформления: меняют цвета через переменные CSS (html[data-theme=…])
-const THEMES=[{id:'',n:'Ночь',a:'#5B6BFF',b:'#0D0B1A',price:0},{id:'ocean',n:'Океан',a:'#2E8BFF',b:'#06121F',price:500000},{id:'emerald',n:'Изумруд',a:'#1FBF72',b:'#06130E',price:1000000},{id:'sunset',n:'Закат',a:'#FF6B4A',b:'#17090F',price:2000000},{id:'amoled',n:'Чёрная',a:'#5B6BFF',b:'#000000',price:3000000},{id:'royal',n:'Королевская',a:'#B05BFF',b:'#120A1F',price:5000000}];
+const THEMES=[{id:'',n:'Ночь',a:'#5B6BFF',b:'#0D0B1A',price:0},{id:'ocean',n:'Океан',a:'#2E8BFF',b:'#06121F',price:500000},{id:'emerald',n:'Изумруд',a:'#1FBF72',b:'#06130E',price:1000000},{id:'sunset',n:'Закат',a:'#FF6B4A',b:'#17090F',price:2000000},{id:'amoled',n:'Чёрная',a:'#5B6BFF',b:'#000000',price:3000000},{id:'royal',n:'Королевская',a:'#B05BFF',b:'#120A1F',price:5000000},{id:'hallow',n:'Хэллоуин',a:'#FF7A1A',b:'#120806',price:2500000},{id:'neon',n:'Неон',a:'#00F0FF',b:'#08051A',price:4000000},{id:'sakura',n:'Сакура',a:'#FF7FB0',b:'#1A0B14',price:3000000},{id:'gold',n:'Золото',a:'#FFC933',b:'#141006',price:8000000}];
 const themeOwn=t=>!t.id||(S.cown||[]).includes('t_'+t.id);
 function applyTheme(){
   const t=THEMES.find(x=>x.id===S.theme&&themeOwn(x))||THEMES[0];
   try{if(t.id)document.documentElement.dataset.theme=t.id;else delete document.documentElement.dataset.theme;
-    const m=document.querySelector('meta[name=theme-color]');if(m)m.content=t.b;
+    const m=document.querySelector('meta[name=theme-color]');if(m)m.content=t.b;try{hwFx()}catch(x){}
     if(tg){tg.setHeaderColor&&tg.setHeaderColor(t.b);tg.setBackgroundColor&&tg.setBackgroundColor(t.b)}}catch(e){}
 }
 applyTheme();
@@ -357,6 +357,8 @@ function taxTick(){
 }
 // ---------- Подсказки при первом заходе и сворачиваемые блоки ----------
 const HINTS={
+  dc:['🎯 Челлендж дня','Каждый день два новых задания: лёгкое и посложнее. Прогресс считается с утра сам. Сделай оба, чтобы получить бонус и продлить серию дней.'],
+  risk:['🎲 Крутка с риском','Выбери ставку и запусти: указатель остановится на множителе. Можно проиграть всё, а можно выиграть до ×20. До 15 попыток в сутки.'],
   season:['🏅 Что такое сезон','Сезон идёт 3 недели. За крутки, кейсы и апгрейды копятся очки: каждый уровень даёт награду, а платная дорожка даёт ещё больше. Лучшие по очкам получают призы в конце.'],
   events:['🎉 События','Каждый день в случайный час включается событие на 1 час: ×1,5…×10 к монетным наградам, очкам сезона, опыту или энергии. Плашка на главной покажет, когда оно начнётся.'],
   craft:['🧪 Крафт','Выбери три ника любой редкости: они сгорят, а взамен придёт новый. Чем реже выбранные ники, тем выше шанс получить редкий. Стоит небольшая плата.'],
@@ -492,6 +494,18 @@ const ACH=[
   A('🪙','Триллионер','Накопи 3 000 000 000 🪙',()=>S.maxCoins,3000000000,50000000),
   A('🌙','100 часов в игре','Проведи в игре 100 часов',()=>Math.floor(S.time/3600),100,3000000),
   A('👑','Королевская особа','Получи VIP навсегда',()=>vipOn()?1:0,1,2000000),
+  A('🎯','Первый челлендж','Выполни задание челленджа дня',()=>S.dcN|0,1,300000),
+  A('🎯','10 челленджей','Выполни 10 заданий челленджа дня',()=>S.dcN|0,10,1500000),
+  A('🎯','50 челленджей','Выполни 50 заданий челленджа дня',()=>S.dcN|0,50,6000000),
+  A('🔥','Серия челленджей','Выполняй оба задания дня 3 дня подряд',()=>S.dcS|0,3,1000000),
+  A('🔥','Челлендж-марафон','Выполняй оба задания дня 7 дней подряд',()=>S.dcS|0,7,4000000),
+  A('🎲','Рискнул','Сыграй в крутку с риском',()=>S.rkN|0,1,100000),
+  A('🎲','Азартный игрок','Сыграй в крутку с риском 50 раз',()=>S.rkN|0,50,1500000),
+  A('💎','Иксы пошли','Выиграй множитель ×5 или больше в крутке с риском',()=>S.rk5|0,1,1000000),
+  A('👑','Джекпот ×20','Выиграй множитель ×20 в крутке с риском',()=>S.rkW|0,20,5000000),
+  A('🎃','Праздничный подарок','Забери подарок к празднику',()=>S.holN|0,1,500000),
+  A('🎉','Любитель праздников','Забери 3 праздничных подарка',()=>S.holN|0,3,3000000),
+  A('🎨','Модник','Купи 3 темы оформления',()=>(S.cown||[]).filter(x=>/^t_/.test(x)).length,3,800000),
 ];
 const achOk=(a,i)=>S.ach.includes(i)||a.cur()>=a.goal;
 const achReady=()=>ACH.map((x,i)=>i).filter(i=>achOk(ACH[i],i)&&!S.achGot.includes(i));
@@ -669,8 +683,8 @@ function vigOn(reel){
 }
 const vigOff=()=>$('#vig').classList.remove('on');
 // стили анимации крутки на выбор: [старт, шаг между буквами] в мс
-const ANIM={classic:[1000,260],slot:[1250,330],wave:[1400,80],flip:[900,240],matrix:[800,220]},
-  ANIMN=[['classic','Классика','буквы-барабаны слева направо'],['slot','Слот','с отскоком, как в автомате'],['wave','Волна','все сразу, падают волной'],['flip','Флип','буквы переворачиваются'],['matrix','Матрица','шифр, который расшифровывается']];
+const ANIM={classic:[1000,260],slot:[1250,330],wave:[1400,80],flip:[900,240],matrix:[800,220],ghost:[900,260],pop:[800,240],rain:[900,200]},
+  ANIMN=[['classic','Классика','буквы-барабаны слева направо'],['slot','Слот','с отскоком, как в автомате'],['wave','Волна','все сразу, падают волной'],['flip','Флип','буквы переворачиваются'],['matrix','Матрица','шифр, который расшифровывается'],['ghost','Призрак','буквы проявляются из тумана'],['pop','Хлопок','буквы вылетают крупно и встают на место'],['rain','Дождь','буквы падают сверху с отскоком']];
 const animMode=()=>ANIM[S.anim]?S.anim:'classic';
 function build(name,animate,reel=$('#reel'),kind=0){
   reel.innerHTML='';reel.dataset.name=name;reel.classList.toggle('idle',!animate&&name.includes('?'));
@@ -680,13 +694,13 @@ function build(name,animate,reel=$('#reel'),kind=0){
   if(sec)vigOn(reel);
   [...name].forEach((ch,i)=>{
     const c=document.createElement('div'),st=document.createElement('div');c.className='cell'+(sec?' sec':myt?' myt':'');st.className='strip'+(animate&&!sec&&!myt?' go':'');c.style.setProperty('--i',i);
-    const m=animate&&!sec&&!myt&&!reduce?animMode():'classic',ap=ANIM[m],shuf=m==='flip'||m==='matrix';
+    const m=animate&&!sec&&!myt&&!reduce?animMode():'classic',ap=ANIM[m],shuf=['flip','matrix','ghost','pop','rain'].includes(m);
     const n=animate&&!sec&&!myt&&!shuf?(m==='wave'?14:12+i*(m==='slot'?4:3)):0,chars=Array.from({length:n},()=>P(POOL));chars.push(ch);
     st.innerHTML=chars.map(x=>`<span>${x}</span>`).join('');c.append(st);reel.append(c);
     if(animate&&!sec&&!myt&&shuf){   // буквы меняются на месте и фиксируются слева направо
-      st.className='strip';st.innerHTML=`<span>${P(POOL)}</span>`;const sp=st.firstChild,d=Math.round((ap[0]+i*ap[1])*FK());c.classList.add(m==='flip'?'flpc':'mtx');
+      st.className='strip';st.innerHTML=`<span>${P(POOL)}</span>`;const sp=st.firstChild,d=Math.round((ap[0]+i*ap[1])*FK());c.classList.add(m==='flip'?'flpc':m==='matrix'?'mtx':'shf-'+m);
       const iv=setInterval(()=>{sp.textContent=P(POOL);if(m==='flip'){c.classList.remove('flp');void c.offsetWidth;c.classList.add('flp')}},m==='flip'?90:55);
-      setTimeout(()=>{clearInterval(iv);sp.textContent=ch;c.classList.remove('mtx','flpc','flp');c.classList.add('land');hap('i','light');sfx('land',i)},d)}
+      setTimeout(()=>{clearInterval(iv);sp.textContent=ch;c.classList.remove('mtx','flpc','flp','shf-ghost','shf-pop','shf-rain');c.classList.add('land');if(m==='ghost'||m==='pop'||m==='rain')c.classList.add('ld-'+m);hap('i','light');sfx('land',i)},d)}
     else if(n){const d=reduce?1:Math.round((ap[0]+i*ap[1])*FK());st.style.transitionDuration=d+'ms';if(m==='slot')st.style.transitionTimingFunction='cubic-bezier(.3,1.4,.45,1)';
       requestAnimationFrame(()=>requestAnimationFrame(()=>st.style.transform=`translateY(${-n*1.5}em)`));
       setTimeout(()=>{st.classList.remove('go');c.classList.add('land');if(!reduce){hap('i','light');sfx('land',i)}},d)}
@@ -774,9 +788,17 @@ function renderPicks(){
 // confetti
 const fx=$('#fx'),cx=fx.getContext('2d');let ps=[],raf=0;
 function boom(col,tr=3){
-  if(reduce)return;const w=fx.width=innerWidth,h=fx.height=innerHeight;
+  if(reduce)return;try{if(tr>=4)rareFx(col,tr)}catch(e){}const w=fx.width=innerWidth,h=fx.height=innerHeight;
   ps=Array.from({length:tr>=5?300:tr===4?160:100},()=>({x:w/2,y:h*.3,vx:(Math.random()-.5)*15,vy:-Math.random()*13-3,r:3+Math.random()*4,c:Math.random()<.6?col:'#fff',a:1}));
   if(!raf)tick();
+}
+function rareFx(col,tr){
+  const f=document.createElement('div');f.className='rfl';f.style.setProperty('--rc',col);document.body.append(f);setTimeout(()=>f.remove(),1100);
+  const E=hwOn()?['🎃','👻','🦇','🕸️']:tr>=6?['🕶️','💎','✨','🔮']:tr===5?['🔥','✨','💎']:['✨','⭐','💫'];
+  const box=document.createElement('div');box.className='rrain';box.setAttribute('aria-hidden','true');
+  box.innerHTML=Array.from({length:tr>=5?22:14},(_,i)=>`<span style="left:${R(96)}%;font-size:${16+R(18)}px;animation-delay:${R(700)}ms;animation-duration:${1400+R(1200)}ms">${P(E)}</span>`).join('');
+  document.body.append(box);setTimeout(()=>box.remove(),3200);
+  if(tr>=5){document.body.classList.add('shk');setTimeout(()=>document.body.classList.remove('shk'),550)}
 }
 function tick(){
   cx.clearRect(0,0,fx.width,fx.height);
@@ -928,6 +950,7 @@ function updAva(){
 }
 function render(){
   try{updAva()}catch(e){}
+  try{hwFx()}catch(e){}
   try{renderNotes()}catch(e){}
   setCoins();
   ensureQuests();updBonDot();checkAch();try{renderCases()}catch(e){}   // кейсы объявлены ниже: на первом проходе их ещё нет
@@ -2383,11 +2406,99 @@ function wresHtml(){
     `<div class="win" style="--tc:${T[r.t].c}">${r.saved?'Ник добавлен в коллекцию.':`Коллекция заполнена, ник продан за ${fmt(r.v)} 🪙.`}</div>`;
 }
 function updTimers(){document.querySelectorAll('#tab-bon [data-t]').forEach(s=>s.textContent=leftT(s.dataset.t==='day'?msToDay():msToWeek()))}
+// ---------- Режимы без сервера: челлендж дня, крутка с риском, праздники ----------
+var DCH=[
+  {k:'spins',t:'Сделай 15 круток',n:15,c:40000,e:3},{k:'upw',t:'Выиграй 2 апгрейда',n:2,c:100000,e:3},{k:'ups',t:'Сделай 5 апгрейдов',n:5,c:80000,e:3},
+  {k:'sold',t:'Продай 5 ников',n:5,c:60000,e:2},{k:'saved',t:'Сохрани 5 ников',n:5,c:60000,e:2},
+  {k:'spins',t:'Сделай 50 круток',n:50,c:150000,e:8},{k:'rare',t:'Получи 3 редких ника или лучше',n:3,c:180000,e:6},{k:'epic',t:'Получи эпический ник или лучше',n:1,c:250000,e:8}];
+function dnum(){return Math.floor((Date.now()-new Date().getTimezoneOffset()*6e4)/864e5)}
+function dcCtr(){const c=S.cnt||[];const sm=a=>a.reduce((s,x)=>s+(+x||0),0);return {spins:S.spins,upw:S.upw,ups:S.ups,sold:S.sold,saved:S.saved,rare:sm(c.slice(2)),epic:sm(c.slice(3))}}
+function dcEnsure(){
+  const k=todayK();if(S.dc&&typeof S.dc==='object'&&S.dc.d===k&&Array.isArray(S.dc.ids))return S.dc;
+  const y=S.dc&&S.dc.d?S.dc:null,yk=dkey(new Date(Date.now()-864e5));
+  if(!(y&&y.d===yk&&y.got&&y.got[0]&&y.got[1]))S.dcS=0;
+  const n=dnum();S.dc={d:k,ids:[n%5,5+n%3],got:[0,0],b:dcCtr()};save();return S.dc;
+}
+const dcProg=i=>{const d=dcEnsure(),q=DCH[d.ids[i]];return Math.max(0,Math.min(q.n,(dcCtr()[q.k]||0)-(d.b[q.k]||0)))};
+const dcReady=()=>{try{const d=dcEnsure();return [0,1].filter(i=>!d.got[i]&&dcProg(i)>=DCH[d.ids[i]].n).length}catch(e){return 0}};
+function dcClaim(i){
+  const d=dcEnsure(),q=DCH[d.ids[i]];if(d.got[i]||dcProg(i)<q.n)return;
+  d.got[i]=1;S.dcN=(S.dcN|0)+1;let r=q.c,m='';S.en+=q.e;addXp(40);
+  if(d.got[0]&&d.got[1]){r+=150000;S.dcS=(S.dcS|0)+1;m=` · оба задания: +150 000 🪙, серия ${S.dcS} дн.`}
+  S.coins=Math.min(CAP,S.coins+r);sfx('coins');hap('n','success');save();toast(`Челлендж выполнен: +${fmt(q.c)} 🪙 и +${q.e} ⚡${m}`);if(d.got[0]&&d.got[1])boom('#FFC933',4);render();
+}
+// праздники по датам: [id, значок, название, месяц начала, день начала, месяц конца, день конца, монеты, энергия]
+var HOL=[['nur','🌿','Наурыз',3,21,3,23,1000000,20],['hw','🎃','Хэллоуин',10,25,11,2,1000000,20],['ny','🎄','Новый год',12,25,1,7,2000000,30],['ind','🇰🇿','День Независимости',12,16,12,17,1000000,20],['val','💝','День влюблённых',2,13,2,15,700000,15],['mar','🌷','8 марта',3,7,3,9,700000,15],['apr','🤡','1 апреля',3,31,4,2,500000,10],['vic','🎖️','9 мая',5,8,5,10,500000,10]];
+function holAt(dt){
+  const m=dt.getMonth()+1,d=dt.getDate(),v=m*100+d;
+  for(const h of HOL){const a=h[3]*100+h[4],b=h[5]*100+h[6],on=a<=b?(v>=a&&v<=b):(v>=a||v<=b);if(on){const yr=a>b&&m<=h[5]?dt.getFullYear()-1:dt.getFullYear();return {h,key:h[0]+'_'+yr}}}
+  return null;
+}
+const holNow=()=>holAt(new Date());
+function holNext(){let best=null;for(let i=1;i<=60;i++){const x=holAt(new Date(Date.now()+i*864e5));if(x){best={h:x.h,days:i};break}}return best}
+const hwOn=()=>{try{const x=holNow();return S.theme==='hallow'||!!(x&&x.h[0]==='hw')}catch(e){return false}};
+function holClaim(){
+  const x=holNow();if(!x)return;S.hol=S.hol&&typeof S.hol==='object'?S.hol:{};if(S.hol[x.key])return;
+  S.hol[x.key]=1;S.holN=(S.holN|0)+1;S.coins=Math.min(CAP,S.coins+x.h[7]);S.en+=x.h[8];addXp(80);sfx('ach');hap('n','success');save();toast(`${x.h[1]} ${x.h[2]}: +${fmt(x.h[7])} 🪙 и +${x.h[8]} ⚡`);boom('#FFC933',5);render();
+}
+// декор Хэллоуина: плавающие тыквы и призраки на фоне
+function hwFx(){
+  try{let el=document.getElementById('hwfx');
+    if(!hwOn()||reduce){if(el)el.remove();return}
+    if(el)return;el=document.createElement('div');el.id='hwfx';el.setAttribute('aria-hidden','true');
+    const E=['🎃','👻','🦇','🕸️','🎃','👻'];el.innerHTML=Array.from({length:9},(_,i)=>`<span style="left:${8+i*10.5}%;animation-duration:${14+(i*5)%9}s;animation-delay:-${(i*3)%13}s;font-size:${18+(i*7)%16}px">${E[i%E.length]}</span>`).join('');
+    document.body.append(el);}catch(e){}
+}
+// мини-режим «Крутка с риском»
+var RKS=[[0,54.7,'💀','Мимо'],[1.5,28,'🪙','×1,5'],[2,13,'💰','×2'],[5,3.8,'💎','×5'],[20,.5,'👑','×20']],RK_ST=[10000,100000,1000000,10000000],RK_DAY=15,rk={st:1,res:''};
+function rkEnsure(){const k=todayK();if(!S.rk||typeof S.rk!=='object'||S.rk.d!==k)S.rk={d:k,n:0};return S.rk}
+function rkRoll(){let r=Math.random()*100;for(let i=0;i<RKS.length;i++){r-=RKS[i][1];if(r<0)return i}return 0}
+function rkPlay(){
+  const stake=RK_ST[rk.st],q=rkEnsure();if(bon.busy)return;
+  if(q.n>=RK_DAY)return toast('На сегодня попытки закончились');
+  if(S.coins<stake)return toast('Не хватает монет на ставку');
+  const w=rkRoll();S.coins-=stake;q.n++;S.rkN=(S.rkN|0)+1;save();setCoins();bon.busy=true;rk.res='';
+  const tiles=[...document.querySelectorAll('#tab-bon .rkt')];let step=0,pos=0;const total=16+w;
+  const go=()=>{tiles.forEach((t,i)=>t.classList.toggle('on',i===pos%5));sfx('tick',pos);hap('i','light');
+    if(step>=total-1&&pos%5===w){return fin()}
+    step++;pos++;setTimeout(go,70+step*step*.5)};
+  const fin=()=>{
+    const m=RKS[w][0],pay=Math.round(stake*m);S.coins=Math.min(CAP,S.coins+pay);
+    if(m>=5)S.rk5=(S.rk5|0)+1;S.rkW=Math.max(S.rkW|0,m);
+    rk.res=m?`${RKS[w][2]} ${RKS[w][3]}: +${fmt(pay)} 🪙 (чистыми ${pay-stake>=0?'+':''}${fmt(pay-stake)})`:`💀 Не повезло: −${fmt(stake)} 🪙`;
+    if(m>=2){sfx(m>=5?'ach':'coins');hap('n','success');boom('#FFC933',m>=20?5:m>=5?4:3)}else{sfx('tap');hap('n',m?'warning':'error')}
+    save();bon.busy=false;setCoins();const el=$('#tab-bon');if(el)el._h='';renderBon()};
+  go();
+}
+function xBon(b){
+  const k=b.dataset.b;
+  if(k==='xdc')dcClaim(+b.dataset.v);else if(k==='xhol')holClaim();
+  else if(k==='xrks'){rk.st=+b.dataset.v;rk.res='';const el=$('#tab-bon');if(el)el._h='';renderBon()}
+  else if(k==='xrk')rkPlay();
+}
+function extraBon(){
+  let h='';
+  const x=holNow(),nx=holNext();S.hol=S.hol&&typeof S.hol==='object'?S.hol:{};
+  if(x){const got=S.hol[x.key];h+=`<div class="pcard holc"><div class="holh"><span>${x.h[1]}</span><div><b>${x.h[2]}</b><small>праздничный подарок</small></div></div>${got?'<button class="btn" disabled>Подарок получен ✓</button>':`<button class="btn main" data-b="xhol">Забрать: ${fmt(x.h[7])} 🪙 и ${x.h[8]} ⚡</button>`}</div>`}
+  else if(nx)h+=`<div class="pcard holc"><div class="holh"><span>${nx.h[1]}</span><div><b>${nx.h[2]}</b><small>через ${nx.days} ${dw(nx.days)}: подарок ${kfmt(nx.h[7])} 🪙</small></div></div></div>`;
+  const d=dcEnsure();
+  h+=`<details class="pcard fold" data-fold="dc"${fo('dc',1)}><summary class="bhead"><h3>🎯 Челлендж дня</h3><span class="bsub">${d.got.filter(Boolean).length} из 2${S.dcS?` · серия ${S.dcS} дн.`:''}</span></summary>${hintCard('dc')}`+
+    [0,1].map(i=>{const q=DCH[d.ids[i]],p=dcProg(i),ok=p>=q.n;return `<div class="quest${d.got[i]?' got':''}"><div class="qtop"><b>${q.t}</b><span>${fmt(q.c)} 🪙 · ${q.e} ⚡</span></div><div class="qbar"><i style="width:${p/q.n*100}%"></i></div><div class="qbot"><small>${p} / ${q.n}</small>${d.got[i]?'<em>Получено ✓</em>':ok?`<button class="btn main sm" data-b="xdc" data-v="${i}">Забрать</button>`:''}</div></div>`}).join('')+
+    `<p class="sum">Выполни оба: +150 000 🪙 и серия дней подряд. Новые задания каждый день.</p></details>`;
+  const q=rkEnsure(),stake=RK_ST[rk.st],left=RK_DAY-q.n;
+  h+=`<details class="pcard fold" data-fold="rk"${fo('rk',0)}><summary class="bhead"><h3>🎲 Крутка с риском</h3><span class="bsub">осталось ${left} из ${RK_DAY}</span></summary>${hintCard('risk')}
+    <div class="rkg">${RKS.map((s,i)=>`<div class="rkt"><i>${s[2]}</i><b>${s[3]}</b><small>${s[1]}%</small></div>`).join('')}</div>
+    <div class="rks">${RK_ST.map((v,i)=>`<button class="btn sm${i===rk.st?' main':''}" data-b="xrks" data-v="${i}">${kfmt(v)}</button>`).join('')}</div>
+    <button class="spin" data-b="xrk"${left<=0||S.coins<stake?' disabled':''}>${left<=0?'Попытки на сегодня закончились':S.coins<stake?'Не хватает монет':`Рискнуть · ${fmt(stake)} 🪙`}</button>
+    ${rk.res?`<p class="rkres">${rk.res}</p>`:''}<p class="sum">Выбери ставку и крути: выигрыш зависит от множителя. В среднем возвращается чуть меньше ставки, это игра на удачу.</p></details>`;
+  return h;
+}
 function renderBon(){
   if(bon.busy)return;
   ensureQuests();
   const li=loginInfo(),can=S.wheel!==todayK(),el=$('#tab-bon');
   let h=`<h2>Бонусы</h2><h4 class="bgrp">Сезон и события</h4>`+(()=>{try{return seasonCard()}catch(e){return ''}})()+hintCard('events')+(()=>{try{return taxLine()}catch(e){return ''}})()+'<h4 class="bgrp">Каждый день</h4>';
+  try{h+=extraBon()}catch(e){}
   h+=`<details class="pcard fold" data-fold="login"${fo('login',1)}><summary class="bhead"><h3>Ежедневный вход</h3><span class="bsub">Серия: ${li.n} ${dw(li.n)}</span></summary><div class="lgrid">`+
     LOGIN.map((r,i)=>{const st=(li.done?i<=li.idx:i<li.idx)?'done':(!li.done&&i===li.idx)?'now':'';
       return `<div class="lcell ${st}${i===6?' big':''}"><small>День ${i+1}</small><b>${kfmt(r)}</b>${st==='done'?'<i>✓</i>':''}</div>`}).join('')+`</div>`+
@@ -2463,7 +2574,7 @@ async function doWheel(){
 }
 $('#tab-bon').onclick=e=>{
   const b=e.target.closest('[data-b]');if(!b||b.disabled||bon.busy)return;
-  if(b.dataset.b==='login')claimLogin();else if(b.dataset.b==='wheel')doWheel();else if(b.dataset.b==='quest')claimQuest(+b.dataset.i);
+  if(b.dataset.b==='login')claimLogin();else if(b.dataset.b==='wheel')doWheel();else if(b.dataset.b==='quest')claimQuest(+b.dataset.i);else if(/^x/.test(b.dataset.b))xBon(b);
 };
 $('#bon-btn').onclick=()=>tab($('#tab-bon').hidden?'bon':'game');
 // ---------- Магазин: эксклюзив и аукцион ников ----------
@@ -2975,6 +3086,10 @@ function renderNotes(){
     {k:'auction',c:'#36E07C',i:ic('<path d="M14 4l6 6-3 3-6-6zM11 7L4 14l3 3 7-7M3 21h10"/>'),t:'Аукцион',d:au?(au.lead&&au.lead.length?`ты лидируешь: ${au.lead.length}`:au.lots&&au.lots.length?`твоих лотов: ${au.lots.length}`:'лоты игроков и ставки'):'лоты игроков и ставки',dot:au&&(au.pend>0)?1:0},
     {k:'top',c:'#FF5FA2',i:ic('<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>'),t:'Лучшие за всё время',d:tp&&tp.top&&tp.top[0]?`№1 ${tp.top[0].name} · @${tp.top[0].bestn||'—'}`.slice(0,34):'рейтинг лучших ников',dot:0}
   ];
+  try{const nb=[['Сделай первую крутку',S.spins>=1],['Сохрани ник в коллекцию',S.saved>=1],['Забери ежедневный вход во вкладке «Бонусы»',(S.login&&S.login.n>=1)],['Попробуй апгрейд ников',S.ups>=1]],dn=nb.filter(x=>x[1]).length;
+    const hx=holNow();if(hx&&!(S.hol&&S.hol[hx.key]))cards.unshift({k:'hol',c:'#FF8A3D',i:`<span style="font-size:20px">${hx.h[1]}</span>`,t:hx.h[2],d:'праздничный подарок ждёт',dot:1});
+    const dr=dcReady();cards.unshift({k:'dc',c:'#36C6FF',i:'<span style="font-size:20px">🎯</span>',t:'Челлендж дня',d:dr?`наград к получению: ${dr}`:`выполнено ${dcEnsure().got.filter(Boolean).length} из 2`,dot:dr?1:0});
+    if(dn<4&&S.spins<60)cards.unshift({k:'new',c:'#6BE38A',i:'<span style="font-size:20px">🚀</span>',t:`Старт новичка ${dn}/4`,d:nb.find(x=>!x[1])[0],dot:0})}catch(e){}
   const sig=JSON.stringify(cards.map(c=>[c.t,c.d,c.dot]));
   if(sig===nt.sig)return;nt.sig=sig;
   const sc=el.scrollLeft;
@@ -2991,6 +3106,8 @@ async function notesLoad(){
   el.onclick=e=>{const b=e.target.closest('[data-n]');if(!b)return;const k=b.dataset.n;
     if(k==='games'){try{sessionStorage.setItem('nr_gw','games')}catch(x){}return tab('bon')}
     if(k==='wheel'){try{sessionStorage.setItem('nr_gw','1')}catch(x){}return tab('bon')}
+    if(k==='new'){const m=!S.spins?'Нажми «Крутить» внизу: выпадет юзернейм':!S.saved?'Под выпавшим ником нажми «Сохранить»':!(S.login&&S.login.n>=1)?'Открой «Бонусы» и забери ежедневный вход':'Вкладка «Апгрейд»: обменяй ники на более редкий';return toast(m)}
+    if(k==='dc'||k==='hol')return tab('bon');
     if(k==='auction')return tab('auction');
     if(k==='top')return tab('top')};
   setTimeout(notesLoad,3000);setInterval(notesLoad,60000);setInterval(()=>{try{renderNotes()}catch(e){}},30000);})();

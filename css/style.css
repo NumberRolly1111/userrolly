@@ -1314,3 +1314,41 @@ header{flex-wrap:nowrap;gap:8px}
 .vpk b{display:block;font:700 14px system-ui,sans-serif;color:#fff;margin-bottom:2px}
 .vpk small{display:block;color:#b9b3e6;font-size:12px;line-height:1.35}
 #stsheet .sbox{overflow-y:auto}.vipcrown,.vperks{flex:none}
+
+/* темы */
+html[data-theme=hallow]{--bg:#120806;--paper:#241108;--tile:#38190c;--fg:#FFF1E6;--dark:#120806;--mute:#E0A87A;--line:#C25A12;--sh:#5A2406;--blue:#FF7A1A;--dot:#331708;--glow:#7A3408}
+html[data-theme=neon]{--bg:#08051A;--paper:#120C30;--tile:#1C1250;--fg:#EAFDFF;--dark:#08051A;--mute:#8FE8F2;--line:#00B8D4;--sh:#0A2A5A;--blue:#00F0FF;--dot:#150E3A;--glow:#0A4A8A}
+html[data-theme=sakura]{--bg:#1A0B14;--paper:#2C1423;--tile:#43203A;--fg:#FFF0F7;--dark:#1A0B14;--mute:#E8A6C6;--line:#D9588E;--sh:#5A1F40;--blue:#FF7FB0;--dot:#3A1A2E;--glow:#7A2A56}
+html[data-theme=gold]{--bg:#141006;--paper:#24200C;--tile:#382F10;--fg:#FFF8E0;--dark:#141006;--mute:#E0CB8A;--line:#B8941F;--sh:#4F3F0A;--blue:#FFC933;--dot:#2E280C;--glow:#6E5A10}
+/* новые стили прокрутки */
+.cell.shf-ghost{opacity:.4;filter:blur(1.5px);color:#ff9a3d}
+.cell.shf-pop{color:var(--blue)}
+.cell.shf-rain{color:#7fe3ff;text-shadow:0 0 8px #7fe3ff}
+.cell.ld-ghost{animation:ldg .55s}
+@keyframes ldg{0%{opacity:0;filter:blur(8px);transform:translateY(-.3em) scale(1.2)}100%{opacity:1;filter:none;transform:none}}
+.cell.ld-pop{animation:ldp .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes ldp{0%{transform:scale(2.4);opacity:0}100%{transform:scale(1);opacity:1}}
+.cell.ld-rain{animation:ldr .5s cubic-bezier(.3,1.5,.5,1)}
+@keyframes ldr{0%{transform:translateY(-1.8em);opacity:0}60%{opacity:1}100%{transform:none}}
+/* эффекты редких выпадений */
+.rfl{position:fixed;inset:0;z-index:60;pointer-events:none;background:radial-gradient(70% 50% at 50% 32%,color-mix(in srgb,var(--rc) 55%,transparent),transparent 70%);animation:rflk 1s ease-out forwards}
+@keyframes rflk{0%{opacity:0}18%{opacity:1}100%{opacity:0}}
+.rrain{position:fixed;inset:0;z-index:61;pointer-events:none;overflow:hidden}
+.rrain span{position:absolute;top:-8%;opacity:0;animation:rrn linear forwards}
+@keyframes rrn{0%{transform:translateY(0) rotate(0);opacity:0}12%{opacity:1}100%{transform:translateY(112vh) rotate(260deg);opacity:.9}}
+body.shk{animation:shk .5s}
+@keyframes shk{10%,50%,90%{transform:translateX(-4px)}30%,70%{transform:translateX(4px)}}
+/* Хэллоуин: плавающий декор */
+#hwfx{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+#hwfx span{position:absolute;bottom:-8%;opacity:.16;animation:hwf linear infinite}
+@keyframes hwf{0%{transform:translateY(0) rotate(-8deg)}50%{transform:translateY(-55vh) rotate(8deg)}100%{transform:translateY(-115vh) rotate(-8deg)}}
+/* праздник и крутка с риском */
+.holc{border-color:#C25A12;background:linear-gradient(135deg,color-mix(in srgb,var(--blue) 14%,var(--paper)),var(--paper))}
+.holh{display:flex;align-items:center;gap:12px;margin-bottom:8px}.holh>span{font-size:38px;line-height:1}
+.holh b{display:block;font:800 16px var(--head)}.holh small{color:var(--mute);font-size:12px}
+.rkg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0}
+.rkt{display:grid;justify-items:center;gap:1px;padding:8px 2px;border-radius:12px;border:1.5px solid var(--line);background:var(--tile);transition:transform .08s,border-color .08s,background .08s}
+.rkt i{font-style:normal;font-size:22px}.rkt b{font:800 12px var(--head)}.rkt small{font-size:10px;color:var(--mute)}
+.rkt.on{transform:scale(1.1);border-color:var(--blue);background:color-mix(in srgb,var(--blue) 30%,var(--tile))}
+.rks{display:flex;gap:6px;margin-bottom:10px}.rks .btn{flex:1;min-width:0}
+.rkres{margin:10px 0 4px;font:800 15px var(--head);text-align:center}
