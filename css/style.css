@@ -1204,3 +1204,16 @@ section .usheet .sbox{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 .vipc .vch>div{flex:1;min-width:0}
 .vipc .vch .vbuy{margin:0;flex:none;padding:8px 14px;font-size:14px}
 .vipc .vok{flex:none;color:#7CF29B;font:800 20px system-ui}
+/* пополнение баланса */
+.stbh{display:flex;align-items:center;justify-content:space-between;margin:22px 0 10px}
+.stbh b{display:flex;align-items:center;gap:8px;font:800 16px 'Unbounded',system-ui,sans-serif}
+.stbh b i{width:14px;height:4px;border-radius:2px;background:#ff8a3d;box-shadow:0 0 0 0 #ff8a3d}
+.stbh span{color:var(--mute);font-size:12px}
+.stgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stp{position:relative;display:grid;gap:6px;justify-items:center;padding:22px 8px 18px;border-radius:18px;border:1px solid var(--line);background:var(--paper);color:var(--fg);cursor:pointer}
+.stp b{font:800 20px 'Unbounded',system-ui,sans-serif}
+.stp small{color:var(--mute);font-size:12px}
+.stp.wide{grid-column:1 / -1}
+.stp.hot{border-color:#ffb62e;background:linear-gradient(180deg,#2a2112,var(--paper))}
+.stp em{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,#ffd34e,#ff9f2e);color:#2a1a00;border-radius:99px;padding:3px 12px;font:800 11px system-ui,sans-serif;font-style:normal;white-space:nowrap}
+.stgrid+.sum{display:block;margin-top:14px}
