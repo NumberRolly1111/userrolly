@@ -2485,8 +2485,8 @@ function wsPaint(cells){
 }
 function wsTry(cells){
   const G=S.ws;if(!G||G.ph!=='play'||cells.length<2)return false;
-  const s=cells.map(([r,c])=>G.g[r][c]).join(""),rv=[...s].reverse().join("");
-  const w=G.words.find(x=>!G.found.some(f=>f.w===x)&&(x===s||x===rv));
+  const s=cells.map(([r,c])=>G.g[r][c]).join("");
+  const w=G.words.find(x=>!G.found.some(f=>f.w===x)&&x===s);
   if(!w)return false;
   G.found.push({w,cells});G.pot+=wsRw(w);sfx('coin');hap('n','success');
   if(G.found.length===G.words.length){G.ph='wheel';sfx('ach');boom('#FFC933',4)}
