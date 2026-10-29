@@ -2582,7 +2582,7 @@ function goStar(id){try{sessionStorage.setItem('nr_st',id)}catch(e){}if(PAGE==='
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-stgo]');if(b)goStar(b.dataset.stgo)});
 function stHtml(){
   const vip=vipOn(),bal=st.bal!=null?st.bal:S.sbal;
-  let h=`<div class="pcard stbal"><div><small>Звёздный баланс</small><b>⭐ ${fmt(bal)}</b></div><small>Пополни один раз и покупай всё в игре одним нажатием. Баланс не сгорает.</small></div>`;
+  let h='';
   if(st.msg==='nochat')h+=`<div class="pcard lbmsg"><b>Бот не смог отправить счёт</b><small>Открой чат с ботом, нажми «Старт» и повтори покупку.</small><button class="btn main" id="st-chat">Открыть чат</button></div>`;
   if(st.sent)h+=`<div class="pcard lbmsg"><b>Счёт отправлен в чат с ботом</b><small>Оплати его в Telegram и вернись в игру: покупка придёт сама через несколько секунд.</small><button class="btn main" id="st-chat">Открыть чат с ботом</button></div>`;
   if(S.sx.custom>0)h+=`<div class="pcard lbmsg"><b>✏️ Именной юзернейм оплачен</b><small>Напиши в поддержку @ddwwks и назови желаемый юзернейм. Это можно сделать сейчас.</small><button class="btn main" id="st-sup">Написать в поддержку</button><button class="btn" id="st-done">Ник выдали, скрыть</button></div>`;
@@ -2592,7 +2592,7 @@ function stHtml(){
       const out=id==='ceo'&&!own&&sh.ex&&sh.ex.ceo&&sh.ex.ceo.left<1,ds=id==='ceo'&&sh.ex&&sh.ex.ceo?c[2]+` · осталось ${sh.ex.ceo.left} из ${sh.ex.ceo.total}`:c[2],dis=own||out;
       return `<div class="pcard svc stit${dis?' own':''}"${dis?'':` data-st="${id}"`}><span class="svi">${c[0]}</span><div><b>${c[1]}</b><small>${ds}</small></div><button class="btn ${dis?'':'main '}sm"${dis?' disabled':` data-st="${id}"`}>${own?'Куплено ✓':out?'Раскуплен':'⭐ '+fmt(stPr(id))}</button></div>`}).join('');
   }
-  h+=`<h3 class="ch3">Пополнить звёздный баланс</h3><div class="mchips stup">${STUP.map(n=>`<button class="btn sm" data-stup="${n}">+${n} ⭐</button>`).join('')}</div>`;
+  h+=`<div class="stbh"><b><i></i>Звёздный баланс</b><span>на балансе ⭐ ${fmt(bal)}</span></div><div class="stgrid">${STUP.map(n=>`<button class="stp${n===100?' hot':''}${n===1000?' wide':''}" data-stup="${n}">${n===100?'<em>выбор игроков</em>':''}<b>+${fmt(n)} ⭐</b><small>${fmt(n)} звёзд Telegram</small></button>`).join('')}</div>`;
   return h+`<small class="sum">Оплата идёт через Telegram Stars. Звёзды покупаются в самом Telegram, их можно потратить на баланс игры или на любой товар напрямую.</small>`;
 }
 function stSheet(){
