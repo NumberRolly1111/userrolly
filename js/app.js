@@ -2441,7 +2441,9 @@ addEventListener('pagehide',()=>{try{if(musEl&&S.mus)sessionStorage.setItem('nr_
 // ---------- Мини-игра «Поиск слов»: 10×10, слова из списка, колесо множителей ----------
 var WSC=0,WS_DAY=10,WS_RW=600,WS_N=10;
 var WS_WORDS=['НИК','ЮЗЕР','КЛАН','РИСК','КЕЙС','ЛОТ','БОНУС','КРАФТ','МУЗЕЙ','РЫНОК','УДАЧА','ТЫКВА','ЗВЕЗДА','КОРОНА','СЕЗОН','МИФИК','ЛУНА','МОНЕТА','КОЛЛЕКЦИЯ','РУЛЕТКА','АПГРЕЙД','АУКЦИОН','РЕЙТИНГ','ЭНЕРГИЯ','ЛЕГЕНДА','ПРИЗРАК','ВЕДЬМА','ТРОФЕЙ','ДЖЕКПОТ','ПОДАРОК','ТЕЛЕГРАМ','ЛОТЕРЕЯ','ВИТРИНА','ПРОФИЛЬ','СЕКРЕТКА','ЮЗЕРНЕЙМ','ПРОМОКОД','ТОРГОВЛЯ','ЧЕЛЛЕНДЖ','МНОЖИТЕЛЬ','ДОСТИЖЕНИЕ','БАЛАНС','ТИТУЛ','РАМКА','ЭПИК','ТЕМА','ОПЫТ','ПАМЯТЬ','ЗАЛ','КАРТА'];
-var WS_SL=[1.2,1.2,1.5,1.2,2,1.2,1.5,3,1.2,1.5,1.2,2,1.2,1.5,5,1.2,2,1.5,1.2,10];   // 20 долей колеса: шансы 45% ×1,2 · 25% ×1,5 · 15% ×2 · 5% ×3 · 5% ×5 · 5% ×10
+var WS_SL=[1.2,1.5,1.2,2,1.2,1.5,3,1.2,5,10],WS_W={1.2:45,1.5:25,2:15,3:5,5:5,10:5};   // 10 долей по 36°; шансы 45% ×1,2 · 25% ×1,5 · 15% ×2 · 5% ×3 · 5% ×5 · 5% ×10
+function wsPickIdx(){let r=Math.random()*100,m=1.2;for(const k in WS_W){r-=WS_W[k];if(r<0){m=+k;break}}const ix=[];WS_SL.forEach((v,i)=>{if(v===m)ix.push(i)});return ix[Math.floor(Math.random()*ix.length)]}
+function wsWheelSvg(){const N=WS_SL.length,A=360/N,col={1.2:'#6AB7FF',1.5:'#5CE695',2:'#FFD34E',3:'#FF8A5C',5:'#C48BFF',10:'#FF5FA2'};let lights='',segs='';for(let i=0;i<20;i++){const [x,y]=wpt(i*18+9,94);lights+=`<circle class="lt" cx="${x}" cy="${y}" r="2.6"/>`}WS_SL.forEach((m,i)=>{const a0=i*A,a1=(i+1)*A,[x0,y0]=wpt(a0,88),[x1,y1]=wpt(a1,88),mid=a0+A/2;segs+=`<g class="ws" data-i="${i}"><path d="M0,0 L${x0},${y0} A88,88 0 0 1 ${x1},${y1} Z" fill="${col[m]}" stroke="#0D0B1A" stroke-width="1.5"/><text transform="rotate(${mid}) translate(0,-58)" text-anchor="middle" class="wl1">×${String(m).replace('.',',')}</text></g>`});return `<svg viewBox="-100 -100 200 200"><circle r="99" fill="#241F4A" stroke="#4B4399" stroke-width="2"/>${lights}${segs}<circle r="12" fill="#0D0B1A"/></svg>`}
 var WS_COL=['#FF6B4A','#FFB13D','#36E07C','#2E8BFF','#B05BFF','#FF5FA2'];
 var WS_DIR=[[0,1],[1,0],[1,1],[-1,1]],ws={sel:null,spin:false};
 function wsMake(){
@@ -2495,10 +2497,10 @@ function wsGiveUp(){
 }
 function wsSpin(){
   const G=S.ws;if(!G||G.ph!=='wheel'||ws.spin)return;
-  const idx=R(WS_SL.length),m=WS_SL[idx],pay=Math.round(G.pot*m);
+  const idx=wsPickIdx(),m=WS_SL[idx],pay=Math.round(G.pot*m);
   S.coins=Math.min(CAP,S.coins+pay);G.ph='done';G.mult=m;G.pay=pay;G.idx=idx;S.wsN=(S.wsN|0)+1;S.wsMax=Math.max(S.wsMax|0,m);S.wsBest=Math.max(S.wsBest|0,pay);addXp(60);save();setCoins();
-  ws.spin=true;const el=document.getElementById('wswh');
-  const ang=360*6+(360-(idx*18+9));
+  ws.spin=true;const el=document.getElementById('wswh'),wh=document.getElementById('wswheel');if(wh)wh.classList.add('spinning');
+  const ang=360*6+(360-(idx*36+18));
   if(el&&!reduce){el.style.transition='transform 4.6s cubic-bezier(.12,.7,.1,1)';el.style.transform=`rotate(${ang}deg)`;
     let n=0;const iv=setInterval(()=>{n++;sfx('tick',n);hap('i','light')},180);
     setTimeout(()=>{clearInterval(iv);ws.spin=false;wsDone()},4800)}
@@ -2539,7 +2541,7 @@ function wsSheet(close){
     const grid=`<div class="wsg">${G.g.map((row,r)=>[...row].map((ch,c)=>{const k=foundMap[r+','+c];return `<div class="wsc${k!=null?' f f'+k:''}" data-r="${r}" data-c="${c}">${ch}</div>`}).join('')).join('')}</div>`;
     if(G.ph==='play')body=list+pot+grid+`<button class="btn cwide wsgive" id="ws-give">Сдаться (найденное сгорит)</button>`;
     else{
-      const wheel=`<div class="wswrap"><div class="wsptr">▼</div><div class="wswh" id="wswh" style="background:conic-gradient(${WS_SL.map((m,i)=>`${WS_COL[(m===1.2?i%2:m===1.5?2+i%2:m===2?4:m===3?5:m===5?3:1)%6]} ${i*18}deg ${(i+1)*18}deg`).join(',')});${G.ph==='done'?`transform:rotate(${360*6+(360-(G.idx*18+9))}deg)`:''}">${WS_SL.map((m,i)=>`<span style="transform:rotate(${i*18+9}deg) translateY(-112px)">${String(m).replace('.',',')}</span>`).join('')}</div></div>`;
+      const wheel=`<div class="wheel wswheel${G.ph==='done'?' haswin':''}" id="wswheel"><i class="wptr"></i><div class="wrot" id="wswh" style="${G.ph==='done'?`transform:rotate(${360*6+(360-(G.idx*36+18))}deg)`:''}">${wsWheelSvg()}</div><div class="whub">🎁</div></div>`;
       body=(G.ph==='wheel'?`<h3 class="wsh3">🎉 Все слова найдены!</h3><p class="sum">Награда за слова: <b>${fmt(G.pot)} 🪙</b>. Крути колесо: множитель умножит её.</p>${wheel}<button class="btn main cwide" id="ws-spin">Крутить колесо</button>`
         :`<h3 class="wsh3">Множитель ×${String(G.mult).replace('.',',')}</h3>${wheel}<div class="pcard lbmsg"><b>+${fmt(G.pay)} 🪙</b><small>${fmt(G.pot)} × ${String(G.mult).replace('.',',')}</small></div><button class="btn main cwide" id="ws-again"${!left?' disabled':''}>${!left?'На сегодня всё':'Сыграть ещё'}</button>`);
     }
