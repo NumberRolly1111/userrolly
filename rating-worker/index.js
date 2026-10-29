@@ -31,9 +31,13 @@ let migrated = false;
 async function migrate(db) {   // добавляем новые столбцы сами, SQL вручную выполнять не нужно
   if (migrated) return;
   const have = (await db.prepare('PRAGMA table_info(players)').all()).results.map((r) => r.name);
-  for (const [c, d] of [['flag', 'INTEGER NOT NULL DEFAULT 0'], ['cos', "TEXT NOT NULL DEFAULT ''"], ['allow', 'INTEGER NOT NULL DEFAULT 0'], ['un', "TEXT NOT NULL DEFAULT ''"]]) {
-    if (!have.includes(c)) await db.prepare(`ALTER TABLE players ADD COLUMN ${c} ${d}`).run();
+  for (const [c, d] of [['flag', 'INTEGER NOT NULL DEFAULT 0'], ['cos', "TEXT NOT NULL DEFAULT ''"], ['allow', 'INTEGER NOT NULL DEFAULT 0'], ['un', "TEXT NOT NULL DEFAULT ''"], ['first', 'INTEGER NOT NULL DEFAULT 0']]) {
+    if (!have.includes(c)) {
+      await db.prepare(`ALTER TABLE players ADD COLUMN ${c} ${d}`).run();
+      if (c === 'first') await db.prepare('UPDATE players SET first=upd WHERE first=0').run();
+    }
   }
+  await db.prepare('CREATE TABLE IF NOT EXISTS stat_snap (ts INTEGER PRIMARY KEY, online INTEGER NOT NULL DEFAULT 0, a1h INTEGER NOT NULL DEFAULT 0, total INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS grants (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, amount INTEGER NOT NULL, claimed INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_grants_uid ON grants(uid, claimed)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS nickgifts (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, name TEXT NOT NULL, claimed INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
@@ -135,10 +139,83 @@ async function notifyEvent(env, uid, bit, text) {
   } catch (e) {}
 }
 // раз в 5 минут (Cron Trigger): завершает аукционы и шлёт напоминания. Не больше одного напоминания игроку за 12 часов, ночью (22–10 по его времени) не пишем
+// снимок «онлайн» раз в 5 минут для графика в админке (пишет cron, а также панель, если снимок устарел)
+async function snapNow(db, now) {
+  try {
+    const o = await db.prepare('SELECT COUNT(*) AS t, COALESCE(SUM(upd>?1-300000),0) AS o, COALESCE(SUM(upd>?1-3600000),0) AS a FROM players').bind(now).first();
+    await db.prepare('INSERT OR REPLACE INTO stat_snap(ts,online,a1h,total) VALUES(?,?,?,?)').bind(Math.floor(now / 300000) * 300000, o.o || 0, o.a || 0, o.t || 0).run();
+    await db.prepare('DELETE FROM stat_snap WHERE ts<?').bind(now - 15 * 86400000).run();
+  } catch {}
+}
+async function adminLive(db, tz) {
+  const now = Date.now(), H = 3600000, D = 86400000, off = tz * 60000;
+  const one = (q, ...a) => db.prepare(q).bind(...a).first();
+  const all = async (q, ...a) => (await db.prepare(q).bind(...a).all()).results;
+  const today0 = Math.floor((now + off) / D) * D - off;
+  const ls = await one('SELECT MAX(ts) AS t FROM stat_snap');
+  if (!ls || !ls.t || now - ls.t > 300000) await snapNow(db, now);
+  const pl = await one(`SELECT COUNT(*) AS total, COALESCE(SUM(upd>?1-300000),0) AS on5, COALESCE(SUM(upd>?1-3600000),0) AS a1h, COALESCE(SUM(upd>?1-86400000),0) AS a24,
+    COALESCE(SUM(upd>?1-604800000),0) AS a7, COALESCE(SUM(first>?2),0) AS newToday, COALESCE(SUM(first>?1-86400000),0) AS new24, COALESCE(SUM(first>?1-604800000),0) AS new7,
+    COALESCE(SUM(flag=1),0) AS flagged, COALESCE(SUM(hide=1),0) AS hidden, COALESCE(SUM(net),0) AS coins, COALESCE(MAX(net),0) AS maxnet FROM players`, now, today0);
+  const rev = (since) => one("SELECT COALESCE(SUM(stars),0) AS s, COUNT(*) AS n, COUNT(DISTINCT uid) AS u FROM purchases WHERE via='tg' AND ref=0 AND ts>?", since);
+  const [r0, r1, r7, r30, rAll] = [await rev(today0), await rev(now - D), await rev(now - 7 * D), await rev(now - 30 * D), await rev(0)];
+  const refd = await one("SELECT COALESCE(SUM(stars),0) AS s, COUNT(*) AS n FROM purchases WHERE ref=1");
+  const acct = await one('SELECT COALESCE(SUM(bal),0) AS bal, COALESCE(SUM(bal>0),0) AS holders, COALESCE(SUM(vip>?),0) AS vips FROM acct', now);
+  const hoursRaw = await all("SELECT CAST((ts-?1)/3600000 AS INTEGER) AS h, SUM(stars) AS s, COUNT(*) AS n FROM purchases WHERE via='tg' AND ref=0 AND ts>=?1 GROUP BY h", now - 24 * H);
+  const daysRaw = await all("SELECT CAST((ts+?1)/86400000 AS INTEGER) AS d, SUM(stars) AS s, COUNT(*) AS n FROM purchases WHERE via='tg' AND ref=0 AND ts>? GROUP BY d", off, now - 15 * D);
+  const newRaw = await all('SELECT CAST((first+?1)/86400000 AS INTEGER) AS d, COUNT(*) AS n FROM players WHERE first>? GROUP BY d', off, now - 15 * D);
+  const dayNo = Math.floor((now + off) / D);
+  const hours = Array.from({ length: 24 }, (_, i) => { const r = hoursRaw.find((x) => x.h === i); return { ts: now - 24 * H + i * H, s: r ? r.s : 0, n: r ? r.n : 0 }; });
+  const days = Array.from({ length: 14 }, (_, i) => { const d = dayNo - 13 + i, r = daysRaw.find((x) => x.d === d), nw = newRaw.find((x) => x.d === d); return { ts: d * D - off, s: r ? r.s : 0, n: r ? r.n : 0, nw: nw ? nw.n : 0 }; });
+  const items = (await all("SELECT item, COUNT(*) AS n, SUM(stars) AS s FROM purchases WHERE ref=0 AND ts>? GROUP BY item ORDER BY s DESC LIMIT 8", now - 30 * D)).map((r) => ({ ...r, title: (STARS_SHOP[r.item] || {}).t || r.item }));
+  const snaps = await all('SELECT ts,online,a1h FROM stat_snap WHERE ts>? ORDER BY ts', now - 24 * H);
+  const chat = await one('SELECT COALESCE(SUM(ts>?1-3600000),0) AS h1, COALESCE(SUM(ts>?1-86400000),0) AS h24 FROM chat', now);
+  const reps = await one('SELECT COUNT(DISTINCT r.mid) AS n FROM chat_rep r JOIN chat c ON c.id=r.mid WHERE c.hid=0');
+  const bans = await one('SELECT COUNT(*) AS n FROM chat_ban WHERE until>?', now);
+  const mk = await one('SELECT COALESCE(SUM(status=0),0) AS act, COALESCE(SUM(status=1 AND sold_ts>?1-86400000),0) AS sold24 FROM market', now);
+  const au = await one('SELECT COALESCE(SUM(status=0),0) AS act FROM auctions');
+  const cnt = await one('SELECT (SELECT COUNT(*) FROM museum) AS museum, (SELECT COUNT(*) FROM clans) AS clans, (SELECT COUNT(*) FROM members) AS members');
+  const ads = await one('SELECT COALESCE(SUM(views),0) AS v, COALESCE(SUM(clicks),0) AS c, COALESCE(SUM(off=0 AND (exp=0 OR exp>?)),0) AS act FROM ads', now);
+  const topNet = await all('SELECT uid,name,lvl,net,upd FROM players WHERE flag=0 AND hide=0 ORDER BY net DESC LIMIT 8');
+  const onl = await all('SELECT uid,name,lvl,net,upd FROM players WHERE upd>? ORDER BY upd DESC LIMIT 14', now - 300000);
+  const topBuy = await all("SELECT p.uid,p.name,SUM(x.stars) AS stars, COUNT(*) AS n FROM purchases x JOIN players p ON p.uid=x.uid WHERE x.via='tg' AND x.ref=0 GROUP BY x.uid ORDER BY stars DESC LIMIT 6");
+  const ev = [];
+  for (const r of await all('SELECT x.item,x.stars,x.via,x.ref,x.ts,x.uid,p.name FROM purchases x LEFT JOIN players p ON p.uid=x.uid ORDER BY x.id DESC LIMIT 14'))
+    ev.push({ ts: r.ts, k: r.ref ? 'refund' : 'buy', uid: r.uid, text: `${r.name || '?'}: ${(STARS_SHOP[r.item] || {}).t || r.item} · ${r.stars} ⭐${r.via === 'bal' ? ' (с баланса)' : ''}${r.ref ? ' · ВОЗВРАТ' : ''}` });
+  for (const r of await all('SELECT uid,name,first FROM players WHERE first>0 ORDER BY first DESC LIMIT 10')) ev.push({ ts: r.first, k: 'new', uid: r.uid, text: `Новый игрок: ${r.name}` });
+  for (const r of await all("SELECT uid,name,text,ts,hid FROM chat WHERE to_uid='' ORDER BY id DESC LIMIT 8")) ev.push({ ts: r.ts, k: 'chat', uid: r.uid, text: `${r.name}: ${String(r.text).slice(0, 80)}${r.hid ? ' [скрыто]' : ''}` });
+  for (const r of await all('SELECT uid,name,tier,ts FROM feed WHERE tier>=5 ORDER BY id DESC LIMIT 8')) ev.push({ ts: r.ts, k: 'drop', uid: r.uid, text: `${r.name} выбил ${r.tier >= 6 ? 'секретный' : 'мифический'} ник` });
+  for (const r of await all('SELECT g.ts,g.amount,p.name,g.uid FROM grants g LEFT JOIN players p ON p.uid=g.uid ORDER BY g.id DESC LIMIT 4')) ev.push({ ts: r.ts, k: 'gift', uid: r.uid, text: `Выдано ${r.name || '?'}: ${r.amount} 🪙` });
+  ev.sort((a, b) => b.ts - a.ts);
+  const g = (r) => ({ ...r, gid: gidOf(r.uid) });
+  return { now, pl, rev: { today: r0, d1: r1, d7: r7, d30: r30, all: rAll, refunded: refd }, acct, hours, days, items, snaps, chat, reports: reps.n, bans: bans.n,
+    market: { active: mk.act, sold24: mk.sold24, auctions: au.act, ...cnt }, ads,
+    topNet: topNet.map(g), online: onl.map(g), topBuy: topBuy.map(g), events: ev.slice(0, 40).map((e) => ({ ...e, gid: e.uid ? gidOf(e.uid) : 0 })) };
+}
+async function adminPlayer(db, uid) {
+  const now = Date.now(), all = async (q, ...a) => (await db.prepare(q).bind(...a).all()).results;
+  const p = await db.prepare('SELECT uid,name,un,net,best,bestn,lvl,upd,first,flag,hide,cos FROM players WHERE uid=?').bind(uid).first();
+  if (!p) return null;
+  const acct = (await db.prepare('SELECT bal,vip FROM acct WHERE uid=?').bind(uid).first()) || { bal: 0, vip: 0 };
+  const ban = await db.prepare('SELECT until,why FROM chat_ban WHERE uid=? AND until>?').bind(uid, now).first();
+  const purchases = await all('SELECT id,item,stars,via,ts,ref FROM purchases WHERE uid=? ORDER BY id DESC LIMIT 30', uid);
+  const grants = await all('SELECT amount,claimed,ts FROM grants WHERE uid=? ORDER BY id DESC LIMIT 8', uid);
+  const gifts = await all('SELECT name,claimed,ts FROM nickgifts WHERE uid=? ORDER BY id DESC LIMIT 8', uid);
+  const msgs = await all("SELECT id,text,ts,hid FROM chat WHERE uid=? AND to_uid='' ORDER BY id DESC LIMIT 12", uid);
+  const museum = await all('SELECT name,v FROM museum WHERE owner=? ORDER BY v DESC LIMIT 12', uid);
+  const lots = await all('SELECT name,price,status,ts FROM market WHERE seller=? ORDER BY id DESC LIMIT 8', uid);
+  const clan = await db.prepare('SELECT c.tag,c.name FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=?').bind(uid).first();
+  const inv = await db.prepare('SELECT COUNT(*) AS n FROM refs WHERE inviter=?').bind(uid).first();
+  const by = await db.prepare('SELECT inviter FROM refs WHERE invitee=?').bind(uid).first();
+  const spent = await db.prepare("SELECT COALESCE(SUM(stars),0) AS s FROM purchases WHERE uid=? AND via='tg' AND ref=0").bind(uid).first();
+  return { ...p, gid: gidOf(uid), acct: { bal: acct.bal, vip: acct.vip > now ? acct.vip : 0 }, ban: ban || null, spent: spent.s,
+    purchases: purchases.map((r) => ({ ...r, title: (STARS_SHOP[r.item] || {}).t || r.item })), grants, gifts, msgs, museum, lots, clan: clan || null, invited: inv.n, invitedBy: by ? gidOf(by.inviter) : 0 };
+}
 async function cron(env) {
   await migrate(env.DB);
   const db = env.DB, now = Date.now(), LIM = 8, DAY = 86400000;
   await auSettle(db, env);
+  await snapNow(db, now);
   const quiet = (r) => { const h = new Date(now + r.tz * 60000).getUTCHours(); return false; };   // тихих часов нет: бот может писать в любое время
   const sendTo = async (r, text, col, val) => {
     if (quiet(r)) return;
@@ -572,6 +649,60 @@ async function handle(req, env) {
         await env.DB.prepare('DELETE FROM ads WHERE id=?').bind(Math.trunc(Number(b.id)) || 0).run();
         return json({ ok: true });
       }
+      if (url.pathname === '/admin/live' && req.method === 'GET') return json(await adminLive(env.DB, Math.max(-840, Math.min(840, Math.trunc(Number(url.searchParams.get('tz'))) || 0))));
+      if (url.pathname === '/admin/players' && req.method === 'GET') {
+        const q = String(url.searchParams.get('q') || '').trim().slice(0, 40), pg = Math.max(0, Math.min(400, Math.trunc(Number(url.searchParams.get('p'))) || 0));
+        const sort = { net: 'net', lvl: 'lvl', upd: 'upd', first: 'first', best: 'best' }[url.searchParams.get('sort')] || 'upd';
+        const flt = url.searchParams.get('f');
+        const where = [], bind = [];
+        if (q) {
+          if (/^\d+$/.test(q)) { where.push('((CAST(uid AS INTEGER) % 999999) + 1 = CAST(? AS INTEGER) OR uid=?)'); bind.push(q, q); }
+          else { where.push('(name LIKE ? OR un LIKE ?)'); bind.push('%' + q + '%', '%' + q.replace(/^@/, '') + '%'); }
+        }
+        if (flt === 'flag') where.push('flag=1'); else if (flt === 'hide') where.push('hide=1');
+        else if (flt === 'online') { where.push('upd>?'); bind.push(Date.now() - 300000); }
+        else if (flt === 'new') { where.push('first>?'); bind.push(Date.now() - 86400000); }
+        const w = where.length ? 'WHERE ' + where.join(' AND ') : '';
+        const total = await env.DB.prepare('SELECT COUNT(*) AS n FROM players ' + w).bind(...bind).first();
+        const rows = (await env.DB.prepare(`SELECT uid,name,un,net,best,bestn,lvl,upd,first,flag,hide FROM players ${w} ORDER BY ${sort} DESC LIMIT 25 OFFSET ?`).bind(...bind, pg * 25).all()).results;
+        return json({ total: total.n, rows: rows.map((r) => ({ ...r, gid: gidOf(r.uid) })) });
+      }
+      if (url.pathname === '/admin/player' && req.method === 'GET') {
+        let uid = String(url.searchParams.get('uid') || '').replace(/\D/g, '');
+        if (!uid) { const f = await findByGid(env.DB, url.searchParams.get('id')); uid = f ? f.uid : ''; }
+        const d = uid ? await adminPlayer(env.DB, uid) : null;
+        return d ? json(d) : json({ error: 'nouser' }, 404);
+      }
+      if (url.pathname === '/admin/flag' && req.method === 'POST') {
+        let b; try { b = await req.json(); } catch { b = {}; }
+        const uid = String(b.uid || '').replace(/\D/g, '');
+        if (!uid) return json({ error: 'bad' }, 400);
+        await env.DB.prepare('UPDATE players SET flag=? WHERE uid=?').bind(b.flag ? 1 : 0, uid).run();
+        return json({ ok: true });
+      }
+      if (url.pathname === '/admin/hide' && req.method === 'POST') {
+        let b; try { b = await req.json(); } catch { b = {}; }
+        const uid = String(b.uid || '').replace(/\D/g, '');
+        if (!uid) return json({ error: 'bad' }, 400);
+        await env.DB.prepare('UPDATE players SET hide=? WHERE uid=?').bind(b.hide ? 1 : 0, uid).run();
+        return json({ ok: true });
+      }
+      if (url.pathname === '/admin/chat' && req.method === 'GET') {
+        const reports = (await env.DB.prepare('SELECT c.id,c.uid,c.name,c.text,c.ts,c.hid,COUNT(r.uid) AS n FROM chat_rep r JOIN chat c ON c.id=r.mid GROUP BY c.id ORDER BY c.hid ASC, n DESC, c.ts DESC LIMIT 30').all()).results;
+        const recent = (await env.DB.prepare("SELECT id,uid,name,text,ts,hid FROM chat WHERE to_uid='' ORDER BY id DESC LIMIT 60").all()).results;
+        const bans = (await env.DB.prepare('SELECT b.uid,b.until,b.why,p.name FROM chat_ban b LEFT JOIN players p ON p.uid=b.uid WHERE b.until>? ORDER BY b.until DESC LIMIT 30').bind(Date.now()).all()).results;
+        const g = (r) => ({ ...r, gid: gidOf(r.uid) });
+        return json({ reports: reports.map(g), recent: recent.map(g), bans: bans.map(g) });
+      }
+      if (url.pathname === '/admin/chat/hide' && req.method === 'POST') {
+        let b; try { b = await req.json(); } catch { b = {}; }
+        await env.DB.prepare('UPDATE chat SET hid=? WHERE id=?').bind(b.hide === 0 ? 0 : 1, Math.trunc(Number(b.id)) || 0).run();
+        return json({ ok: true });
+      }
+      if (url.pathname === '/admin/purchases/last' && req.method === 'GET') {
+        const rows = (await env.DB.prepare('SELECT x.id,x.item,x.stars,x.via,x.ts,x.ref,x.uid,p.name FROM purchases x LEFT JOIN players p ON p.uid=x.uid ORDER BY x.id DESC LIMIT 40').all()).results;
+        return json({ items: rows.map((r) => ({ ...r, gid: gidOf(r.uid), title: (STARS_SHOP[r.item] || {}).t || r.item })) });
+      }
       if (url.pathname === '/admin/log' && req.method === 'GET') {
         const r = (await env.DB.prepare('SELECT g.id,g.amount,g.claimed,g.ts,p.name FROM grants g LEFT JOIN players p ON p.uid=g.uid ORDER BY g.id DESC LIMIT 20').all()).results;
         return json({ log: r });
@@ -652,7 +783,7 @@ async function handle(req, env) {
         `INSERT INTO players(uid,name,net,best,bestn,lvl,hide,upd,flag,cos,allow) VALUES(?,?,?,?,?,?,?,?,0,?,0)
          ON CONFLICT(uid) DO UPDATE SET name=excluded.name,net=excluded.net,best=excluded.best,bestn=excluded.bestn,lvl=excluded.lvl,hide=excluded.hide,upd=excluded.upd,flag=0,cos=excluded.cos,allow=0`
       ).bind(uid, clean(b.name, 24) || 'Игрок', net, best, clean(b.bestn, 32), lvl, b.hide ? 1 : 0, now, cos).run();
-      try { await env.DB.prepare('UPDATE players SET un=? WHERE uid=?').bind(tgUn(req.headers.get('X-Init-Data')), uid).run(); } catch {}
+      try { await env.DB.prepare('UPDATE players SET un=?1, first=CASE WHEN first=0 THEN ?3 ELSE first END WHERE uid=?2').bind(tgUn(req.headers.get('X-Init-Data')), uid, now).run(); } catch {}
       return json({ ok: true });
     }
 
