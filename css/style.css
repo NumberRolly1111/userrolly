@@ -1371,3 +1371,10 @@ body.shk{animation:shk .5s}
 .picks>*{flex:0 0 calc((100% - 16px)/3);min-width:0}
 
 body.shk{animation:none!important}
+
+.musrow{display:grid;gap:8px}.musrow small{color:var(--mute);font-size:12px}
+.musopts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.musopts .btn{display:grid;gap:2px;justify-items:center;padding:10px 6px}
+.musopts .btn[data-mus=""]{grid-column:1 / -1}
+.musopts .btn small{font-size:11px;opacity:.75}
+.musv{display:flex;align-items:center;gap:10px}.musv input{flex:1;accent-color:var(--blue)}

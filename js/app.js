@@ -1369,6 +1369,7 @@ function renderProf(){
     <div class="pt"><small>В игре за всё время</small><b id="tm-all">${fmtT(S.time)}</b></div><div class="pt"><small>В игре сегодня</small><b id="tm-day">${fmtT(todaySec())}</b></div></div>
     <div class="pgrid tiers">${T.map((t,i)=>`<div class="pt${i===99?' last':''}" style="--tc:${t.c}"><small>${TN[i]}</small><b>${fmt(S.cnt[i])}</b></div>`).join('')}</div></div>
   <div class="pcard sndrow"><div><b>Звуки</b><small>Эффекты рулетки, наград и колеса</small></div><button class="sw${S.snd?' on':''}" id="snd-tg" role="switch" aria-checked="${S.snd}" aria-label="Звуки"><i></i></button></div>
+  <div class="pcard musrow"><b>🎵 Музыка</b><small>Спокойные ambient-треки. На iPhone громкость регулируется кнопками телефона.</small><div class="musopts"><button class="btn sm${!S.mus?' main':''}" data-mus="">Выкл</button>${MUS.map(m=>`<button class="btn sm${S.mus===m[0]?' main':''}" data-mus="${m[0]}"><b>${m[1]}</b><small>${m[2]}</small></button>`).join('')}</div><label class="musv"><span>🔈</span><input type="range" id="mus-v" min="0" max="100" value="${S.musv==null?40:S.musv}" aria-label="Громкость музыки"><span>🔊</span></label></div>
   <div class="pcard anrow"><b>Анимация крутки</b><small>Как открываются буквы ника. Выбери стиль, он сразу покажется ниже.</small><div class="anopts">${ANIMN.map(a=>`<button class="anb" data-an="${a[0]}" aria-pressed="${animMode()===a[0]}"><b>${a[1]}</b><small>${animSub(a)}</small></button>`).join('')}</div><div class="stage anprev"><div class="reel" id="anreel"></div></div></div>${ntfCard()}`;
   requestAnimationFrame(()=>{const r=document.getElementById('anreel');if(r)build('hjaajh',false,r)});
 }
@@ -1396,6 +1397,7 @@ $('#tab-prof').onclick=e=>{
   {const nb=e.target.closest('[data-nt]');if(nb)return ntToggle(+nb.dataset.nt)}
   if(e.target.closest('#nt-test'))return ntTest();
   const anb=e.target.closest('[data-an]');if(anb){animPick(anb.dataset.an,()=>{document.querySelectorAll('[data-an]').forEach(x=>{x.setAttribute('aria-pressed',x.dataset.an===S.anim);const a=ANIMN.find(y=>y[0]===x.dataset.an);x.querySelector('small').textContent=animSub(a)});anPrev();anBtn()});return}
+  {const mb=e.target.closest('[data-mus]');if(mb){S.mus=mb.dataset.mus;try{sessionStorage.removeItem('nr_mt')}catch(x){}save();musApply();renderProf();return}}
   if(e.target.closest('#snd-tg')){S.snd=!S.snd;save();renderProf();if(S.snd){sfx('ach')}return}
   if(e.target.closest('#idcopy')){(async()=>{try{await navigator.clipboard.writeText(String(S.uid).padStart(6,'0'));toast('ID скопирован')}catch(x){toast('Не удалось скопировать ID')}})();return}
   if(e.target.closest('#ref-claim'))return claimRefs();
@@ -2415,6 +2417,22 @@ function wresHtml(){
     `<div class="win" style="--tc:${T[r.t].c}">${r.saved?'Ник добавлен в коллекцию.':`Коллекция заполнена, ник продан за ${fmt(r.v)} 🪙.`}</div>`;
 }
 function updTimers(){document.querySelectorAll('#tab-bon [data-t]').forEach(s=>s.textContent=leftT(s.dataset.t==='day'?msToDay():msToWeek()))}
+// ---------- Фоновая музыка (свои ambient-треки, media/music) ----------
+var MUS=[['evening','Вечерний город','мягкое пианино'],['fog','Туман','глубокие аккорды'],['night','Ночной рейс','тихий ритм']],musEl=null;
+function musApply(){
+  try{
+    if(!S.mus||!MUS.some(x=>x[0]===S.mus)){if(musEl)musEl.pause();return}
+    if(!musEl||musEl.dataset.k!==S.mus){
+      if(musEl)musEl.pause();musEl=new Audio('media/music/'+S.mus+'.mp3');musEl.loop=true;musEl.preload='auto';musEl.dataset.k=S.mus;
+      try{const q=JSON.parse(sessionStorage.getItem('nr_mt')||'null');if(q&&q.k===S.mus&&q.t>0)musEl.addEventListener('loadedmetadata',()=>{try{musEl.currentTime=q.t%(musEl.duration||1e9)}catch(e){}},{once:true})}catch(e){}
+    }
+    musEl.volume=Math.max(0,Math.min(1,(S.musv==null?40:+S.musv)/100));
+    if(!document.hidden){const p=musEl.play();p&&p.catch&&p.catch(()=>{})}
+  }catch(e){}
+}
+document.addEventListener('pointerdown',()=>{if(S.mus&&(!musEl||musEl.paused))musApply()},{passive:true});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){try{musEl&&musEl.pause()}catch(e){}}else musApply()});
+addEventListener('pagehide',()=>{try{if(musEl&&S.mus)sessionStorage.setItem('nr_mt',JSON.stringify({k:S.mus,t:musEl.currentTime}))}catch(e){}});
 // ---------- Режимы без сервера: челлендж дня, крутка с риском, праздники ----------
 var DCH=[
   {k:'spins',t:'Сделай 15 круток',n:15,c:40000,e:3},{k:'upw',t:'Выиграй 2 апгрейда',n:2,c:100000,e:3},{k:'ups',t:'Сделай 5 апгрейдов',n:5,c:80000,e:3},
@@ -3152,3 +3170,6 @@ async function notesLoad(){
     if(k==='auction')return tab('auction');
     if(k==='top')return tab('top')};
   setTimeout(notesLoad,3000);setInterval(notesLoad,60000);setInterval(()=>{try{renderNotes()}catch(e){}},30000);})();
+
+document.addEventListener('input',e=>{if(e.target&&e.target.id==='mus-v'){S.musv=+e.target.value;musApply()}});
+document.addEventListener('change',e=>{if(e.target&&e.target.id==='mus-v')save()});
