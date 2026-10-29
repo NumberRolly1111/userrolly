@@ -358,7 +358,7 @@ function taxTick(){
 // ---------- Подсказки при первом заходе и сворачиваемые блоки ----------
 const HINTS={
   dc:['🎯 Челлендж дня','Каждый день два новых задания: лёгкое и посложнее. Прогресс считается с утра сам. Сделай оба, чтобы получить бонус и продлить серию дней.'],
-  risk:['🎲 Крутка с риском','Выбери ставку и запусти: указатель остановится на множителе. Можно проиграть всё, а можно выиграть до ×20. До 15 попыток в сутки.'],
+  risk:['🎲 Крутка с риском','Выбери ставку и запусти: указатель остановится на множителе, до ×20. Выигрыш можно сразу забрать или рискнуть им: удвоение 48%, до 4 раз подряд. До 15 игр в сутки.'],
   season:['🏅 Что такое сезон','Сезон идёт 3 недели. За крутки, кейсы и апгрейды копятся очки: каждый уровень даёт награду, а платная дорожка даёт ещё больше. Лучшие по очкам получают призы в конце.'],
   events:['🎉 События','Каждый день в случайный час включается событие на 1 час: ×1,5…×10 к монетным наградам, очкам сезона, опыту или энергии. Плашка на главной покажет, когда оно начнётся.'],
   craft:['🧪 Крафт','Выбери три ника любой редкости: они сгорят, а взамен придёт новый. Чем реже выбранные ники, тем выше шанс получить редкий. Стоит небольшая плата.'],
@@ -505,6 +505,9 @@ const ACH=[
   A('👑','Джекпот ×20','Выиграй множитель ×20 в крутке с риском',()=>S.rkW|0,20,5000000),
   A('🎃','Праздничный подарок','Забери подарок к празднику',()=>S.holN|0,1,500000),
   A('🎉','Любитель праздников','Забери 3 праздничных подарка',()=>S.holN|0,3,3000000),
+  A('🪜','Лесенка','Удвой выигрыш в крутке с риском 3 раза подряд',()=>S.rkL|0,3,2000000),
+  A('🪜','Вся лестница','Пройди все 4 удвоения в крутке с риском',()=>S.rkL|0,4,6000000),
+  A('🎯','Серия побед','Выиграй 5 раз подряд в крутке с риском',()=>S.rkStrB|0,5,1500000),
   A('🎨','Модник','Купи 3 темы оформления',()=>(S.cown||[]).filter(x=>/^t_/.test(x)).length,3,800000),
 ];
 const achOk=(a,i)=>S.ach.includes(i)||a.cur()>=a.goal;
@@ -2461,28 +2464,44 @@ function hwFx(){
 var RKS=[[0,54.7,'💀','Мимо'],[1.5,28,'🪙','×1,5'],[2,13,'💰','×2'],[5,3.8,'💎','×5'],[20,.5,'👑','×20']],RK_ST=[10000,100000,1000000,10000000],RK_DAY=15,rk={st:1,res:''};
 function rkEnsure(){const k=todayK();if(!S.rk||typeof S.rk!=='object'||S.rk.d!==k)S.rk={d:k,n:0};return S.rk}
 function rkRoll(){let r=Math.random()*100;for(let i=0;i<RKS.length;i++){r-=RKS[i][1];if(r<0)return i}return 0}
+var RK_L=4,RK_P=.48;   // лесенка: до 4 удвоений, шанс каждого 48%
+const rkRefresh=()=>{const el=$('#tab-bon');if(el)el._h='';renderBon()};
 function rkPlay(){
   const stake=RK_ST[rk.st],q=rkEnsure();if(bon.busy)return;
+  if(S.rkp>0)return toast('Сначала забери выигрыш или рискни им');
   if(q.n>=RK_DAY)return toast('На сегодня попытки закончились');
   if(S.coins<stake)return toast('Не хватает монет на ставку');
-  const w=rkRoll();S.coins-=stake;q.n++;S.rkN=(S.rkN|0)+1;save();setCoins();bon.busy=true;rk.res='';
+  const w=rkRoll();S.coins-=stake;q.n++;S.rkN=(S.rkN|0)+1;save();setCoins();bon.busy=true;rk.res='';rk.last=stake;
   const tiles=[...document.querySelectorAll('#tab-bon .rkt')];let step=0,pos=0;const total=16+w;
   const go=()=>{tiles.forEach((t,i)=>t.classList.toggle('on',i===pos%5));sfx('tick',pos);hap('i','light');
     if(step>=total-1&&pos%5===w){return fin()}
     step++;pos++;setTimeout(go,70+step*step*.5)};
   const fin=()=>{
-    const m=RKS[w][0],pay=Math.round(stake*m);S.coins=Math.min(CAP,S.coins+pay);
-    if(m>=5)S.rk5=(S.rk5|0)+1;S.rkW=Math.max(S.rkW|0,m);
-    rk.res=m?`${RKS[w][2]} ${RKS[w][3]}: +${fmt(pay)} 🪙 (чистыми ${pay-stake>=0?'+':''}${fmt(pay-stake)})`:`💀 Не повезло: −${fmt(stake)} 🪙`;
-    if(m>=2){sfx(m>=5?'ach':'coins');hap('n','success');boom('#FFC933',m>=20?5:m>=5?4:3)}else{sfx('tap');hap('n',m?'warning':'error')}
-    save();bon.busy=false;setCoins();const el=$('#tab-bon');if(el)el._h='';renderBon()};
+    const m=RKS[w][0],pay=Math.round(stake*m);
+    S.rkH=[...(Array.isArray(S.rkH)?S.rkH:[]),m].slice(-10);
+    if(m){S.rkWin=(S.rkWin|0)+1;S.rkW=Math.max(S.rkW|0,m);if(m>=5)S.rk5=(S.rk5|0)+1;S.rkBig=Math.max(S.rkBig|0,pay);S.rkp=pay;S.rkS=0;S.rkStr=(S.rkStr|0)+1;S.rkStrB=Math.max(S.rkStrB|0,S.rkStr);
+      rk.res=`${RKS[w][2]} ${RKS[w][3]}: выигрыш ${fmt(pay)} 🪙`;sfx(m>=5?'ach':'coins');hap('n','success');if(m>=2)boom('#FFC933',m>=20?5:m>=5?4:3)}
+    else{S.rkStr=0;rk.res=`💀 Не повезло: −${fmt(stake)} 🪙`;sfx('tap');hap('n','error')}
+    save();bon.busy=false;setCoins();rkRefresh()};
   go();
+}
+function rkCash(){
+  if(!(S.rkp>0))return;const v=S.rkp;S.rkp=0;S.coins=Math.min(CAP,S.coins+v);const net=v-(rk.last||0);S.rkS=0;
+  rk.res=`✅ Забрано ${fmt(v)} 🪙`;sfx('coins');hap('n','success');save();setCoins();rkRefresh();
+}
+function rkDouble(){
+  if(!(S.rkp>0)||bon.busy||(S.rkS|0)>=RK_L)return;bon.busy=true;
+  const c=document.querySelector('#tab-bon .rkcoin');let n=0;const iv=setInterval(()=>{n++;if(c)c.textContent=n%2?'🪙':'💀';sfx('tick',n);hap('i','light')},110);
+  setTimeout(()=>{clearInterval(iv);const win=Math.random()<RK_P;
+    if(win){S.rkp*=2;S.rkS=(S.rkS|0)+1;S.rkL=Math.max(S.rkL|0,S.rkS);S.rkBig=Math.max(S.rkBig|0,S.rkp);rk.res=`🔥 Удвоено! Теперь ${fmt(S.rkp)} 🪙`;sfx(S.rkS>=3?'ach':'coins');hap('n','success');if(S.rkS>=3)boom('#FFC933',4)}
+    else{const lost=S.rkp;S.rkp=0;S.rkS=0;S.rkStr=0;rk.res=`💀 Сгорело ${fmt(lost)} 🪙`;sfx('tap');hap('n','error')}
+    save();bon.busy=false;rkRefresh()},1100);
 }
 function xBon(b){
   const k=b.dataset.b;
   if(k==='xdc')dcClaim(+b.dataset.v);else if(k==='xhol')holClaim();
-  else if(k==='xrks'){rk.st=+b.dataset.v;rk.res='';const el=$('#tab-bon');if(el)el._h='';renderBon()}
-  else if(k==='xrk')rkPlay();
+  else if(k==='xrks'){rk.st=+b.dataset.v;rk.res='';rkRefresh()}
+  else if(k==='xrk')rkPlay();else if(k==='xrkc')rkCash();else if(k==='xrkd')rkDouble();
 }
 function extraBon(){
   let h='';
@@ -2493,12 +2512,19 @@ function extraBon(){
   h+=`<details class="pcard fold" data-fold="dc"${fo('dc',1)}><summary class="bhead"><h3>🎯 Челлендж дня</h3><span class="bsub">${d.got.filter(Boolean).length} из 2${S.dcS?` · серия ${S.dcS} дн.`:''}</span></summary>${hintCard('dc')}`+
     [0,1].map(i=>{const q=DCH[d.ids[i]],p=dcProg(i),ok=p>=q.n;return `<div class="quest${d.got[i]?' got':''}"><div class="qtop"><b>${q.t}</b><span>${fmt(q.c)} 🪙 · ${q.e} ⚡</span></div><div class="qbar"><i style="width:${p/q.n*100}%"></i></div><div class="qbot"><small>${p} / ${q.n}</small>${d.got[i]?'<em>Получено ✓</em>':ok?`<button class="btn main sm" data-b="xdc" data-v="${i}">Забрать</button>`:''}</div></div>`}).join('')+
     `<p class="sum">Выполни оба: +150 000 🪙 и серия дней подряд. Новые задания каждый день.</p></details>`;
-  const q=rkEnsure(),stake=RK_ST[rk.st],left=RK_DAY-q.n;
-  h+=`<details class="pcard fold" data-fold="rk"${fo('rk',0)}><summary class="bhead"><h3>🎲 Крутка с риском</h3><span class="bsub">осталось ${left} из ${RK_DAY}</span></summary>${hintCard('risk')}
-    <div class="rkg">${RKS.map((s,i)=>`<div class="rkt"><i>${s[2]}</i><b>${s[3]}</b><small>${s[1]}%</small></div>`).join('')}</div>
-    <div class="rks">${RK_ST.map((v,i)=>`<button class="btn sm${i===rk.st?' main':''}" data-b="xrks" data-v="${i}">${kfmt(v)}</button>`).join('')}</div>
-    <button class="spin" data-b="xrk"${left<=0||S.coins<stake?' disabled':''}>${left<=0?'Попытки на сегодня закончились':S.coins<stake?'Не хватает монет':`Рискнуть · ${fmt(stake)} 🪙`}</button>
-    ${rk.res?`<p class="rkres">${rk.res}</p>`:''}<p class="sum">Выбери ставку и крути: выигрыш зависит от множителя. В среднем возвращается чуть меньше ставки, это игра на удачу.</p></details>`;
+  const q=rkEnsure(),stake=RK_ST[rk.st],left=RK_DAY-q.n,pot=S.rkp>0?S.rkp:0,stp=S.rkS|0,hist=(Array.isArray(S.rkH)?S.rkH:[]).slice().reverse();
+  const wr=S.rkN?Math.round((S.rkWin|0)/S.rkN*100):0;
+  h+=`<details class="pcard fold" data-fold="rk"${fo('rk',0)}><summary class="bhead"><h3>🎲 Крутка с риском</h3><span class="bsub">${pot?'ждёт выигрыш!':`осталось ${left} из ${RK_DAY}`}</span></summary>${hintCard('risk')}
+    <div class="rkg">${RKS.map((s,i)=>`<div class="rkt"><i>${s[2]}</i><b>${s[3]}</b><small>${s[1]}%</small></div>`).join('')}</div>`+
+  (pot?`<div class="rkpot"><small>Твой выигрыш</small><b class="rkcoin">🪙</b><strong>${fmt(pot)} 🪙</strong>
+      <div class="rkl">${Array.from({length:RK_L},(_,i)=>`<i class="${i<stp?'on':''}">×${2<<i}</i>`).join('')}</div>
+      <div class="rkb"><button class="btn main" data-b="xrkc">Забрать ${fmt(pot)}</button>${stp<RK_L?`<button class="btn" data-b="xrkd">Рискнуть: ×2 или всё (${Math.round(RK_P*100)}%)</button>`:'<button class="btn" disabled>Лестница пройдена</button>'}</div></div>`
+   :`<div class="rks">${RK_ST.map((v,i)=>`<button class="btn sm${i===rk.st?' main':''}" data-b="xrks" data-v="${i}">${kfmt(v)}</button>`).join('')}</div>
+    <button class="spin" data-b="xrk"${left<=0||S.coins<stake?' disabled':''}>${left<=0?'Попытки на сегодня закончились':S.coins<stake?'Не хватает монет':`Рискнуть · ${fmt(stake)} 🪙`}</button>`)+
+  `${rk.res?`<p class="rkres">${rk.res}</p>`:''}
+    ${hist.length?`<div class="rkh"><small>Последние:</small>${hist.map(m=>`<i class="${m?(m>=5?'big':'w'):'l'}">${m?'×'+String(m).replace('.',','):'✕'}</i>`).join('')}</div>`:''}
+    <div class="rkst"><div><b>${fmt(S.rkN|0)}</b><small>игр</small></div><div><b>${wr}%</b><small>побед</small></div><div><b>×${String(S.rkW|0).replace('.',',')}</b><small>лучший</small></div><div><b>${kfmt(S.rkBig|0)}</b><small>рекорд</small></div><div><b>${S.rkStr|0}</b><small>серия</small></div></div>
+    <p class="sum">Выиграл? Забери сразу или рискни выигрышем: удвоение с шансом ${Math.round(RK_P*100)}%, лесенка до ×${2<<(RK_L-1)}. Проиграл удвоение, выигрыш сгорает. Невзятый выигрыш не пропадает и ждёт тебя здесь.</p></details>`;
   return h;
 }
 function renderBon(){
