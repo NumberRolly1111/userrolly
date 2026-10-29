@@ -22,7 +22,7 @@ const hap=(k,v)=>{try{tg&&tg.HapticFeedback&&(k==='n'?tg.HapticFeedback.notifica
 const T=[{n:'Обычный',c:'#9AA5DB',v:390},{n:'Необычный',c:'#27D9BD',v:1470},{n:'Редкий',c:'#9B7BFF',v:4800},{n:'Эпический',c:'#FF5FA2',v:17700},{n:'Легендарный',c:'#FFC933',v:72000},{n:'Мифический',c:'#FF4B3E',v:378000},{n:'Секретный',c:'#EAF1FF',v:1000000},{n:'Эксклюзивный',c:'#B455FF',v:25000000}]
 const BDGP={crown:10000000,dragon:7500000,unicorn:5000000,liberty:4000000,slot:3000000,fire:2000000,rose:1500000,coin:1000000,moai:1000000},TOPP=500000,MULTIP=1000000,MULTIN=5;
 T.forEach((t,i)=>t.s=['Обычн.','Необыч.','Редкий','Эпик','Легенд.','Миф.','Секрет','Эксклюз.'][i]);;
-const MULTI5={l:'×5',min:0,cost:5000};   // мульти-крутка ×5: только за монеты, 5 000 🪙 за каждый ник, режим не выбирается
+const MULTI5={l:'×5',min:0,cost:0};   // мульти-крутка ×5: только за монеты, 5 000 🪙 за каждый ник, режим не выбирается
 const MODES=[{l:'Любой',min:0,cost:3000},{l:'Редкий+',min:2,cost:10500},{l:'Эпик+',min:3,cost:40000}];
 const WORDS=['storm','night','wolf9','cyber','pixel','ghost','nova7','lunar','ember','frost','raven','blaze','orbit','pulse','zenith','vortex','shadow','dragon','falcon','comet','atlas','magic','royal','alpha','omega','delta','sigma','ninja','panda','tiger','cobalt','cipher','quartz','rocket','silent','golden','crystal','phoenix','nexus','vector','matrix','legend','hunter','pirate','wizard','spirit','shiver','velvet','copper','jungle','sunset','thunder','galaxy','planet','meteor','aurora','eclipse','horizon','cosmos','stellar','nebula','quasar','photon','plasma','neutron','proton','carbon','silver','bronze','marble','granite','onyx','amber','jade','ruby','sapphire','opal','ivory','ebony','crimson','scarlet','violet','indigo','azure','emerald','cinder','smoke','steel','iron','titan','giant','knight','archer','viking','samurai','shogun','ronin','sensei','monk','sage','oracle','druid','shaman','rogue','bandit','outlaw','rebel','phantom','specter','wraith','demon','angel','mystic','arcane','cosmic','atomic','turbo','hyper','super','rapid','swift','stealth','blizzard','glacier','tundra','desert','canyon','island','ocean','river','forest','meadow','garden','harbor','castle','temple','tower','bridge','anchor','compass','lantern','candle','mirror','puzzle','riddle','secret','myth','fable','story','poem','melody','rhythm','echo','whisper','thunder','lightning','tornado','cyclone','volcano','crater','spark','flame','inferno','magma','cobra','viper','python','raptor','condor','eagle','hawk','owl','lynx','puma','jaguar','leopard','cheetah','panther','wolfpack','badger','otter','beaver','bison','moose','walrus','penguin','dolphin','octopus','kraken','hydra','griffin','pegasus','unicorn','goblin','ogre','troll','golem','zombie','vampire','captain','sailor','pilot','shuttle','module','sensor','signal','binary','kernel','socket','packet','buffer','cache','proxy','server','client','script','coder','hacker','gamer','streamer','player','winner','champion','master','expert','genius','sorcerer','alchemy','potion','gemstone','diamond','pearl','coral','reef','wave','tide','breeze','zephyr','mistral','monsoon'].filter(w=>/^[a-z]{5,}$/.test(w));
 const L='abcdefghijklmnopqrstuvwxyz',V='aeiouy',K='bcdfghjklmnprstvwxz',POOL=L+'0123456789_#$%@';
@@ -32,7 +32,10 @@ const rev=s=>[...s].reverse().join('');
 const MAX0=10,MAXSLOTS=30;   // стартовый и предельный размер коллекции
 let MAX=MAX0;                // текущий размер коллекции (растёт за монеты, хранится в S.slots)
 const slotPrice=n=>Math.round(75000*Math.pow(1.35,n-MAX0)/1000)*1000;   // цена следующего места при n местах
-const EN_CAP=15,EN_INT=15*60*1000;   // запас энергии и время накопления одной единицы (15 минут)
+const EN_CAP=15,EN_INT=15*60*1000;
+const V5_DAY=3;   // VIP: сколько бесплатных кручений ×5 в сутки
+var vipOn=()=>(+S.vip||0)>Date.now(),vipX=()=>vipOn()?10:0,enInt=()=>vipOn()?8*60*1000:EN_INT,setMax=()=>{MAX=(S.slots||MAX0)+vipX()};
+var v5Left=()=>{const d=todayK();if(!S.v5||S.v5.d!==d)S.v5={d,n:0};return Math.max(0,V5_DAY-S.v5.n)};   // запас энергии и время накопления одной единицы (15 минут)
 const AUTO=['выключена','ниже необычного','ниже редкого','ниже эпического','ниже легендарного','ниже мифического'];
 const APP_LINK='https://t.me/NumberRollyBot';            // ссылка на Mini App для кнопки «Позвать друзей»: https://t.me/ИМЯ_БОТА/КОРОТКОЕ_ИМЯ_ПРИЛОЖЕНИЯ (из @BotFather → /newapp). С ней работают награды за друзей
 const fmt=n=>Math.round(n).toLocaleString('ru-RU');
@@ -294,8 +297,9 @@ function fixState(){
   if(!S.q||typeof S.q!=='object'||!Array.isArray(S.q.list))S.q={wk:'',list:[]};
   S.q.list=S.q.list.filter(q=>q&&typeof q.id==='string'&&+q.n>0).map(q=>({id:q.id,n:+q.n,p:Math.max(0,+q.p||0),got:!!q.got}));
   S.items=(Array.isArray(S.items)?S.items:[]).filter(x=>x&&typeof x.n==='string'&&x.n&&Number.isInteger(x.t)&&x.t>=0&&x.t<=7).map(x=>({id:String(x.id||Date.now()+''+R(1000)),n:x.n,t:x.t,p:+x.p||0}));
-  S.slots=Math.min(MAXSLOTS,Math.max(MAX0,Math.floor(+S.slots)||MAX0));MAX=S.slots;
-  S.items=S.items.slice(0,MAX);
+  S.vip=Math.max(0,+S.vip||0);S.sx=S.sx&&typeof S.sx==='object'?S.sx:{};S.v5=S.v5&&typeof S.v5==='object'?{d:String(S.v5.d||''),n:Math.max(0,+S.v5.n||0)}:{d:'',n:0};S.topfree=Math.max(0,Math.floor(+S.topfree)||0);S.sbal=Math.max(0,Math.floor(+S.sbal)||0);
+  S.slots=Math.min(MAXSLOTS,Math.max(MAX0,Math.floor(+S.slots)||MAX0));setMax();
+  S.items=S.items.slice(0,Math.max(MAX,S.slots+10));   // после окончания VIP ники сверх лимита остаются, но новые не добавить
   if(!(S.auto>=0&&S.auto<=5))S.auto=0;S.auto=Math.floor(S.auto);
   if(S.xpv!==1){   // уровни появились позже: старым игрокам тихо начисляем опыт за прошлые действия
     let t=S.spins*10+S.upw*60+S.ups*25+S.saved*3+S.sold*2+(Array.isArray(S.achGot)?S.achGot.length*60:0);S.lvl=1;
@@ -370,8 +374,8 @@ function taxLine(){
   if(S.coins<=TAX_FREE*.5)return '';
   const left=Math.max(0,864e5-(Date.now()-(+S.taxT||Date.now())));
   const sm=S.coins>TAX_FREE?'сгорает 1% в сутки':'порог '+kfmt(TAX_FREE);
-  return `<details class="pcard fold taxl" data-fold="tax"${fo('tax',0)}><summary class="bhead"><h3>🔥 Налог на залежи</h3><span class="bsub">${sm}</span></summary>`+(S.coins>TAX_FREE?`<small>Монеты сверх ${fmt(TAX_FREE)} 🪙 сгорают на 1% в сутки. Ближайшее сгорание через ${leftT(left)}: −${fmt(taxBurn(1))} 🪙. Трать монеты на кейсы, апгрейды и аукцион.</small>`
-   :`<small>Если на балансе будет больше ${fmt(TAX_FREE)} 🪙, лишнее начнёт сгорать на 1% в сутки.</small>`)+`</details>`;
+  return `<div class="pcard taxl"><div class="taxh"><h3>🔥 Налог на залежи</h3><span class="bsub">${sm}</span></div>`+(S.coins>TAX_FREE?`<small>Монеты сверх ${fmt(TAX_FREE)} 🪙 сгорают на 1% в сутки. Ближайшее сгорание через ${leftT(left)}: −${fmt(taxBurn(1))} 🪙. Трать монеты на кейсы, апгрейды и аукцион.</small>`
+   :`<small>Если на балансе будет больше ${fmt(TAX_FREE)} 🪙, лишнее начнёт сгорать на 1% в сутки.</small>`)+`</div>`;
 }
 setTimeout(()=>{try{taxTick()}catch(e){}},2500);setInterval(()=>{try{taxTick()}catch(e){}},60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)try{taxTick()}catch(e){}});
@@ -407,11 +411,11 @@ function tickEn(){   // накопление энергии: +1 каждые 15 
   const now=Date.now();
   if(S.en>=EN_CAP){S.enT=now;return false}
   if(!S.enT||S.enT>now)S.enT=now;
-  const k=Math.floor((now-S.enT)/EN_INT);
-  if(k>0){S.en=Math.min(EN_CAP,S.en+k);S.enT=S.en>=EN_CAP?now:S.enT+k*EN_INT;return true}
+  const k=Math.floor((now-S.enT)/enInt());
+  if(k>0){S.en=Math.min(EN_CAP,S.en+k);S.enT=S.en>=EN_CAP?now:S.enT+k*enInt();return true}
   return false;
 }
-const enLeft=()=>S.en>=EN_CAP?0:Math.max(0,EN_INT-(Date.now()-S.enT));
+const enLeft=()=>S.en>=EN_CAP?0:Math.max(0,enInt()-(Date.now()-S.enT));
 const mmss=ms=>{const s=Math.ceil(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 function updEn(){
   const el=$('#en');if(!el||el.hidden)return;
@@ -683,12 +687,15 @@ function plShow(got,spent,en){
   const e=document.getElementById('spres');if(!e)return;
   const d=got-spent;sessPL+=d;const k=d>0?'up':d<0?'dn':'eq',sg=n=>(n>0?'+':n<0?'−':'')+fmt(Math.abs(n));
   e.className='spres '+k;e.hidden=false;
-  e.innerHTML=`<span class="spi">${d>0?'📈':d<0?'📉':'➖'}</span><div class="spm"><b>${d>0?'В плюсе':d<0?'В минусе':'Ровно в ноль'}: ${sg(d)} 🪙</b><small>выпало на ${fmt(got)} 🪙 · ${en?`потрачено ⚡ ${en} (бесплатно)`:`потрачено ${fmt(spent)} 🪙`}</small></div><div class="spt">за сессию<b class="${sessPL>0?'up':sessPL<0?'dn':''}">${sg(sessPL)} 🪙</b></div>`;
+  e.innerHTML=`<span class="spi">${d>0?'📈':d<0?'📉':'➖'}</span><div class="spm"><b>${d>0?'В плюсе':d<0?'В минусе':'Ровно в ноль'}: ${sg(d)} 🪙</b><small>выпало на ${fmt(got)} 🪙 · ${en?`потрачено ⚡ ${en} (бесплатно)`:spent?`потрачено ${fmt(spent)} 🪙`:'VIP: бесплатно'}</small></div><div class="spt">за сессию<b class="${sessPL>0?'up':sessPL<0?'dn':''}">${sg(sessPL)} 🪙</b></div>`;
 }
 async function spin(){
-  if(busy)return;tickEn();const free=S.src==='free'&&count!==5,m=count===5?MULTI5:free?MODES[0]:MODES[mode],cost=free?count:m.cost*count;
+  if(busy)return;tickEn();
+  if(count===5){if(!vipOn()){toast('Крутка ×5 доступна только с VIP');count=3;render();return}if(!v5Left()){toast(`Бесплатные ×5 на сегодня закончились (${V5_DAY} в сутки)`);return}}
+  const free=S.src==='free'&&count!==5,m=count===5?MODES[mode]:free?MODES[0]:MODES[mode],cost=free?count:count===5?0:m.cost*count;
   if(free){if(S.en<cost){toast(`Не хватает энергии: нужно ${cost}, есть ${S.en}. Следующая через ${mmss(enLeft())}. Можно крутить за монеты.`);return}}
   else if(S.coins<cost){toast('Не хватает монет. Продай ники в коллекции или загляни в бонусы.');return}
+  if(count===5){v5Left();S.v5.n++}
   flushPrev();plHide();sfx('whoosh');addXp(10*count);busy=true;if(free){if(S.en>=EN_CAP)S.enT=Date.now();S.en-=cost}else S.coins-=cost;S.spins+=count;if(count>1)S.tri++;addQuest('spins',count);try{spAdd(3*count)}catch(e){}
   cur=Array.from({length:count},()=>roll(m));const plGot=cur.reduce((a,c)=>a+val(c.t,c.p,c.name),0),plSp=free?0:cost,plEn=free?cost:0;
   cur.forEach(c=>{if(c.t>=3&&c.t<=6)feedPush(c.name,c.t);S.cnt[c.t]++;S.best=Math.max(S.best,c.t);noteBest(val(c.t,c.p,c.name),c.name)});
@@ -814,14 +821,14 @@ function renderHelp(){
   pl('id="cos-open"','Оформление','Титулы, рамки, ник и тема','✨');
 }
 const GUIDE=[
-  ['🎰','Крути рулетку','Вкладка «Рулетка»: выбери режим («Любой», «Редкий+», «Эпик+») и нажми кнопку. Можно открыть 1 или сразу 3 ника. Платить можно монетами или бесплатной энергией: её запас до 15 единиц, одна восстанавливается за 15 минут.'],
+  ['🎰','Крути рулетку','Вкладка «Крутить»: выбери режим («Любой», «Редкий+», «Эпик+») и нажми кнопку. Можно открыть 1, 3 или 5 ников. Платить можно монетами или бесплатной энергией: её запас до 15 единиц, одна восстанавливается за 15 минут.'],
   ['💎','Узнай редкость','Ник получает редкость от «Обычного» до «Эксклюзивного» и цену по своим баллам. Чем короче, чище и необычнее ник, тем он дороже. Секретные ники выпадают только из апгрейда, кейсов и бонус-рулетки.'],
-  ['📦','Собирай коллекцию','Понравившийся ник нажми «Сохранить», он попадёт во вкладку «Коллекция». Лишнее можно сразу «Продать» за монеты. Место в коллекции ограничено, его можно расширять.'],
-  ['⚡','Делай апгрейд и крафт','«Апгрейд»: поставь до 5 ников и попробуй получить ник получше, чем больше ставка, тем выше шанс. «Крафт» (в профиле): три ника превращаются в один новый, шансы зависят от выбранных.'],
-  ['🎁','Забирай бонусы каждый день','Кнопка подарка вверху: награда за вход (серия из 7 дней), бесплатное колесо раз в день и задания недели. Не пропускай дни, серия даёт больше.'],
-  ['🗂️','Собери витрины','В «Помощи» → «Витрины»: собери набор из ников коллекции и получи награду. Ники при этом не тратятся.'],
-  ['🔨','Торгуй с игроками','«Рынок игроков» и «Аукцион»: выставляй свои ники и покупай чужие. Продажа приносит монеты, а бот пришлёт уведомление, когда ник купят.'],
-  ['🛡️','Вступай в клан и зови друзей','Кланы, рейтинг и достижения лежат в «Помощи» и в профиле. За каждого приглашённого друга ты получаешь монеты и энергию.']
+  ['📦','Собирай склад','Понравившийся ник нажми «Сохранить», он попадёт в «Склад». Лишнее можно сразу «Продать» за монеты. Место в складе ограничено, его можно расширять.'],
+  ['⚡','Апгрейд и крафт','«Склад» → «Апгрейд»: поставь до 5 ников и попробуй получить ник получше, чем больше ставка, тем выше шанс. «Крафт» (тоже в «Складе»): три ника превращаются в один новый, шансы зависят от выбранных.'],
+  ['🎁','Забирай бонусы каждый день','Кнопка подарка вверху: награда за вход (серия из 7 дней), бесплатное колесо раз в день, задания и сезон. Не пропускай дни, серия даёт больше.'],
+  ['🗂️','Витрины и музей','«Склад» → «Витрины»: собери набор из ников и получи награду, ники при этом не тратятся. «Музей»: поставь ник навсегда, он приносит монеты.'],
+  ['🔨','Магазин, рынок и аукцион','Вкладка «Магазин»: услуги, рынок игроков и аукцион. Выставляй свои ники и покупай чужие. Продажа приносит монеты, а бот пришлёт уведомление, когда ник купят.'],
+  ['🏆','Рейтинг и профиль','«Рейтинг»: капитал, лучший ник, уровень и музей, а также кланы. «Профиль»: оформление (титулы, рамки, ник, тема), достижения и приглашение друзей. За каждого приглашённого ты получаешь монеты и энергию.']
 ];
 function renderGuide(){
   const el=$('#tab-guide');if(!el)return;
@@ -847,8 +854,8 @@ function claimShow(i){
 const totalV=its=>its.reduce((x,y)=>x+val(y.t,y.p,y.n),0);
 function colPanel(){
   const n=S.items.length,full=S.slots>=MAXSLOTS,pr=slotPrice(S.slots);
-  return `<div class="cpanel"><div class="ctop"><div><b>${n}</b> <span>из ${S.slots}</span><small>мест занято</small></div><div class="r"><b>${fmt(totalV(S.items))} 🪙</b><small>стоимость ников</small></div></div>
-  <div class="cbar"><i style="width:${n/S.slots*100}%"></i></div>
+  return `<div class="cpanel"><div class="ctop"><div><b>${n}</b> <span>из ${MAX}</span><small>мест занято</small></div><div class="r"><b>${fmt(totalV(S.items))} 🪙</b><small>стоимость ников</small></div></div>
+  <div class="cbar"><i style="width:${Math.min(100,n/MAX*100)}%"></i></div>
   <button class="btn cwide" data-a="buy"${full?' disabled':''}>${full?'Максимум мест':`+ Купить место · ${fmt(pr)} 🪙`}</button>
   <button class="btn cwide" data-a="cheap">Продать дешёвые</button>
   <button class="crow" data-a="auto"><span>Автопродажа</span><b>${AUTO[S.auto]} ›</b></button></div>`;
@@ -886,14 +893,14 @@ function render(){
   try{renderNotes()}catch(e){}
   setCoins();
   ensureQuests();updBonDot();checkAch();try{renderCases()}catch(e){}   // кейсы объявлены ниже: на первом проходе их ещё нет
-  tickEn();const free=S.src==='free'&&count!==5,m=count===5?MULTI5:free?MODES[0]:MODES[mode],seg=$('#seg'),cn=$('#cnt'),sr=$('#src');
+  setMax();if(!vipOn()&&count===5)count=3;tickEn();const free=S.src==='free'&&count!==5,m=count===5?MODES[mode]:free?MODES[0]:MODES[mode],seg=$('#seg'),cn=$('#cnt'),sr=$('#src');
   if(!sr.firstChild)sr.innerHTML='<button aria-pressed="false" data-s="free">⚡ Бесплатно</button><button aria-pressed="false" data-s="coin">🪙 За монеты</button>';
-  [...sr.children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===S.src));seg.hidden=free||count===5;$('#en').hidden=!free;updEn();
+  [...sr.children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===S.src));seg.hidden=free;$('#en').hidden=!free;updEn();
   if(!seg.firstChild)seg.innerHTML=MODES.map((x,i)=>`<button aria-pressed="false" data-m="${i}">${x.l}<small>${fmt(x.cost)} 🪙</small></button>`).join('');
-  if(!cn.firstChild)cn.innerHTML=[1,3,5].map(n=>`<button aria-pressed="false" data-n="${n}">×${n}<small>${n===1?'один ник':n===3?'три ника':'пять ников'}</small></button>`).join('');
+  {const cl=vipOn()?[1,3,5]:[1,3],ck=cl.join();if(cn.dataset.k!==ck){cn.dataset.k=ck;cn.innerHTML=cl.map(n=>`<button aria-pressed="false" data-n="${n}">×${n}<small>${n===1?'один ник':n===3?'три ника':'👑 VIP бесплатно'}</small></button>`).join('')}}
   [...seg.children].forEach((b,i)=>b.setAttribute('aria-pressed',i===mode));
   [...cn.children].forEach(b=>b.setAttribute('aria-pressed',+b.dataset.n===count));
-  const sp=$('#spin');sp.textContent=`Крутить${count>1?' ×'+count:''} · ${free?count+' ⚡':fmt(m.cost*count)+' 🪙'}`;sp.disabled=busy;
+  const sp=$('#spin');sp.textContent=`Крутить${count>1?' ×'+count:''} · ${free?count+' ⚡':count===5?'VIP · осталось '+v5Left():fmt(m.cost*count)+' 🪙'}`;sp.disabled=busy;
   $('#st-spins').textContent=`Круток: ${fmt(S.spins)}`;
   $('#st-best').innerHTML=`Лучший: <b class="chip" style="background:${T[S.best].c}">${S.spins?T[S.best].n:'—'}</b>`;
   renderCol();
@@ -910,9 +917,9 @@ $('#spin').onclick=spin;
   const upd=()=>{b.setAttribute('aria-pressed',S.fast?'true':'false');b.innerHTML='<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>Быстро'};
   upd();b.onclick=()=>{S.fast=S.fast?0:1;save();upd();toast(S.fast?'Быстрый режим включён':'Быстрый режим выключен')};
 })();
-$('#src').onclick=e=>{const b=e.target.closest('[data-s]');if(b&&!busy&&S.src!==b.dataset.s){S.src=b.dataset.s;if(S.src==='free'&&count===5){count=3;toast('×5 только за монеты, включил ×3')}save();render()}};
+$('#src').onclick=e=>{const b=e.target.closest('[data-s]');if(b&&!busy&&S.src!==b.dataset.s){S.src=b.dataset.s;save();render()}};
 $('#seg').onclick=e=>{const b=e.target.closest('[data-m]');if(b&&!busy){mode=+b.dataset.m;render()}};
-$('#cnt').onclick=e=>{const b=e.target.closest('[data-n]');if(b&&!busy){count=+b.dataset.n;if(count===5&&S.src!=='coin'){S.src='coin';save();toast('×5 только за монеты: 5 000 🪙 за ник')}render()}};
+$('#cnt').onclick=e=>{const b=e.target.closest('[data-n]');if(b&&!busy){count=+b.dataset.n;if(count===5&&!vipOn()){count=3;toast('Крутка ×5 только для VIP: раздел Магазин → ⭐ Звёзды')}render()}};
 $('#reels').onclick=e=>{
   const pk=e.target.closest('[data-pk]');
   if(pk){if(!busy&&+pk.dataset.pk!==sel)showSel(+pk.dataset.pk,false);return}
@@ -947,7 +954,7 @@ $('#tab-col').onclick=e=>{
   if(a==='buy'){
     if(S.slots>=MAXSLOTS)return;const pr=slotPrice(S.slots);
     if(S.coins<pr){toast(`Не хватает монет: нужно ${fmt(pr)} 🪙`);return}
-    ask(`Купить место №${S.slots+1} за ${fmt(pr)} 🪙?`,()=>{if(S.coins<pr||S.slots>=MAXSLOTS)return;S.coins-=pr;S.slots++;MAX=S.slots;addXp(40);sfx('coin');save();hap('n','success');toast(`Новое место! Теперь мест: ${S.slots}`);render()});return}
+    ask(`Купить место №${S.slots+1} за ${fmt(pr)} 🪙?`,()=>{if(S.coins<pr||S.slots>=MAXSLOTS)return;S.coins-=pr;S.slots++;setMax();addXp(40);sfx('coin');save();hap('n','success');toast(`Новое место! Теперь мест: ${S.slots}`);render()});return}
   if(a==='auto'){S.auto=(S.auto+1)%AUTO.length;save();toast(S.auto?`Автопродажа: ники ${AUTO[S.auto]} будут продаваться сами, когда ты не сохранил их после крутки`:'Автопродажа выключена');renderCol();return}
   if(a==='cheap'){
     const lim=S.auto||2,its=S.items.filter(i=>i.t<lim);
@@ -1188,8 +1195,9 @@ const TTL=[
   {id:'lucky',n:'Счастливчик',price:50e6,c:'#3DDC84'},
   {id:'biz',n:'Бизнесмен',price:150e6,c:'#FF8A3D'},
   {id:'faceless',n:'Человек без лица',price:1e9,c:'#F2EFFF'},
+  {id:'oligarch',n:'Олигарх',price:0,star:349,c:'#FFD34E'},   // только за звёзды
 ];
-const OLDT={trader:'collector',upgrader:'millionaire',gambler:'hands',magnate:'lucky',oligarch:'biz',billionaire:'biz',legend:'faceless',emperor:'faceless'};   // старые титулы → новые (у кого что было куплено, ничего не пропадает)
+const OLDT={trader:'collector',upgrader:'millionaire',gambler:'hands',magnate:'lucky',billionaire:'biz',legend:'faceless',emperor:'faceless'};   // старые титулы → новые (у кого что было куплено, ничего не пропадает)
 FRM=[
   {id:'f_silver',n:'Серебряная рамка',price:1e6},
   {id:'f_gold',n:'Золотая рамка',price:5e6},
@@ -1201,7 +1209,7 @@ const cosOwn=id=>S.cown.includes(id);
 const nickHtml=(name,id)=>`<span class="nk${cosNick(id)?' nk-'+id:''}">${escH(name)}</span>`;
 const titleHtml=id=>{const t=cosTitle(id);return t?`<span class="ttl" style="--tc:${t.c}">${t.n}</span>`:''};
 const cosKey=()=>(cosOwn(S.cn)&&cosNick(S.cn)?S.cn:'')+'|'+(cosOwn(S.ct)&&cosTitle(S.ct)?S.ct:'')+'|'+(cosOwn(S.cf)&&cosFrame(S.cf)?S.cf:'');
-function cosFix(){S.cown=[...new Set(S.cown.map(x=>OLDT[x]||x))].filter(x=>cosNick(x)||cosTitle(x)||cosFrame(x)||cosTheme(x));if(OLDT[S.ct])S.ct=OLDT[S.ct];if(S.cn&&!cosOwn(S.cn))S.cn='';if(S.ct&&!cosOwn(S.ct))S.ct='';if(S.cf&&!cosOwn(S.cf))S.cf='';if(S.theme&&!S.cown.includes('t_'+S.theme))S.theme=''}
+function cosFix(){const ol=S.sx&&S.sx.title_oligarch;S.cown=[...new Set(S.cown.map(x=>x==='oligarch'&&!ol?'biz':OLDT[x]||x))].filter(x=>cosNick(x)||cosTitle(x)||cosFrame(x)||cosTheme(x));if(OLDT[S.ct])S.ct=OLDT[S.ct];if(S.ct==='oligarch'&&!ol)S.ct='biz';if(S.cn&&!cosOwn(S.cn))S.cn='';if(S.ct&&!cosOwn(S.ct))S.ct='';if(S.cf&&!cosOwn(S.cf))S.cf='';if(S.theme&&!S.cown.includes('t_'+S.theme))S.theme=''}
 cosFix();
 try{avaKey='';updAva()}catch(e){}
 var cosTab='t';
@@ -1217,6 +1225,7 @@ function cosSheet(){
         if(id==='t_'){S.theme='';applyTheme();save();sfx('tap');return cosSheet()}   // Ночь: бесплатная тема по умолчанию
         const fld=cosNick(id)?'cn':cosTitle(id)?'ct':cosFrame(id)?'cf':'theme';
         if(cosOwn(id)){if(fld==='theme'){S.theme=th.id;applyTheme()}else S[fld]=S[fld]===id?'':id}   // надеть / снять
+        else if(it.star){o.remove();return goStar('title_oligarch')}
         else{
           if(S.coins<it.price)return toast('Не хватает монет');
           S.coins-=it.price;S.cown.push(id);if(fld==='theme'){S.theme=th.id;applyTheme()}else S[fld]=id;sfx('ach');hap('n','success');toast('Куплено: '+it.n);
@@ -1224,8 +1233,8 @@ function cosSheet(){
         save();render();lb.sent='';lbPush();cosSheet();if(!$('#tab-prof').hidden)renderProf();try{if(!$('#tab-museum').hidden)renderMuseum()}catch(x){}}
     }}
   const u=tgUser(),nm=u.first_name||'Игрок';
-  const row=(it,kind)=>{const own=kind===4?themeOwn({id:it.id.slice(2)}):cosOwn(it.id),on=kind===1?S.cn===it.id:kind===2?S.ct===it.id:kind===3?S.cf===it.id:S.theme===it.id.slice(2),poor=!own&&S.coins<it.price;
-    return `<div class="crow2${on?' on':''}"><div class="cprev">${kind===1?nickHtml(nm,it.id):kind===2?titleHtml(it.id):kind===3?`<span class="fprev">${frameRing(it.id)}<b>${escH([...nm][0]||'?').toUpperCase()}</b></span>`:`<i class="dthm" style="background:linear-gradient(135deg,${it.b} 52%,${it.a} 52%);border:2px solid ${it.a}"></i>`}</div><div class="cinfo"><b>${it.n}</b><small${own?'':' class="prc"'}>${own?(on?'Надето':'Куплено'):fmtC(it.price)+' 🪙'}</small></div><button class="btn sm${own||!poor?' main':''}" data-cb="${it.id}"${poor?' disabled':''}>${own?(on?(kind===4?'Выбрано':'Снять'):'Надеть'):poor?'Не хватает':'Купить'}</button></div>`};
+  const row=(it,kind)=>{const own=kind===4?themeOwn({id:it.id.slice(2)}):cosOwn(it.id),on=kind===1?S.cn===it.id:kind===2?S.ct===it.id:kind===3?S.cf===it.id:S.theme===it.id.slice(2),poor=!own&&!it.star&&S.coins<it.price;
+    return `<div class="crow2${on?' on':''}"><div class="cprev">${kind===1?nickHtml(nm,it.id):kind===2?titleHtml(it.id):kind===3?`<span class="fprev">${frameRing(it.id)}<b>${escH([...nm][0]||'?').toUpperCase()}</b></span>`:`<i class="dthm" style="background:linear-gradient(135deg,${it.b} 52%,${it.a} 52%);border:2px solid ${it.a}"></i>`}</div><div class="cinfo"><b>${it.n}</b><small${own?'':' class="prc"'}>${own?(on?'Надето':'Куплено'):it.star?'⭐ '+it.star+' · только за звёзды':fmtC(it.price)+' 🪙'}</small></div><button class="btn sm${own||!poor?' main':''}" data-cb="${it.id}"${poor?' disabled':''}>${own?(on?(kind===4?'Выбрано':'Снять'):'Надеть'):it.star?'В магазин':poor?'Не хватает':'Купить'}</button></div>`};
   const free=()=>{const on=!S.theme;return `<div class="crow2${on?' on':''}"><div class="cprev"><i class="dthm" style="background:linear-gradient(135deg,#0D0B1A 52%,#5B6BFF 52%);border:2px solid #5B6BFF"></i></div><div class="cinfo"><b>Ночь</b><small>${on?'Надето':'Бесплатно'}</small></div><button class="btn sm main" data-cb="t_"${on?' disabled':''}>${on?'Выбрано':'Надеть'}</button></div>`};
   const list=cosTab==='t'?TTL.map(x=>row(x,2)).join(''):cosTab==='f'?FRM.map(x=>row(x,3)).join(''):cosTab==='n'?NSTY.map(x=>row(x,1)).join(''):free()+THEMES.filter(x=>x.id).map(x=>row({...x,id:'t_'+x.id},4)).join('');
   const have=S.cown.length;
@@ -1260,7 +1269,7 @@ function renderProf(){
   const doneV=S.show.length;
   $('#tab-prof').innerHTML=`<h2 class="ptitle">Профиль</h2>
   <div class="pcard pro"><div class="ptop"><div class="av" style="--p:${pct}">${frameRing(frameId())}<span class="avi">${av}<b>${name.slice(0,1).toUpperCase()}</b></span><em class="lvb">${S.lvl}</em></div>
-    <div class="pnm"><b class="pname">${nickHtml(name,cosOwn(S.cn)?S.cn:'')}</b>${cosOwn(S.ct)?`<span class="ttlrow">${titleHtml(S.ct)}</span>`:''}<span class="rank" style="--rc:${rk[2]}">🛡 ${rk[1]}</span>${nx?`<small>до «${nx[1]}»: ${nx[0]} ур.</small>`:'<small>Высший ранг</small>'}</div></div>
+    <div class="pnm"><b class="pname">${nickHtml(name,cosOwn(S.cn)?S.cn:'')}</b>${cosOwn(S.ct)?`<span class="ttlrow">${titleHtml(S.ct)}</span>`:''}${vipOn()?'<span class="vipb">👑 VIP</span>':''}<span class="rank" style="--rc:${rk[2]}">🛡 ${rk[1]}</span>${nx?`<small>до «${nx[1]}»: ${nx[0]} ур.</small>`:'<small>Высший ранг</small>'}</div></div>
   <div class="pid idc"><span class="idtag">ID</span><b>${idStr()}</b><button id="idcopy" aria-label="Скопировать ID">⧉</button></div>
   <div class="lvrow"><b>Уровень ${S.lvl}</b><small>${fmt(S.xp)} / ${fmt(need)} опыта</small></div>
   <div class="xbar"><i style="width:${pct}%"></i></div>
@@ -1272,6 +1281,7 @@ function renderProf(){
     <button class="ptile" id="ach-open"><span class="pti">🎖️</span><b>Достижения</b><small>${ACH.filter(achOk).length} из ${ACH.length}${achReady().length?' · наград: '+achReady().length:''}</small><span class="ptbar"><i style="width:${ACH.filter(achOk).length/ACH.length*100}%"></i></span></button>
     <button class="ptile" id="cos-open"><span class="pti">✨</span><b>Оформление</b><small>титулы, рамки, ник, тема · куплено ${S.cown.length}</small></button>
     <button class="ptile" id="guide-open"><span class="pti">📖</span><b>Как играть</b><small>видео и 8 шагов</small></button>
+    <button class="ptile wide" id="chat-open"><span class="pti">💬</span><div><b>Чат игроков</b><small>Общий чат игры: пиши и читай в реальном времени</small></div></button>
     <button class="ptile wide" data-craft="1"><span class="pti">⚗️</span><div><b>Крафт</b><small>Три любых ника → один новый, шансы зависят от выбранных</small></div></button>
   </div>
   <div class="pcard inv invx"><div><b>Позвать друзей</b><small>За каждого друга: +${fmt(REF_C)} 🪙 и +${REF_E} ⚡ · приглашено ${S.refc} из ${REF_MAX}</small></div><div class="invb">${lb.refn>0?`<button class="btn main" id="ref-claim">Забрать +${fmt(lb.refn*REF_C)} 🪙</button>`:''}<button class="btn${lb.refn>0?'':' main'}" id="invite">Позвать</button></div></div>
@@ -1298,6 +1308,7 @@ $('#tab-prof').onclick=e=>{
   if(e.target.closest('#top-open'))return tab('top');
   if(e.target.closest('#clan-open'))return tab('clan');
   if(e.target.closest('#dex-claim'))return dexClaim();
+  if(e.target.closest('#chat-open'))return chatSheet();
   if(e.target.closest('#cos-open'))return cosSheet();
   if(e.target.closest('#guide-open'))return tab('guide');
   {const nb=e.target.closest('[data-nt]');if(nb)return ntToggle(+nb.dataset.nt)}
@@ -1475,7 +1486,7 @@ function clanMy(){
     ${c.descr?`<p class="cdesc2">${escH(c.descr)}</p>`:''}
     <div class="cpts2"><span>Очки клана</span><b>${fmt(c.pts)}</b></div>
     <div class="qbar"><i style="width:${c.lvl>=20?100:pr}%"></i></div><small class="cnext">${c.lvl>=20?'Максимальный уровень':`До ${c.lvl+1} уровня: ${fmt(c.lvl*3000000-c.pts)} очков (+2 места)`}</small>
-    <div class="crow2">${c.link?`<button class="btn" data-link="${escH(c.link)}">💬 Чат клана</button>`:''}${m.leader?'<button class="btn" id="cl-edit">⚙ Настройки</button>':''}<button class="btn${cl.armed==='leave'?' danger':''}" data-arm="leave">${cl.armed==='leave'?'Точно выйти?':'Выйти'}</button></div></div>`;
+    <div class="crow2">${m.leader?'<button class="btn" id="cl-edit">⚙ Настройки</button>':''}<button class="btn${cl.armed==='leave'?' danger':''}" data-arm="leave">${cl.armed==='leave'?'Точно выйти?':'Выйти'}</button></div></div>`;
   if(m.leader&&m.requests.length)h+=`<h3 class="ch3">Заявки · ${m.requests.length}</h3>`+m.requests.map(r=>`<div class="mrow"><div class="mn"><b>${escH(r.name)}</b><small>${r.lvl} ур. · ${fmtC(r.pts)} 🪙</small></div><div class="mbt"><button class="btn main sm" data-acc="${r.uid}">✓</button><button class="btn sm" data-rej="${r.uid}">✕</button></div></div>`).join('');
   h+=`<h3 class="ch3">Участники · ${m.members.length}</h3>`+m.members.map((x,i)=>`<div class="mrow${x.me?' me':''}"><em>${i+1}</em><div class="mn"><b>${escH(x.name)}${x.owner?' 👑':''}</b><small>${x.lvl} ур.</small></div><span class="mpt">${fmtC(x.pts)} 🪙</span>${m.leader&&!x.me?`<button class="btn sm${cl.armed==='k'+x.uid?' danger':''}" data-arm="k${x.uid}" aria-label="Выгнать">${cl.armed==='k'+x.uid?'Выгнать?':'✕'}</button>`:''}</div>`).join('');
   return h;
@@ -1486,7 +1497,6 @@ function clanSheet(){
   return `<div class="usheet" id="csheet"><div class="sbg" data-cclose="1"></div><div class="sbox"><div class="shead"><b>${edit?'Настройки клана':'Новый клан'}</b></div>
   <div class="cform">${edit?'':`<label>Тег<input id="f-tag" maxlength="5" autocapitalize="characters" placeholder="ABC" value="${escH(f.tag)}"></label><label>Название<input id="f-name" maxlength="20" placeholder="Название клана" value="${escH(f.name)}"></label>`}
   <label>Описание<textarea id="f-descr" maxlength="90" rows="2" placeholder="Коротко о клане">${escH(f.descr)}</textarea></label>
-  <label>Ссылка на чат (t.me)<input id="f-link" maxlength="64" placeholder="https://t.me/…" value="${escH(f.link)}"></label>
   <div class="seg two"><button data-fj="0" aria-pressed="${!f.join}">Открытый</button><button data-fj="1" aria-pressed="${!!f.join}">По заявке</button></div>
   <label>Минимальный уровень<select id="f-lvl">${[1,2,3,5,8,10,15,20,30,40,50].map(v=>`<option value="${v}"${v===f.minlvl?' selected':''}>${v}</option>`).join('')}</select></label></div>
   ${edit?'':`<small class="sum">Создание стоит ${fmt(CLAN_COST)} 🪙${S.coins<CLAN_COST?` · не хватает ${fmt(CLAN_COST-S.coins)}`:''}</small>`}
@@ -1510,7 +1520,7 @@ function renderClan(){
 }
 function readForm(){
   const g=id=>{const e=$('#'+id);return e?e.value:''};const f=cl.form;
-  if($('#f-tag'))f.tag=g('f-tag').toUpperCase();if($('#f-name'))f.name=g('f-name');f.descr=g('f-descr');f.link=g('f-link');f.minlvl=+g('f-lvl')||1;
+  if($('#f-tag'))f.tag=g('f-tag').toUpperCase();if($('#f-name'))f.name=g('f-name');f.descr=g('f-descr');f.link='';f.minlvl=+g('f-lvl')||1;
 }
 let clanQ=0;
 $('#tab-clan').oninput=e=>{if(e.target.id!=='cl-q')return;cl.q=e.target.value;clearTimeout(clanQ);clanQ=setTimeout(async()=>{await loadClans(true);renderClan()},350)};
@@ -1698,7 +1708,7 @@ function plDraw(){
     const ttl=cs3[1]&&cosTitle(cs3[1])?`<span class="ttlrow">${titleHtml(cs3[1])}</span>`:'';
     const fr=cs3[2]&&cosFrame(cs3[2])?frameRing(cs3[2]):'';
     b=`<div class="plhd"><div class="av">${fr}<span class="avi"><b>${eh([...String(d.name||'?')][0]||'?').toUpperCase()}</b></span><em class="lvb">${d.lvl||1}</em></div>
-    <div class="pnm"><b class="pname">${d.tag?`<em class="ctag">[${eh(d.tag)}]</em> `:''}${nickHtml(d.name,cs3[0])}</b>${ttl}<span class="rank" style="--rc:${rk[2]}">🛡 ${rk[1]}</span></div></div>
+    <div class="pnm"><b class="pname">${d.tag?`<em class="ctag">[${eh(d.tag)}]</em> `:''}${nickHtml(d.name,cs3[0])}</b>${ttl}${vipOn()?'<span class="vipb">👑 VIP</span>':''}<span class="rank" style="--rc:${rk[2]}">🛡 ${rk[1]}</span></div></div>
     <div class="pgrid"><div class="pt"><small>Место в рейтинге</small><b>#${d.rank}</b></div><div class="pt"><small>Капитал</small><b>${fmtC(d.net)} 🪙</b></div>
     <div class="pt"><small>Уровень</small><b>${d.lvl||1}</b></div><div class="pt"><small>Клан</small><b>${d.cname?eh(d.cname):'—'}</b></div></div>
     <div class="pcard" style="margin:10px 0 0"><small class="cap2">Самый дорогой ник</small>${bn?`<div class="muprev">${plate(d.bestn,bn.t)}<span>${fmtC(d.best)} 🪙</span></div>`:'<p class="sum">—</p>'}</div>`+(d.me?'':d.un?`<button class="btn main cwide" data-pltg="${eh(d.un)}" style="margin-top:12px">Открыть в Telegram ↗</button>`:`<p class="sum" style="margin-top:12px;text-align:center">Ссылка на Telegram появится, когда игрок зайдёт в игру в обновлённой версии, или у него нет username</p>`);
@@ -1971,8 +1981,8 @@ $('#tab-market').onclick=async e=>{
   if(t.closest('[data-mclose]')){mk.sheet=false;return renderMarket()}
   if(t.closest('#m-topx')){S.toppick=0;save();return renderMarket()}
   {const tp=t.closest('[data-top]');if(tp){
-    if(S.coins<TOPP){toast('Не хватает монет');return}
-    const r=await mAct('/market/top',{id:+tp.dataset.top},()=>{S.coins-=TOPP;S.toppick=0;save();render();try{sfx('coins')}catch(x){}toast('Лот в топе на 24 часа')});
+    if(!S.topfree&&S.coins<TOPP){toast('Не хватает монет');return}
+    const r=await mAct('/market/top',{id:+tp.dataset.top},()=>{if(S.topfree>0)S.topfree--;else S.coins-=TOPP;S.toppick=0;save();render();try{sfx('coins')}catch(x){}toast('Лот в топе на 24 часа')});
     return renderMarket()}}
   if(t.closest('#m-new')){mk.sheet=true;mk.sel='';mk.price='';return renderMarket()}
   const kk=t.closest('[data-mk]');if(kk){const it=S.items.find(i=>i.id===mk.sel);if(it){mk.price=String(Math.round(val(it.t,it.p,it.n)*+kk.dataset.mk));renderMarket()}return}
@@ -2018,13 +2028,13 @@ async function muLoad(){const r=await lbReq('/museum');mu.my=r.my;mu.items=r.ite
 
 // ---------- Доход музея: ники, которые стоят в музее, приносят монеты ----------
 function muMine(){const a=Array.isArray(mu.my)?mu.my:(mu.items||[]).filter(x=>x.mine);return a.filter(x=>x&&x.name&&isFinite(+x.ts))}
-function muRate(x){return Math.max(1,Math.round(nickVal(x.name).v*WORKRATE*(1+hallBonus()/100)))}
+function muRate(x){return Math.max(1,Math.round(nickVal(x.name).v*WORKRATE*(1+hallBonus()/100+(vipOn()?.3:0))))}
 function muTotal(){const now=Date.now(),t0=+S.muT||0;return muMine().reduce((a,x)=>a+Math.floor(muRate(x)*Math.min(WORKCAP,Math.max(0,now-Math.max(+x.ts,t0)))/3600e3),0)}
 function museumIncome(){
   const my=muMine();
   if(!my.length)return `<div class="pcard mincome"><b>Доход музея</b><small>Ники, которые стоят в музее, приносят монеты: 0,25% цены в час, копится до 8 часов. Поставь первый ник.</small></div>`;
   const acc=muTotal(),rate=my.reduce((a,x)=>a+muRate(x),0);
-  return `<div class="pcard mincome"><div class="mirow"><div><b>Доход музея</b><small>${my.length} ${pl(my.length)} в музее · +${fmt(rate)} 🪙/ч · копится до 8 ч${hallBonus()?` · декор +${hallBonus()}%`:''}</small></div><b class="miacc">${fmt(acc)} 🪙</b></div><button class="btn main cwide" id="mu-claim"${acc>0?'':' disabled'}>${acc>0?'Забрать · +'+fmt(acc)+' 🪙':'Пока нечего забирать'}</button></div>`;
+  return `<div class="pcard mincome"><div class="mirow"><div><b>Доход музея</b><small>${my.length} ${pl(my.length)} в музее · +${fmt(rate)} 🪙/ч · копится до 8 ч${hallBonus()?` · декор +${hallBonus()}%`:''}${vipOn()?' · 👑 VIP +30%':''}</small></div><b class="miacc">${fmt(acc)} 🪙</b></div><button class="btn main cwide" id="mu-claim"${acc>0?'':' disabled'}>${acc>0?'Забрать · +'+fmt(acc)+' 🪙':'Пока нечего забирать'}</button></div>`;
 }
 function muClaim(){const g=muTotal();if(g<=0)return;S.coins=Math.min(CAP,S.coins+g);S.muT=Date.now();save();render();sfx('coins');toast('Музей принёс +'+fmt(g)+' 🪙');renderMuseum()}
 // ---------- Свой зал в музее: покупка, интерьер, предпросмотр ----------
@@ -2166,7 +2176,7 @@ function hallPlate(){
   const cfg=hallCfg(),own=!!S.hall;
   return `<div class="pcard hallpl">${hallSvg(own?cfg:{f:'f_concrete',w:'w_concrete',l:'l_bulb'},own?hallExNames():[],'pl',own?hallDec():{})}
   <div class="hallrow"><div><b>${own?'Мой зал':'Свой зал в музее'}</b><small>${own?'Интерьер, свет и твои экспонаты':'Нужен, чтобы ставить ники в музей и получать доход'}</small></div>
-  <button class="btn main" id="hall-go">${own?'Мой зал':'Купить · '+fmt(HALL_PRICE)+' 🪙'}</button></div></div>`;
+  <button class="btn main" id="hall-go">${own?'Мой зал':'Купить · '+fmt(HALL_PRICE)+' 🪙'}</button>${own?'':'<button class="btn cwide" data-stgo="museum">⭐ Или за звёзды</button>'}</div></div>`;
 }
 function hallSheet(close){
   let sh=document.getElementById('hallsh');
@@ -2377,7 +2387,7 @@ $('#bon-btn').onclick=()=>tab($('#tab-bon').hidden?'bon':'game');
 // ---------- Магазин: эксклюзив и аукцион ников ----------
 // Аукцион хранит сервер (rating-worker). Ставка списывается сразу, при перебитии возвращается; победитель и продавец получают своё автоматически.
 const shEl=()=>$('#tab-'+(PAGE==='auction'?'auction':'shop')),AUCP=PAGE==='auction';
-const sh={tab:AUCP?'auc':'ex',lots:null,my:null,hist:null,ex:null,off:0,lot:null,sort:'end',q:'',sheet:false,sel:'',price:'',hours:24,bid:'',busy:false,err:'',load:false,fin:0};
+const sh={tab:AUCP?'auc':'stars',lots:null,my:null,hist:null,ex:null,off:0,lot:null,sort:'end',q:'',sheet:false,sel:'',price:'',hours:24,bid:'',busy:false,err:'',load:false,fin:0};
 const SHE={have:'Этот ник у тебя уже есть',sync:'Подожди пару секунд: профиль ещё не отправлен на сервер',gone:'Аукцион уже закончился или лот снят',own:'Это твой лот',lead:'Твоя ставка и так лидирует',low:'Ставка ниже минимальной',changed:'Ставка изменилась, попробуй ещё раз',poor:'Не хватает монет (по данным сервера)',sold:'Этот ник уже купили',toomany:'Не больше 5 лотов одновременно',price:'Цена от 10 🪙',flag:'Данные не прошли проверку'};
 const sherr=e=>{const m=String(e&&e.message||e).replace(/^e:/,'');return SHE[m]||merr(e)};
 const shNow=()=>Date.now()+sh.off;
@@ -2397,7 +2407,7 @@ async function auClaim(){
 async function openShop(){
   renderShop();if(!API||!tg||!tg.initData)return;
   sh.load=true;sh.err='';renderShop();
-  try{await lbPush(true);await auClaim();await gAuto();await shLoad()}catch(e){sh.err=sherr(e)}
+  try{await lbPush(true);await auClaim();await gAuto();try{await stLoad()}catch(x){}await shLoad()}catch(e){sh.err=sherr(e)}
   sh.load=false;if(!shEl().hidden)renderShop();
 }
 async function shAct(path,body,fn){
@@ -2453,12 +2463,13 @@ function renderShop(){
   else if(sh.load&&!sh.lots)body='<div class="pcard lbmsg"><small>Загружаю…</small></div>';
   else if(sh.err&&!sh.lots)body=`<div class="pcard lbmsg"><b>${escH(sh.err)}</b><button class="btn main" id="sh-retry">Повторить</button></div>`;
   else if(lot){el.innerHTML=shDetail(lot)+shSheet();return shAfter(keepBid,keepQ)}
+  else if(sh.tab==='stars')body=stHtml();
   else if(sh.tab==='ex'){
     const c=(sh.ex&&sh.ex.ceo)||{price:25000000,total:3,sold:0,left:3,mine:0},own=c.mine||S.exc.ceo,canb=c.left>0&&S.coins>=c.price;
     const svc=(ic,t,d,pr,id,ok,lab)=>`<div class="pcard svc"><span class="svi">${ic}</span><div><b>${t}</b><small>${d}</small></div><button class="btn main sm" id="${id}"${ok?'':' disabled'}>${lab}<br><small>${fmt(pr)} 🪙</small></button></div>`;
     body=`<h3 class="ch3">Услуги</h3>`+
     svc('🔝','Лот в топ','Твой лот станет первым на рынке на 24 часа',TOPP,'sh-top',S.coins>=TOPP,S.coins>=TOPP?'Купить':'Мало 🪙')+
-    svc('🎡',`Мульти-крутка ×${MULTIN}`,`${MULTIN} раз прокрутить ежедневное колесо${S.wheelx?` · сейчас осталось ${S.wheelx}`:''}`,MULTIP,'sh-multi',S.coins>=MULTIP,S.coins>=MULTIP?'Купить':'Мало 🪙')+
+    `<div class="pcard lbmsg"><small>Мульти-крутка колеса ×${MULTIN}${S.wheelx?` (сейчас осталось ${S.wheelx})`:''} продаётся за ⭐ во вкладке «Звёзды».</small></div>`+
     `<h3 class="ch3">Эксклюзив</h3>
     <div class="pcard excard"><div class="exlab">ЭКСКЛЮЗИВ · ТОЛЬКО 3 НА ВЕСЬ СЕРВЕР</div><div class="aubig">${plate('ceo',7)}</div><div class="aunm">@ceo</div>
     <small class="ausub">Фиолетовый эксклюзивный ник. Редкость выше секретных. Всего 3 экземпляра на весь сервер, по одному на игрока. Потом его можно продать на рынке или аукционе.</small>
@@ -2480,7 +2491,8 @@ function renderShop(){
   }
   else body=!sh.hist?'<div class="pcard lbmsg"><small>Загружаю…</small></div>':(sh.hist.length?sh.hist.map(h=>{const n=nickVal(h.name),sold=h.kind==='sold',won=h.kind==='won';return `<div class="mlot hrow2" style="--tc:${T[n.t].c}"><div class="mi"><b>${sold?'💰 Продано':won?'🏆 Выиграно':'↩ Без ставок'} · @${escH(h.name)}</b><small>${T[n.t].n}${h.kind==='unsold'?'':` · ${sold?'покупатель':'продавец'}: ${escH(h.who)}`}</small><small>${fmtDate(h.ts)}</small></div><div class="mpr">${h.kind==='unsold'?'<small>ник вернулся</small>':`<b class="${sold?'hplus':'hminus'}">${sold?'+':'−'}${fmt(sold?h.get:h.price)} 🪙</b>${sold?`<small>цена ${fmt(h.price)}</small>`:''}`}</div></div>`}).join(''):'<div class="pcard lbmsg"><small>Завершённых аукционов пока нет.</small></div>');
   el.innerHTML=`${subTabs('shop',AUCP?'auction':'shop')}
-  ${AUCP?`<div class="seg three"><button data-shtab="auc" aria-pressed="${sh.tab==='auc'}">Лоты</button><button data-shtab="my" aria-pressed="${sh.tab==='my'}">Мои${sh.my&&sh.my.lead&&sh.my.lead.length?' •':''}</button><button data-shtab="hist" aria-pressed="${sh.tab==='hist'}">История</button></div>`:''}${body}${shSheet()}`;
+  ${AUCP?'':`<div class="seg"><button data-shtab="stars" aria-pressed="${sh.tab==='stars'}">⭐ Звёзды</button><button data-shtab="ex" aria-pressed="${sh.tab==='ex'}">🪙 Монеты</button></div>`}
+  ${AUCP?`<div class="seg three"><button data-shtab="auc" aria-pressed="${sh.tab==='auc'}">Лоты</button><button data-shtab="my" aria-pressed="${sh.tab==='my'}">Мои${sh.my&&sh.my.lead&&sh.my.lead.length?' •':''}</button><button data-shtab="hist" aria-pressed="${sh.tab==='hist'}">История</button></div>`:''}${body}${shSheet()}${sh.tab==='stars'?stSheet():''}`;
   shAfter(keepBid,keepQ);
 }
 function shAfter(kb,kq){
@@ -2497,6 +2509,7 @@ if(shEl()){
   shEl().onchange=e=>{const s=e.target.closest('[data-shsel]');if(!s)return;sh.sel=s.dataset.shsel;const it=S.items.find(i=>i.id===sh.sel);sh.price=it?String(val(it.t,it.p,it.n)):'';renderShop()};
   shEl().onclick=async e=>{
     const t=e.target;
+    if(stClick(t))return;
     if(t.closest('#sh-back'))return tab('help');
     if(t.closest('#sh-retry'))return openShop();
     if(t.closest('#sh-lback')){sh.lot=null;sh.bid='';return renderShop()}
@@ -2542,11 +2555,176 @@ if(shEl()){
   },1000);
 }
 
+
+// ================= Магазин за звёзды Telegram (⭐) =================
+// Цены и состав наборов хранит сервер (rating-worker, STARS_SHOP). Здесь только витрина и выдача оплаченного.
+var st={bal:null,owned:{},cat:null,sel:'',sent:'',msg:'',busy:0};
+var STC={
+  starter:['🎁','Стартовый пак','400 000 🪙 · 20 ⚡ · ник «Редкий+»',19,1],
+  pack_pro:['📦','Набор «Профи»','2 500 000 🪙 · 60 ⚡ · ник «Эпик+»',99,0],
+  pack_gold:['💎','Золотой набор','7 000 000 🪙 · 150 ⚡ · ник «Легендарный+» · золотая рамка',249,0],
+  energy60:['⚡','Энергия ×60','+60 ⚡ в запас, копится даже сверх лимита',39,0],
+  vip:['👑','VIP на 30 дней','Крутка ×5 бесплатно, энергия быстрее, +10 мест, комиссия 2%, музей +30%, подарок каждый день',299,0],
+  title_oligarch:['🏆','Титул «Олигарх»','Эксклюзивный титул, за монеты его не купить',349,1],
+  collector:['🗂️','Коллекционер','Открывает все 30 мест в коллекции',399,1],
+  museum:['🏛️','Музей','Свой зал в музее без монет',115,1],
+  wheel5:['🎡','Колесо ×5','5 дополнительных кручений ежедневного колеса',29,0],
+  top:['🔝','Лот в топ','Твой лот первым на рынке на 24 часа',19,0],
+  pass:['🎫','Платный пропуск','Платная дорожка наград текущего сезона',99,0],
+  custom_nick:['✏️','Именной юзернейм','Любой свободный юзернейм по твоему выбору. Выдаёт поддержка @ddwwks',349,0]
+};
+var STG=[['Наборы',['starter','pack_pro','pack_gold','energy60']],['Статус',['vip','title_oligarch','collector','museum']],['Услуги',['wheel5','top','pass','custom_nick']]];
+var STUP=[25,50,100,150,250,500,750,1000,1500];
+var VIPPERK=['Крутка ×5 бесплатно с выбором редкости (до '+V5_DAY+' в сутки)','Энергия восстанавливается за 8 минут вместо 15','+10 мест в коллекции','Комиссия рынка и аукциона 2% вместо 5%','Доход музея +30%','Подарок каждый день: 100 000 🪙 и 5 ⚡','Значок 👑 VIP в профиле'];
+var stPr=id=>(st.cat&&st.cat[id])||STC[id][3];
+var stHave=id=>{const c=STC[id];if(!c)return false;if(id==='pass'){try{return !!(st.owned.pass||szState().paid)}catch(e){return !!st.owned.pass}}return !!(c[4]&&(S.sx[id]||st.owned[id]))};
+function goStar(id){try{sessionStorage.setItem('nr_st',id)}catch(e){}if(PAGE==='shop'){sh.tab='stars';st.sel=id;renderShop()}else tab('shop')}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-stgo]');if(b)goStar(b.dataset.stgo)});
+function stHtml(){
+  const vip=vipOn(),bal=st.bal!=null?st.bal:S.sbal;
+  let h=`<div class="pcard stbal"><div><small>Звёздный баланс</small><b>⭐ ${fmt(bal)}</b></div><small>Пополни один раз и покупай всё в игре одним нажатием. Баланс не сгорает.</small></div>
+  <div class="mchips stup">${STUP.map(n=>`<button class="btn sm" data-stup="${n}">+${n} ⭐</button>`).join('')}</div>`;
+  if(st.msg==='nochat')h+=`<div class="pcard lbmsg"><b>Бот не смог отправить счёт</b><small>Открой чат с ботом, нажми «Старт» и повтори покупку.</small><button class="btn main" id="st-chat">Открыть чат</button></div>`;
+  if(st.sent)h+=`<div class="pcard lbmsg"><b>Счёт отправлен в чат с ботом</b><small>Оплати его в Telegram и вернись в игру: покупка придёт сама через несколько секунд.</small><button class="btn main" id="st-chat">Открыть чат с ботом</button></div>`;
+  if(S.sx.custom>0)h+=`<div class="pcard lbmsg"><b>✏️ Именной юзернейм оплачен</b><small>Напиши в поддержку @ddwwks и назови желаемый юзернейм. Это можно сделать сейчас.</small><button class="btn main" id="st-sup">Написать в поддержку</button><button class="btn" id="st-done">Ник выдали, скрыть</button></div>`;
+  if(vip)h+=`<div class="pcard stvip"><b>👑 VIP активен</b><small>до ${fmtDate(S.vip)}. Продли покупкой ниже, дни добавятся к текущим.</small></div>`;
+  for(const [g,ids] of STG){
+    h+=`<h3 class="ch3">${g}</h3>`+ids.map(id=>{const c=STC[id],own=stHave(id);
+      return `<div class="pcard svc stit${own?' own':''}"${own?'':` data-st="${id}"`}><span class="svi">${c[0]}</span><div><b>${c[1]}</b><small>${c[2]}</small></div><button class="btn ${own?'':'main '}sm"${own?' disabled':` data-st="${id}"`}>${own?'Куплено ✓':'⭐ '+stPr(id)}</button></div>`}).join('');
+  }
+  return h+`<small class="sum">Оплата идёт через Telegram Stars. Звёзды покупаются в самом Telegram, их можно потратить на баланс игры или на любой товар напрямую.</small>`;
+}
+function stSheet(){
+  const id=st.sel,c=STC[id];if(!c)return '';
+  const p=stPr(id),bal=st.bal!=null?st.bal:S.sbal,poor=bal<p;
+  return `<div class="usheet" id="stsheet"><div class="sbg" data-stx="1"></div><div class="sbox"><div class="shead"><b>${c[0]} ${c[1]}</b><button class="btn sm" data-stx="1">✕</button></div>
+  <p class="sum">${c[2]}</p>${id==='vip'?`<ul class="stperk">${VIPPERK.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}
+  <div class="stprice">⭐ ${p}</div>
+  <button class="btn main cwide" id="st-bal"${poor?' disabled':''}>${poor?`На балансе ⭐ ${fmt(bal)}, не хватает ${p-bal}`:`Оплатить с баланса · ⭐ ${p}`}</button>
+  <button class="btn cwide" id="st-inv">Счёт в чат с ботом · ⭐ ${p}</button></div></div>`;
+}
+async function stLoad(){
+  if(!API||!tg||!tg.initData)return;
+  const r=await lbReq('/pay/state');st.bal=r.bal;S.sbal=r.bal;st.owned=r.owned||{};st.cat=r.cat||null;
+  if(r.vip&&r.vip>S.vip)S.vip=r.vip;else if(!r.vip)S.vip=0;
+  stOwned();save();setMax();
+}
+function stOwned(){   // восстановить разовые покупки, если на устройстве потерялось локальное состояние
+  const o=st.owned||{};
+  if(o.title_oligarch){S.sx.title_oligarch=1;if(!S.cown.includes('oligarch'))S.cown.push('oligarch')}
+  if(o.museum){S.sx.museum=1;S.hall=1}
+  if(o.collector){S.sx.collector=1;if(S.slots<MAXSLOTS)S.slots=MAXSLOTS}
+  if(o.pass){try{szState().paid=1}catch(e){}}
+  if(o.starter)S.sx.starter=1;
+}
+function stGive(min){const c=roll({min,cost:0});if(S.items.length<MAX){addItem(c.name,c.t,c.p);return `ник @${c.name}`}const v=val(c.t,c.p,c.name);S.coins=Math.min(CAP,S.coins+v);return `ник @${c.name} продан за ${fmt(v)} 🪙 (коллекция полна)`}
+function stApply(r,out){
+  const id=r.item;tickEn();
+  const pk=(coins,en,min,frame)=>{S.coins=Math.min(CAP,S.coins+coins);S.en+=en;out.push(`+${fmt(coins)} 🪙, +${en} ⚡, ${stGive(min)}`);if(frame&&!S.cown.includes('f_gold')){S.cown.push('f_gold');if(!S.cf)S.cf='f_gold'}};
+  if(id==='starter'){S.sx.starter=1;pk(4e5,20,2)}
+  else if(id==='pack_pro')pk(2.5e6,60,3);
+  else if(id==='pack_gold')pk(7e6,150,4,1);
+  else if(id==='energy60'){S.en+=60;out.push('+60 ⚡')}
+  else if(id==='vip'){out.push('👑 VIP включён')}
+  else if(id==='museum'){S.sx.museum=1;S.hall=1;out.push('🏛️ зал музея открыт')}
+  else if(id==='collector'){S.sx.collector=1;S.slots=MAXSLOTS;out.push('все места в коллекции')}
+  else if(id==='wheel5'){S.wheelx+=5;out.push('+5 кручений колеса')}
+  else if(id==='title_oligarch'){S.sx.title_oligarch=1;if(!S.cown.includes('oligarch'))S.cown.push('oligarch');S.ct='oligarch';out.push('титул «Олигарх»')}
+  else if(id==='custom_nick'){S.sx.custom=(S.sx.custom||0)+1;out.push('напиши в поддержку @ddwwks')}
+  else if(id==='pass'){try{const z=szState();if(String(z.id)===String(r.meta)||!r.meta){z.paid=1}}catch(e){}out.push('платная дорожка открыта')}
+  else if(id==='top'){S.topfree=(S.topfree||0)+1;S.toppick=1;out.push('лот в топ: выбери лот на рынке')}
+}
+async function payClaim(){
+  if(!API||!tg||!tg.initData||payClaim.b)return;payClaim.b=1;
+  try{
+    const r=await lbReq('/pay/claim',{});st.bal=r.bal;S.sbal=r.bal;if(typeof r.vip==='number'&&r.vip>0)S.vip=Math.max(S.vip,r.vip);
+    const out=[];(r.items||[]).forEach(it=>{try{stApply(it,out)}catch(e){}});
+    if(r.items&&r.items.length){st.sent='';st.msg='';st.sel='';cosFix();setMax();save();render();lb.sent='';try{sfx('ach');hap('n','success')}catch(e){}toast('✅ Покупка получена: '+out.join(' · '));
+      if(r.items.some(x=>x.item==='top')&&PAGE==='shop')setTimeout(()=>tab('market'),900)}
+    if(PAGE==='shop'&&!shEl().hidden)renderShop();
+  }catch(e){}
+  payClaim.b=0;
+}
+async function stGift(){
+  if(!vipOn()||!API||!tg||!tg.initData)return;
+  try{const r=await lbReq('/pay/vipgift',{});if(r&&r.ok){tickEn();S.coins=Math.min(CAP,S.coins+r.c);S.en+=r.e;save();render();try{sfx('coins')}catch(e){}toast(`👑 Подарок VIP: +${fmt(r.c)} 🪙 и +${r.e} ⚡`)}}catch(e){}
+}
+function stPoll(){clearInterval(stPoll.t);let n=0;stPoll.t=setInterval(async()=>{n++;await payClaim();if(!st.sent||n>60)clearInterval(stPoll.t)},3000)}
+async function stInvoice(id){
+  if(st.busy||!id)return;if(STC[id]&&stHave(id))return toast('Это уже куплено');
+  st.busy=1;st.msg='';
+  try{const r=await lbReq('/pay/invoice',{item:id});
+    if(r.ok){st.sent=id;st.sel='';toast('Счёт отправлен в чат с ботом');stPoll()}
+    else if(r.error==='nochat')st.msg='nochat';else if(r.error==='owned')toast('Это уже куплено')}
+  catch(e){toast(sherr(e))}
+  st.busy=0;renderShop();
+}
+async function stBal(id){
+  if(st.busy||!id)return;st.busy=1;
+  try{const r=await lbReq('/pay/balance',{item:id});
+    if(r.ok){st.bal=r.bal;S.sbal=r.bal;st.sel='';await payClaim()}
+    else toast(r.error==='poor'?'Не хватает звёзд на балансе':r.error==='owned'?'Это уже куплено':'Не получилось, попробуй ещё раз')}
+  catch(e){toast(sherr(e))}
+  st.busy=0;if(PAGE==='shop')renderShop();
+}
+function stClick(t){
+  const it=t.closest('[data-st]');if(it){const id=it.dataset.st;if(STC[id]&&!stHave(id)){st.sel=id;st.msg='';renderShop()}return true}
+  if(t.closest('[data-stx]')){st.sel='';renderShop();return true}
+  const tu=t.closest('[data-stup]');if(tu){stInvoice('bal'+tu.dataset.stup);return true}
+  if(t.closest('#st-inv')){stInvoice(st.sel);return true}
+  if(t.closest('#st-bal')){stBal(st.sel);return true}
+  if(t.closest('#st-chat')){try{tg.close()}catch(e){}return true}
+  if(t.closest('#st-sup')){try{tg.openTelegramLink('https://t.me/ddwwks')}catch(e){}return true}
+  if(t.closest('#st-done')){S.sx.custom=0;save();renderShop();return true}
+  return false;
+}
+if(PAGE==='shop'){try{const q=sessionStorage.getItem('nr_st');if(q){sessionStorage.removeItem('nr_st');if(STC[q])st.sel=q}}catch(e){}}
+setTimeout(async()=>{await payClaim();try{await stLoad()}catch(e){}stGift()},5000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(payClaim,600)});
+
+
+// ---------- Общий чат игры ----------
+var chat={items:[],last:0,t:0,busy:0,err:''};
+function chatRender(stick){
+  const o=document.getElementById('chatsh');if(!o)return;
+  const box=o.querySelector('.chlist');if(!box)return;
+  const near=box.scrollHeight-box.scrollTop-box.clientHeight<80;
+  box.innerHTML=chat.items.length?chat.items.map(m=>`<div class="chm${m.mine?' me':''}"><b>${m.vip?'👑 ':''}${escH(m.name)}</b><span>${escH(m.text)}</span><small>${new Date(m.ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</small></div>`).join(''):'<p class="sum" style="text-align:center">Пока никто не писал. Начни первым.</p>';
+  if(stick||near)box.scrollTop=box.scrollHeight;
+  const er=o.querySelector('.cher');if(er)er.textContent=chat.err;
+}
+async function chatPull(first){
+  if(!API||!tg||!tg.initData||!document.getElementById('chatsh'))return;
+  try{const r=await lbReq('/chat'+(chat.last&&!first?'?after='+chat.last:''));
+    if(first){chat.items=r.items}else{const nw=r.items.filter(m=>m.id>chat.last);if(nw.length)chat.items=chat.items.concat(nw).slice(-120);r.items=nw}
+    if(chat.items.length)chat.last=chat.items[chat.items.length-1].id;
+    if(first||r.items.length)chatRender(first)}catch(e){}
+}
+async function chatSend(){
+  const i=document.getElementById('chin');if(!i||chat.busy)return;const text=i.value.trim();if(!text)return;
+  chat.busy=1;chat.err='';
+  try{const r=await lbReq('/chat',{text});
+    if(r.ok){i.value='';await chatPull(false);const b=document.querySelector('#chatsh .chlist');if(b)b.scrollTop=b.scrollHeight}
+    else chat.err=r.error==='link'?'Ссылки и @юзернеймы в чате запрещены':r.error==='fast'?'Не так быстро: подожди пару секунд':r.error==='flag'?'Чат закрыт: данные не прошли проверку':'Не отправилось'}
+  catch(e){chat.err='Нет связи, попробуй ещё раз'}
+  chat.busy=0;chatRender(false);
+}
+function chatSheet(){
+  let o=document.getElementById('chatsh');if(o)o.remove();
+  o=document.createElement('div');o.id='chatsh';o.className='usheet';
+  o.innerHTML=`<div class="sbg" data-chx="1"></div><div class="sbox chbox"><div class="shead"><b>💬 Чат игроков</b><button class="btn sm" data-chx="1">✕</button></div>
+  ${API&&tg&&tg.initData?`<div class="chlist"><p class="sum" style="text-align:center">Загружаю…</p></div><div class="cher"></div>
+  <div class="chrow"><input id="chin" maxlength="200" placeholder="Сообщение…" autocomplete="off"><button class="btn main" id="chsend">➤</button></div>`:'<p class="sum">Чат доступен в Telegram: открой игру через бота.</p>'}</div>`;
+  o.onclick=e=>{if(e.target.closest('[data-chx]')){clearInterval(chat.t);return o.remove()}if(e.target.closest('#chsend'))chatSend()};
+  o.onkeydown=e=>{if(e.key==='Enter'&&e.target.id==='chin'){e.preventDefault();chatSend()}};
+  document.body.append(o);chat.last=0;chatPull(true);clearInterval(chat.t);chat.t=setInterval(()=>{if(!document.getElementById('chatsh'))return clearInterval(chat.t);if(!document.hidden)chatPull(false)},4000);
+}
+
 // ---- уведомления от бота ----
 const NTF=[[1,'🔨','Аукцион','ставку перебили, лот продан или выигран'],[2,'💰','Рынок','твой ник купили'],[4,'🎡','Бесплатное колесо','когда оно снова доступно'],[8,'⚡','Полная энергия','можно крутить бесплатно'],[16,'👋','Давно не заходил','напомнит через 3 дня'],[32,'🎉','События и сезоны','×2…×10 к наградам и новый сезон']];
 function ntfCard(){
   if(!tg||!tg.initData)return '';
-  return `<div class="pcard ntfc"><div class="ntfh"><b>Уведомления от бота</b><small>Бот пришлёт сообщение в Telegram, даже когда игра закрыта. Ночью (22–10) не пишет.</small></div>
+  return `<div class="pcard ntfc"><div class="ntfh"><b>Уведомления от бота</b><small>Бот пришлёт сообщение в Telegram, даже когда игра закрыта.</small></div>
   ${NTF.map(([b,ic,n,d])=>`<div class="ntfr"><span class="ntfi">${ic}</span><div><b>${n}</b><small>${d}</small></div><button class="sw${S.ntf&b?' on':''}" data-nt="${b}" role="switch" aria-checked="${!!(S.ntf&b)}" aria-label="${n}"><i></i></button></div>`).join('')}
   <button class="btn sm ntft" id="nt-test">Отправить тестовое сообщение</button></div>`;
 }
@@ -2560,7 +2738,7 @@ async function ntSync(fresh){
   clearTimeout(ntT);
   if(!API||!tg||!tg.initData||(!S.ntf&&!S.ntfs))return;
   const now=Date.now(),d=new Date();d.setHours(24,0,0,0);
-  const wheelAt=S.wheel===todayK()?d.getTime():0,enFull=S.en>=EN_CAP?0:now+enLeft()+(EN_CAP-S.en-1)*EN_INT;
+  const wheelAt=S.wheel===todayK()?d.getTime():0,enFull=S.en>=EN_CAP?0:now+enLeft()+(EN_CAP-S.en-1)*enInt();
   try{
     const r=await lbReq('/notify/set',{mask:S.ntf,wheelAt,enFull,tz:-d.getTimezoneOffset(),fresh:fresh?1:0});
     S.ntfs=S.ntf?1:S.ntfs;
