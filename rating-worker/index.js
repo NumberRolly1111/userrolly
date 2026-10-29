@@ -434,7 +434,7 @@ const BAD_ROOTS = ['хуй', 'хуя', 'хуе', 'хуи', 'пизд', 'ебат
 const LOOK = { a: 'а', b: 'в', c: 'с', e: 'е', h: 'н', k: 'к', m: 'м', o: 'о', p: 'р', t: 'т', x: 'х', y: 'у', ё: 'е', '0': 'о', '3': 'з', '4': 'ч', '6': 'б' };
 function chatBad(text, env) {
   const t = String(text).toLowerCase().replace(/[a-zё0346]/g, (c) => LOOK[c] || c);
-  const flat = t.replace(/[^а-я]/g, '');
+  const flat = t.replace(/(?<=[а-я])[^а-яa-z0-9\s]+(?=[а-я])/g, '');   // «х.у.й», «ху*й»: убираем знаки между буквами, но не пробелы (иначе «после бана» → «ебан»)
   const extra = String((env && env.CHAT_BAD) || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
   return [...BAD_ROOTS, ...extra].some((r) => { const rr = r.replace(/[^а-я]/g, ''); return rr && (t.includes(r) || flat.includes(rr)); });
 }
