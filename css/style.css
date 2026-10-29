@@ -1294,3 +1294,11 @@ section .usheet .sbox{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 .anmenu button small{font-size:11px;opacity:.7}.anmenu button[aria-pressed=true]{background:color-mix(in srgb,var(--blue) 22%,var(--tile));outline:2px solid var(--blue)}
 .hallrow{flex-direction:column;align-items:stretch}.hallbtns{display:flex;gap:8px}.hallbtns .btn{flex:1;min-width:0;padding-left:8px;padding-right:8px}
 .hallbtns .btn{white-space:nowrap;font-size:14px}
+/* звёздный баланс справа от монет: шапка остаётся в один ряд */
+header{flex-wrap:nowrap;gap:8px}
+.brand{flex:1 1 auto;min-width:0;gap:8px}
+.brand h1{white-space:normal;word-break:keep-all;line-height:1.1;font-size:15px;min-width:0}
+.top{flex:none;gap:6px}
+.spill{flex:none;padding-left:9px;padding-right:9px;white-space:nowrap;color:#ffe08a;cursor:pointer;font-size:13px}
+#coins{padding-left:10px;padding-right:10px;font-size:13px;white-space:nowrap}
+@media(max-width:380px){.brand h1{font-size:12.5px}.spill,#coins{padding-left:7px;padding-right:7px;font-size:12px}.top{gap:4px}}

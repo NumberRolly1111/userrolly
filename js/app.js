@@ -774,6 +774,7 @@ function collapse(els,done){els.forEach(e=>{e.style.maxHeight=e.offsetHeight+'px
 
 let shownCoins=S.coins,twRaf=0,colSel=null;
 function setCoins(){
+  const sb=$('#sbal');if(sb)sb.textContent=fmt(S.sbal||0)+' ⭐';
   const el=$('#coins'),from=shownCoins,to=S.coins;
   if(from===to){el.textContent=fmtC(to)+' 🪙';return}
   cancelAnimationFrame(twRaf);el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');
@@ -2904,6 +2905,8 @@ refInit();
 cloudLoad();
 try{window.bootDone&&bootDone()}catch(e){}   // игра готова: убираем загрузочный экран
 
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#sbal')){try{tab('shop')}catch(x){location.href='shop.html'}}});
+setTimeout(()=>{try{if(API&&tg&&tg.initData)stLoad().then(()=>setCoins()).catch(()=>{})}catch(e){}},3500);
 // подарки от админа
 async function gAuto(){
   if(!API||!tg||!tg.initData)return;
