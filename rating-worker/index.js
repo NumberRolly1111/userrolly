@@ -36,6 +36,7 @@ async function migrate(db) {   // добавляем новые столбцы �
   }
   await db.prepare('CREATE TABLE IF NOT EXISTS grants (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, amount INTEGER NOT NULL, claimed INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_grants_uid ON grants(uid, claimed)').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS nickgifts (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, name TEXT NOT NULL, claimed INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
   try {
     const mh = (await db.prepare('PRAGMA table_info(market)').all()).results.map((r) => r.name);
     if (mh.length && !mh.includes('top')) await db.prepare('ALTER TABLE market ADD COLUMN top INTEGER NOT NULL DEFAULT 0').run();
@@ -393,7 +394,7 @@ async function tgHook(req, env, json) {
     if (fresh) bg(tgApi(env, 'sendMessage', { chat_id: m.chat.id, text: it.topup ? `✅ Баланс пополнен на ${it.topup} ⭐${LAST_BONUS ? ` и ещё +${LAST_BONUS} ⭐ бонусом за первое пополнение` : ''}. Загляни в магазин игры.` : `✅ Оплата получена: ${it.t}. Открой игру, и покупка уже будет там.`, reply_markup: { inline_keyboard: [[gameBtn(env)]] } }));
     return json({ ok: true });
   }
-  if (m && typeof m.text === 'string' && m.chat && m.chat.type === 'private' && isAdmin(m.from.id, env) && /^\/(refund|buyer|ban|unban|stats|help_admin)/.test(m.text)) {
+  if (m && typeof m.text === 'string' && m.chat && m.chat.type === 'private' && isAdmin(m.from.id, env) && /^\/(refund|buyer|ban|unban|stats|givenick|help_admin)/.test(m.text)) {
     const [cmd, a1, a2, ...rest] = m.text.trim().split(/\s+/), say = (t) => tgApi(env, 'sendMessage', { chat_id: m.chat.id, text: t });
     if (cmd === '/stats') {
       const s = await salesStats(db);
@@ -414,11 +415,15 @@ async function tgHook(req, env, json) {
       const pl = await findByGid(db, a1), h = Math.max(1, Math.min(24 * 365, Number(a2) || 24));
       if (!pl) await say('Игрок не найден. Формат: /ban 123456 24 причина');
       else { await db.prepare('INSERT INTO chat_ban(uid,until,why) VALUES(?,?,?) ON CONFLICT(uid) DO UPDATE SET until=?2, why=?3').bind(pl.uid, Date.now() + h * 3600000, rest.join(' ').slice(0, 80)).run(); await say(`🔨 ${pl.name} (ID ${gidOf(pl.uid)}) в бане чата на ${h} ч`); }
+    } else if (cmd === '/givenick') {
+      const pl = await findByGid(db, a1), nm = String(a2 || '').trim();
+      if (!pl || !NICK_RE.test(nm)) await say('Формат: /givenick 123456 ник (игрок должен хотя бы раз открыть игру)');
+      else { await db.prepare('INSERT INTO nickgifts(uid,name,claimed,ts) VALUES(?,?,0,?)').bind(pl.uid, nm, Date.now()).run(); await say(`🎁 Ник @${nm} подарен: ${pl.name} (ID ${gidOf(pl.uid)}). Игрок получит его при следующем входе в игру`); }
     } else if (cmd === '/unban') {
       const pl = await findByGid(db, a1);
       if (pl) await db.prepare('DELETE FROM chat_ban WHERE uid=?').bind(pl.uid).run();
       await say(pl ? `✅ ${pl.name} разбанен` : 'Игрок не найден');
-    } else await say('Команды админа:\n/stats: продажи\n/buyer ID: покупки игрока\n/refund НОМЕР: вернуть платёж\n/ban ID часы причина\n/unban ID');
+    } else await say('Команды админа:\n/stats: продажи\n/buyer ID: покупки игрока\n/refund НОМЕР: вернуть платёж\n/ban ID часы причина\n/unban ID\n/givenick ID ник: подарить ник');
     return json({ ok: true });
   }
   if (m && typeof m.text === 'string' && m.text.startsWith('/start') && m.chat && m.chat.type === 'private') {
@@ -506,6 +511,17 @@ async function handle(req, env) {
         if (url.pathname === '/admin/unban') await env.DB.prepare('DELETE FROM chat_ban WHERE uid=?').bind(pl.uid).run();
         else await env.DB.prepare('INSERT INTO chat_ban(uid,until,why) VALUES(?,?,?) ON CONFLICT(uid) DO UPDATE SET until=?2, why=?3').bind(pl.uid, Date.now() + Math.max(1, Math.min(8760, Number(b.hours) || 24)) * 3600000, String(b.why || '').slice(0, 80)).run();
         return json({ ok: true, name: pl.name });
+      }
+      if (url.pathname === '/admin/nick' && req.method === 'POST') {   // подарить игроку ник: {id (6-значный ID), name, uid?}
+        let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
+        const id = String(b.id || '').replace(/\D/g, ''), name = String(b.name || '').trim();
+        if (!id || !NICK_RE.test(name)) return json({ error: 'bad' }, 400);
+        let rows = await find(id);
+        if (b.uid) rows = rows.filter((r) => r.uid === String(b.uid));
+        if (!rows.length) return json({ error: 'nouser' }, 404);
+        if (rows.length > 1) return json({ error: 'many', players: rows }, 409);
+        await env.DB.prepare('INSERT INTO nickgifts(uid,name,claimed,ts) VALUES(?,?,0,?)').bind(rows[0].uid, name, Date.now()).run();
+        return json({ ok: true, name: rows[0].name, uid: rows[0].uid, nick: name });
       }
       if (url.pathname === '/admin/grant' && req.method === 'POST') {
         let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
@@ -791,7 +807,14 @@ async function handle(req, env) {
         if (u.meta.changes) sum += r.amount;
       }
       if (sum > 0) await env.DB.prepare('UPDATE players SET allow = allow + ? WHERE uid=?').bind(sum, uid).run();
-      return json({ sum });
+      // подаренные ники: выдаём не больше, чем влезает в коллекцию (room), остальные ждут
+      let bq = {}; try { bq = await req.json(); } catch {}
+      const room = Math.max(0, Math.min(10, Math.trunc(Number(bq.room)) || 0)), nicks = [];
+      if (room > 0) {
+        const ng = (await env.DB.prepare('SELECT id,name FROM nickgifts WHERE uid=? AND claimed=0 ORDER BY id LIMIT ?').bind(uid, room).all()).results;
+        for (const g of ng) { const u = await env.DB.prepare('UPDATE nickgifts SET claimed=1 WHERE id=? AND claimed=0').bind(g.id).run(); if (u.meta.changes) nicks.push(g.name); }
+      }
+      return json({ sum, nicks });
     }
     // ---- друзья ----
     const REF_MAX = 20;

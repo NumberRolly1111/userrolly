@@ -2907,7 +2907,8 @@ try{window.bootDone&&bootDone()}catch(e){}   // игра готова: убир�
 // подарки от админа
 async function gAuto(){
   if(!API||!tg||!tg.initData)return;
-  try{const r=await lbReq('/grants/claim',{});
+  try{const r=await lbReq('/grants/claim',{room:Math.max(0,MAX-S.items.length)});
+    if(r&&r.nicks&&r.nicks.length){r.nicks.forEach(n=>{const sc=score(n);addItem(n,sc.t,sc.p)});save();render();try{sfx('ach');buyFx(r.nicks.map(n=>({i:'@',t:'@'+n,s:'подарок от админа · '+T[score(n).t].n,c:T[score(n).t].c})))}catch(e){toast('Подарок: ник @'+r.nicks[0])}}
     if(r&&r.sum){S.coins=Math.max(0,S.coins+r.sum);save();render();try{sfx('coins')}catch(e){}toast(r.sum>0?`Подарок: +${fmt(r.sum)} 🪙`:`Списано: ${fmt(-r.sum)} 🪙`)}}catch(e){}
 }
 setTimeout(()=>{gAuto();auClaim()},6000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(gAuto,800)});
