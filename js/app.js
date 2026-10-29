@@ -1043,7 +1043,7 @@ function upSkeleton(){
     <div class="hist"><div class="hstrip" id="hstrip"></div><button class="hlink" id="up-hist">История ›</button></div>
     <p class="hint">Выбери ники из коллекции и цель. Шанс = цена ставки ÷ цена цели × 0,9. Не повезёт — ставка сгорит.</p>
   </div>
-  <p class="sum adc">Реклама в игре: <b>@ddwwks</b></p>
+  <div class="pcard adc"><b>Хотите разместить рекламу?</b><small>Напишите в поддержку: @ddwwks</small><button class="btn main cwide" id="ad-sup">Написать</button></div>
   <div class="pcard sndrow"><div><b>Страховка</b><small id="ins-sub"></small></div><button class="sw" id="up-ins" role="switch" aria-checked="false" aria-label="Страховка"><i></i></button></div>
   <button class="spin" id="up-main">Выбрать из коллекции</button>
   <div class="upres" id="upres"></div>
@@ -2767,6 +2767,7 @@ function adShow(){
   document.body.append(o);lbReq('/ads/hit',{id:a.id,k:'v'}).catch(()=>{});setTimeout(()=>{if(o.isConnected)close()},9000);
 }
 setTimeout(async()=>{await adLoad();setTimeout(adShow,2000);setInterval(adShow,240000);setInterval(adLoad,900000)},25000);
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#ad-sup')){try{tg.openTelegramLink('https://t.me/ddwwks')}catch(x){window.open('https://t.me/ddwwks','_blank')}}});
 // ---------- История покупок ----------
 async function histSheet(){
   let o=document.getElementById('hissh');if(o)o.remove();

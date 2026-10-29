@@ -1274,4 +1274,4 @@ section .usheet .sbox{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 #adb .adg{width:32px;height:32px;border-radius:10px;background:var(--blue);color:#fff;font-weight:800;flex:none}
 #adb .adx{width:26px;height:26px;opacity:.6;flex:none}
 @keyframes adup{from{opacity:0;transform:translateY(40px)}}@keyframes addn{to{opacity:0;transform:translateY(40px)}}
-.adc{text-align:center;opacity:.7;margin-top:12px}
+.adc{margin-top:12px;display:grid;gap:4px}.adc small{opacity:.75}
