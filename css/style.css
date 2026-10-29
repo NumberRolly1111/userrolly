@@ -1292,3 +1292,5 @@ section .usheet .sbox{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 .anmenu[hidden]{display:none}
 .anmenu button{display:grid;gap:1px;text-align:left;padding:8px 10px;border-radius:11px}
 .anmenu button small{font-size:11px;opacity:.7}.anmenu button[aria-pressed=true]{background:color-mix(in srgb,var(--blue) 22%,var(--tile));outline:2px solid var(--blue)}
+.hallrow{flex-direction:column;align-items:stretch}.hallbtns{display:flex;gap:8px}.hallbtns .btn{flex:1;min-width:0;padding-left:8px;padding-right:8px}
+.hallbtns .btn{white-space:nowrap;font-size:14px}

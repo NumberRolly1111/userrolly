@@ -2227,7 +2227,7 @@ function hallPlate(){
   const cfg=hallCfg(),own=!!S.hall;
   return `<div class="pcard hallpl">${hallSvg(own?cfg:{f:'f_concrete',w:'w_concrete',l:'l_bulb'},own?hallExNames():[],'pl',own?hallDec():{})}
   <div class="hallrow"><div><b>${own?'Мой зал':'Свой зал в музее'}</b><small>${own?'Интерьер, свет и твои экспонаты':'Нужен, чтобы ставить ники в музей и получать доход'}</small></div>
-  <button class="btn main" id="hall-go">${own?'Мой зал':'Купить · '+fmt(HALL_PRICE)+' 🪙'}</button>${own?'':'<button class="btn cwide" data-stgo="museum">⭐ Или за звёзды</button>'}</div></div>`;
+  <div class="hallbtns"><button class="btn main" id="hall-go">${own?'Мой зал':'Купить · '+fmt(HALL_PRICE)+' 🪙'}</button>${own?'':'<button class="btn" data-stgo="museum">⭐ Или за звёзды</button>'}</div></div></div>`;
 }
 function hallSheet(close){
   let sh=document.getElementById('hallsh');
