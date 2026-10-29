@@ -808,7 +808,6 @@ function boom(col,tr=3){
 }
 function rareFx(col,tr){
   const f=document.createElement('div');f.className='rfl';f.style.setProperty('--rc',col);document.body.append(f);setTimeout(()=>f.remove(),1100);
-  if(tr>=5){document.body.classList.add('shk');setTimeout(()=>document.body.classList.remove('shk'),550)}
 }
 function tick(){
   cx.clearRect(0,0,fx.width,fx.height);

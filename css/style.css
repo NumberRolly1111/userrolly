@@ -1369,3 +1369,5 @@ body.shk{animation:shk .5s}
 /* выбор ников после ×3/×5: последний неполный ряд по центру */
 .picks{display:flex;flex-wrap:wrap;justify-content:center}
 .picks>*{flex:0 0 calc((100% - 16px)/3);min-width:0}
+
+body.shk{animation:none!important}
