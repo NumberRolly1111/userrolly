@@ -1365,7 +1365,7 @@ function renderProf(){
   <div class="lvrow"><b>Уровень ${S.lvl}</b><small>${fmt(S.xp)} / ${fmt(need)} опыта</small></div>
   <div class="xbar"><i style="width:${pct}%"></i></div>
   <div class="path"><span class="pi">🧭</span><b>Путь игрока</b><small>${S.lvl+1} ур.: +${fmt(nr.c)} 🪙 и +${nr.e} ⚡</small></div>
-  <div class="tri"><div><small>Капитал</small><b>${S.coins>=1e9?short(S.coins):fmtC(S.coins)} 🪙</b></div><div><small>Коллекция</small><b>${S.items.length} из ${S.slots}</b></div><div><small>Витрины</small><b>${doneV} из ${SHOW.length}</b></div></div>${vitHtml()}</div>
+  <div class="tri"><div><small>Капитал</small><b>${S.coins>=1e9?short(S.coins):S.coins>=1e6?tz((S.coins/1e6).toFixed(1))+' млн':fmtC(S.coins)} 🪙</b></div><div><small>Коллекция</small><b>${S.items.length} из ${S.slots}</b></div><div><small>Витрины</small><b>${doneV} из ${SHOW.length}</b></div></div>${vitHtml()}</div>
   ${(()=>{try{return albumCard()}catch(e){return ''}})()}
   <div class="ptiles">
     <button class="ptile" id="clan-open"><span class="pti">🛡️</span><b>Кланы</b><small>${cl.me&&cl.me.clan?escH('['+(cl.me.clan.tag||'')+'] '+(cl.me.clan.name||'')):'Вступи или создай'}</small></button>

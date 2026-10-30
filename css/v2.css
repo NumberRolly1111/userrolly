@@ -60,3 +60,14 @@ html.v2 .pcard:active{transform:scale(.995)}
 @keyframes rry{from{opacity:0;transform:rotate(0) scale(.4)}25%{opacity:.9}to{opacity:0;transform:rotate(40deg) scale(1)}}
 html.v2 .stage.hit{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.02)),var(--paper);border:1px solid var(--tc)}
 html.v2 body{background-image:radial-gradient(120% 50% at 50% -8%,color-mix(in srgb,var(--blue) 30%,transparent) 0,transparent 62%),radial-gradient(70% 40% at 100% 100%,color-mix(in srgb,var(--blue) 14%,transparent) 0,transparent 70%)}
+/* ключевые карточки — как рулетка на главной: неоновая рамка + свечение */
+html.v2 .pcard.pro,html.v2 .pcard.vipc,html.v2 .pcard.luckc,html.v2 .pcard.cnc,html.v2 .pcard.cmain,html.v2 .pcard.holc{
+  border:1px solid transparent;
+  background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.015)) padding-box,linear-gradient(var(--paper),var(--paper)) padding-box,linear-gradient(135deg,color-mix(in srgb,var(--blue) 80%,#fff),rgba(255,255,255,.08) 40%,rgba(180,85,255,.7)) border-box;
+  box-shadow:0 30px 70px -28px color-mix(in srgb,var(--blue) 70%,#000),0 0 40px -18px var(--blue)}
+html.v2 .pcard.vipc{background:linear-gradient(180deg,rgba(255,201,51,.1),rgba(255,255,255,.015)) padding-box,linear-gradient(var(--paper),var(--paper)) padding-box,linear-gradient(135deg,#FFD23F,rgba(255,255,255,.08) 40%,#FF9F1C) border-box;box-shadow:0 30px 70px -28px rgba(255,190,40,.55),0 0 40px -18px #FFC933}
+html.v2 .pcard.luckc{background:linear-gradient(180deg,rgba(60,220,120,.1),rgba(255,255,255,.015)) padding-box,linear-gradient(var(--paper),var(--paper)) padding-box,linear-gradient(135deg,#36e07c,rgba(255,255,255,.08) 40%,#1fb85c) border-box;box-shadow:0 30px 70px -28px rgba(40,220,110,.5),0 0 40px -18px #36e07c}
+html.v2 .pcard.holc{background:linear-gradient(180deg,rgba(255,138,61,.12),rgba(255,255,255,.015)) padding-box,linear-gradient(var(--paper),var(--paper)) padding-box,linear-gradient(135deg,#FF8A3D,rgba(255,255,255,.08) 40%,#FF5F2E) border-box;box-shadow:0 30px 70px -28px rgba(255,120,40,.5),0 0 40px -18px #FF8A3D}
+html.v2 .ptitle,html.v2 h2.ptitle{letter-spacing:-.01em}
+html.v2 .lbme{border:1px solid var(--blue);box-shadow:0 0 30px -8px var(--blue),0 12px 30px -14px #000}
+html.v2 .podium>*,html.v2 .pod>*{filter:drop-shadow(0 14px 22px rgba(0,0,0,.5))}
