@@ -1490,7 +1490,7 @@ function tabIn(n){
   if(n==='guide')renderGuide();
   if(n==='season')try{renderSeason()}catch(e){}
   if(n==='games')try{renderGames()}catch(e){}
-  if(n==='battles')try{renderBattles();btLoad()}catch(e){}
+  if(n==='battles')try{if(!bt.room)btLoad();else renderBattles()}catch(e){}
   if(n==='fair')try{renderFair()}catch(e){}
   scrollTo(0,0);setTimeout(ptFix,30);
 }
@@ -2622,7 +2622,7 @@ var RKS=[[0,54.7,'💀','Мимо'],[1.5,28,'🪙','×1,5'],[2,13,'💰','×2'],
 function rkEnsure(){const k=todayK();if(!S.rk||typeof S.rk!=='object'||S.rk.d!==k)S.rk={d:k,n:0};return S.rk}
 function rkRoll(){let r=Math.random()*100;for(let i=0;i<RKS.length;i++){r-=RKS[i][1];if(r<0)return i}return 0}
 var RK_L=4,RK_P=.48;   // лесенка: до 4 удвоений, шанс каждого 48%
-const rkRefresh=()=>{const el=$('#tab-bon');if(el)el._h='';renderBon()};
+const rkRefresh=()=>{const el=$('#tab-bon');if(el)el._h='';renderBon();try{const g=$('#tab-games');if(g){g._h='';renderGames()}}catch(e){}};
 const RK_W=74,RK_G=8;
 const rkCell=i=>`<div class="rkc rc${i}" style="width:${RK_W}px"><i>${RKS[i][2]}</i><b>${RKS[i][3]}</b></div>`;
 const rkIdle=()=>[0,1,0,2,0,3,0,1,0,4,0,2,0,1,0];
@@ -2637,7 +2637,7 @@ function rkPlay(){
   if(q.n>=RK_DAY)return toast('На сегодня попытки закончились');
   if(S.coins<stake)return toast('Не хватает монет на ставку');
   const w=rkRoll();S.coins-=stake;q.n++;S.rkN=(S.rkN|0)+1;save();setCoins();bon.busy=true;rk.res='';rk.last=stake;rk.lw=-1;
-  const reel=document.getElementById('rkreel'),strip=document.getElementById('rkstrip'),btn=document.querySelector('#tab-bon [data-b="xrk"]');
+  const reel=document.getElementById('rkreel'),strip=document.getElementById('rkstrip'),btn=document.querySelector('[data-b="xrk"]');
   if(btn)btn.disabled=true;
   if(!reel||!strip){setTimeout(()=>fin(),50)}
   else{   // короткий плавный выезд результата под указатель
@@ -2675,18 +2675,11 @@ function xBon(b){
   else if(k==='xrks'){rk.st=+b.dataset.v;rk.res='';rkRefresh()}
   else if(k==='xrk')rkPlay();else if(k==='xrkc')rkCash();else if(k==='xrkd')rkDouble();
 }
-function extraBon(){
+function riskHtml(){
   let h='';
-  const x=holNow(),nx=holNext();S.hol=S.hol&&typeof S.hol==='object'?S.hol:{};
-  if(x){const got=S.hol[x.key];h+=`<div class="pcard holc"><div class="holh"><span>${x.h[1]}</span><div><b>${x.h[2]}</b><small>праздничный подарок</small></div></div>${got?'<button class="btn" disabled>Подарок получен ✓</button>':`<button class="btn main" data-b="xhol">Забрать: ${fmt(x.h[7])} 🪙 и ${x.h[8]} ⚡</button>`}</div>`}
-  else if(nx)h+=`<div class="pcard holc"><div class="holh"><span>${nx.h[1]}</span><div><b>${nx.h[2]}</b><small>через ${nx.days} ${dw(nx.days)}: подарок ${kfmt(nx.h[7])} 🪙</small></div></div></div>`;
-  const d=dcEnsure();
-  h+=`<details class="pcard fold" data-fold="dc"${fo('dc',1)}><summary class="bhead"><h3>🎯 Челлендж дня</h3><span class="bsub">${d.got.filter(Boolean).length} из 2${S.dcS?` · серия ${S.dcS} дн.`:''}</span></summary>${hintCard('dc')}`+
-    [0,1].map(i=>{const q=DCH[d.ids[i]],p=dcProg(i),ok=p>=q.n;return `<div class="quest${d.got[i]?' got':''}"><div class="qtop"><b>${q.t}</b><span>${fmt(q.c)} 🪙 · ${q.e} ⚡</span></div><div class="qbar"><i style="width:${p/q.n*100}%"></i></div><div class="qbot"><small>${p} / ${q.n}</small>${d.got[i]?'<em>Получено ✓</em>':ok?`<button class="btn main sm" data-b="xdc" data-v="${i}">Забрать</button>`:''}</div></div>`}).join('')+
-    `<p class="sum">Выполни оба: +150 000 🪙 и серия дней подряд. Новые задания каждый день.</p></details>`;
   const q=rkEnsure(),stake=RK_ST[rk.st],left=RK_DAY-q.n,pot=S.rkp>0?S.rkp:0,stp=S.rkS|0,hist=(Array.isArray(S.rkH)?S.rkH:[]).slice().reverse();
   const wr=S.rkN?Math.round((S.rkWin|0)/S.rkN*100):0;
-  h+=`<details class="pcard fold" data-fold="rk"${fo('rk',0)}><summary class="bhead"><h3>🎲 Крутка с риском</h3><span class="bsub">${pot?'ждёт выигрыш!':`осталось ${left} из ${RK_DAY}`}</span></summary>${hintCard('risk')}
+  h+=`<div class="pcard rkcard"><div class="bhead"><h3>🎲 Крутка с риском</h3><span class="bsub">${pot?'ждёт выигрыш!':`осталось ${left} из ${RK_DAY}`}</span></div>${hintCard('risk')}
     ${rkReelHtml()}
     <div class="rkleg">${RKS.map((s,i)=>`<span class="rl${i}"><i>${s[2]}</i>${s[3]} <small>${String(s[1]).replace('.',',')}%</small></span>`).join('')}</div>`+
   (pot?`<div class="rkpot"><small>Твой выигрыш</small><b class="rkcoin">🪙</b><strong>${fmt(pot)} 🪙</strong>
@@ -2697,7 +2690,19 @@ function extraBon(){
   `${rk.res?`<p class="rkres">${rk.res}</p>`:''}
     ${hist.length?`<div class="rkh"><small>Последние:</small>${hist.map(m=>`<i class="${m?(m>=5?'big':'w'):'l'}">${m?'×'+String(m).replace('.',','):'✕'}</i>`).join('')}</div>`:''}
     <div class="rkst"><div><b>${fmt(S.rkN|0)}</b><small>игр</small></div><div><b>${wr}%</b><small>побед</small></div><div><b>×${String(S.rkW|0).replace('.',',')}</b><small>лучший</small></div><div><b>${kfmt(S.rkBig|0)}</b><small>рекорд</small></div><div><b>${S.rkStr|0}</b><small>серия</small></div></div>
-    <p class="sum">Выиграл? Забери сразу или рискни выигрышем: удвоение с шансом ${Math.round(RK_P*100)}%, лесенка до ×${2<<(RK_L-1)}. Проиграл удвоение, выигрыш сгорает. Невзятый выигрыш не пропадает и ждёт тебя здесь.</p></details>`;
+    <p class="sum">Выиграл? Забери сразу или рискни выигрышем: удвоение с шансом ${Math.round(RK_P*100)}%, лесенка до ×${2<<(RK_L-1)}. Проиграл удвоение, выигрыш сгорает. Невзятый выигрыш не пропадает и ждёт тебя здесь.</p></div>`;
+  return h;
+}
+function extraBon(){
+  let h='';
+  const x=holNow(),nx=holNext();S.hol=S.hol&&typeof S.hol==='object'?S.hol:{};
+  if(x){const got=S.hol[x.key];h+=`<div class="pcard holc"><div class="holh"><span>${x.h[1]}</span><div><b>${x.h[2]}</b><small>праздничный подарок</small></div></div>${got?'<button class="btn" disabled>Подарок получен ✓</button>':`<button class="btn main" data-b="xhol">Забрать: ${fmt(x.h[7])} 🪙 и ${x.h[8]} ⚡</button>`}</div>`}
+  else if(nx)h+=`<div class="pcard holc"><div class="holh"><span>${nx.h[1]}</span><div><b>${nx.h[2]}</b><small>через ${nx.days} ${dw(nx.days)}: подарок ${kfmt(nx.h[7])} 🪙</small></div></div></div>`;
+  const d=dcEnsure();
+  h+=`<details class="pcard fold" data-fold="dc"${fo('dc',1)}><summary class="bhead"><h3>🎯 Челлендж дня</h3><span class="bsub">${d.got.filter(Boolean).length} из 2${S.dcS?` · серия ${S.dcS} дн.`:''}</span></summary>${hintCard('dc')}`+
+    [0,1].map(i=>{const q=DCH[d.ids[i]],p=dcProg(i),ok=p>=q.n;return `<div class="quest${d.got[i]?' got':''}"><div class="qtop"><b>${q.t}</b><span>${fmt(q.c)} 🪙 · ${q.e} ⚡</span></div><div class="qbar"><i style="width:${p/q.n*100}%"></i></div><div class="qbot"><small>${p} / ${q.n}</small>${d.got[i]?'<em>Получено ✓</em>':ok?`<button class="btn main sm" data-b="xdc" data-v="${i}">Забрать</button>`:''}</div></div>`}).join('')+
+    `<p class="sum">Выполни оба: +150 000 🪙 и серия дней подряд. Новые задания каждый день.</p></details>`;
+  try{h+=gmPlaque()}catch(e){}
   return h;
 }
 function renderBon(){
@@ -2722,7 +2727,6 @@ function renderBon(){
       return `<div class="quest${q.got?' got':''}"><div class="qtop"><b>${d.t(q.n)}</b><span>${fmt(d.r)} 🪙</span></div>${d.h?`<small class="qh">${d.h}</small>`:''}<div class="qbar"><i style="width:${q.p/q.n*100}%"></i></div>`+
       `<div class="qbot"><small>${q.p} / ${q.n}</small>${q.got?'<em>Получено ✓</em>':ok?`<button class="btn main sm" data-b="quest" data-i="${i}">Забрать</button>`:''}</div></div>`}).join('')+`</details>`;
   try{h+=promoCard()}catch(e){}
-  try{h+=gmPlaque()}catch(e){}
   if(el._h!==h){
     el.innerHTML=h;el._h=h;
     const fr=bon.fresh;bon.fresh=false;
@@ -3326,7 +3330,7 @@ var LIM={lot:3,gs:8};
 function limGet(){const k=todayK();if(!S.lim||typeof S.lim!=='object'||S.lim.d!==k)S.lim={d:k,lot:0,gs:0};return S.lim}
 function limLeft(k){return Math.max(0,LIM[k]-(limGet()[k]|0))}
 function limUse(k){limGet()[k]=(limGet()[k]|0)+1;save()}
-function gmReady(){return (limLeft('lot')>0&&S.coins>=LOTP?1:0)+(limLeft('gs')>0&&S.coins>=GSC?1:0)+(wsLeft()>0?1:0)+(S.btn|0)}
+function gmReady(){return (limLeft('lot')>0&&S.coins>=LOTP?1:0)+(limLeft('gs')>0&&S.coins>=GSC?1:0)+(wsLeft()>0?1:0)+(S.btn|0)+(S.rkp>0?1:0)}
 function gmPlaque(){const n=gmReady();
   return `<button class="gmplq" id="gm-open"><span class="gmi">🎮</span><div><b>Игры: <em>${n?'ждут '+n:'пока нет новых'}</em></b><small>Лотерея, дороже или дешевле, найди слова, кейсы, батлы</small></div><span class="gma">›</span></button>`}
 var gmv='main';
@@ -3335,26 +3339,29 @@ function gmHtml(){
   const card=(id,ic,t,d,meta,cc,extra)=>`<button class="gmc" ${id?`id="${id}"`:''} ${extra||''} style="--cc:${cc}"><span class="gmci">${ic}</span><b>${t}</b><small>${d}</small><span class="gmm">${meta}</span></button>`;
   let body;
   if(gmv==='cases')body=`<div class="bcases">${casesHtml()}</div>`;
+  else if(gmv==='risk')body=riskHtml();
   else body=`<h4 class="gmh">Мини-игры</h4><div class="gmg">`+
     card('lot-open','🎟️','Лотерея','Найди три одинаковых из девяти',`${limLeft('lot')} из ${LIM.lot} сегодня · ${fmt(LOTP)} 🪙`,'#FFC933')+
     card('gs-open','🔎','Дороже или дешевле','Угадай ник: серия верных — награда',`${limLeft('gs')} из ${LIM.gs} забегов · ${fmt(GSC)} 🪙`,'#27D9BD')+
     card('ws-open','🔤','Найди слова','Сетка 10×10, в конце колесо ×1,2–10',`${wsLeft()} из ${WS_DAY} забегов · бесплатно`,'#FF8A3D')+
     `</div><h4 class="gmh">Игры на удачу</h4><div class="gmg">`+
     card('','🧳','Кейсы','Тематические кейсы, шансы открыты',`Открыто: ${fmt(S.casen)}`,'#8B7CFF','data-gm="cases"')+
+    card('','🎲','Крутка с риском','Выиграй множитель и рискни им',S.rkp>0?'<i class="gmdot"></i>ждёт выигрыш':`${RK_DAY-rkEnsure().n} из ${RK_DAY} сегодня`,'#FFB62E','data-gm="risk"')+
     card('','⚔️','Батлы','Открывай кейсы против игроков — забирай всё',S.btn?`<i class="gmdot"></i>результатов: ${S.btn}`:'создай свой','#FF5F7A','data-gm="bt"')+
     `</div><button class="gmfair" data-gm="fair">🛡 Честная игра <span>как всё работает и какие шансы</span></button>
     <p class="gmage"><b>18+</b> Игры на удачу идут на виртуальные монеты и вещи внутри игры. Они не приносят реальных денег и не обменяются на них. Играй в меру.</p>`;
-  return `<div class="ahead"><button class="btn sm" data-gm="${gmv==='cases'?'main':'back'}">‹ ${gmv==='cases'?'Игры':'Бонусы'}</button><h2>${gmv==='cases'?'Кейсы':'Игры'}</h2></div><div class="gmpage">${body}</div>`;
+  return `<div class="ahead"><button class="btn sm" data-gm="${gmv==='cases'||gmv==='risk'?'main':'back'}">‹ ${gmv==='cases'||gmv==='risk'?'Игры':'Бонусы'}</button><h2>${gmv==='cases'?'Кейсы':gmv==='risk'?'Крутка с риском':'Игры'}</h2></div><div class="gmpage">${body}</div>`;
 }
 function renderGames(){
-  const el=document.getElementById('tab-games');if(!el||el.hidden)return;
+  const el=document.getElementById('tab-games');if(!el||el.hidden||bon.busy)return;
   const h=gmHtml();if(el._h!==h){el.innerHTML=h;el._h=h}
 }
 document.addEventListener('click',e=>{
   const g=e.target.closest&&e.target.closest('#tab-games [data-gm]');if(!g)return;const k=g.dataset.gm;
   if(k==='back')return tab('bon');
-  if(k==='main'||k==='cases'){gmv=k;const el=$('#tab-games');if(el)el._h='';renderGames();return scrollTo(0,0)}
+  if(k==='main'||k==='cases'||k==='risk'){gmv=k;const el=$('#tab-games');if(el)el._h='';renderGames();return scrollTo(0,0)}
   if(k==='bt')return tab('battles');
+  if(k==='risk'){gmv='risk';const el=$('#tab-games');if(el)el._h='';renderGames();return scrollTo(0,0)}
   if(k==='fair'){fgFrom='games';return tab('fair')}
 });
 setInterval(()=>{const el=$('#tab-games');if(el&&!el.hidden&&!document.querySelector('.usheet:not([hidden])'))renderGames()},1500);
@@ -3373,75 +3380,128 @@ function renderFair(){
   <button class="btn cwide" data-fgx="1">Назад</button></div>`;
 }
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#tab-fair [data-fgx]'))tab(fgFrom==='battles'?'battles':'games')});
-// --- Батлы ---
-var bt={open:[],mine:[],busy:false,res:null,cid:'start',err:'',load:false};
-const BTCIDS=['start','rare','all','star','abyss'],btCase=id=>CASES.find(c=>c.id===id);
+// --- Батлы в реальном времени ---
+var bt={open:[],mine:[],busy:false,err:'',load:false,cid:'start',n:1,custom:false,off:0,room:null};
+const BTCIDS=['start','rare','all','star','abyss'],btCase=id=>CASES.find(c=>c.id===id),BT_NS=[1,3,5,10],BT_MAX=20;
 const btOk=()=>!!(API&&tg&&tg.initData);
-async function btPoll(){if(!btOk())return;try{const r=await lbReq('/battle/list');bt.open=r.open||[];bt.mine=r.mine||[];S.btn=bt.mine.filter(x=>x.st==='done').length}catch(e){}}
-async function btLoad(){bt.load=true;bt.err='';btSheet();if(!btOk()){bt.err='Батлы работают только внутри Telegram';bt.load=false;return btSheet()}
-  try{await btPoll()}catch(e){bt.err='Не удалось загрузить батлы'}bt.load=false;btSheet()}
+const btNow=()=>Date.now()+bt.off;
+async function btPoll(){if(!btOk())return;try{const r=await lbReq('/battle/list');bt.open=r.open||[];bt.mine=r.mine||[];if(r.now)bt.off=r.now-Date.now();S.btn=bt.mine.filter(x=>x.st==='ready'||x.st==='live').length}catch(e){}}
+async function btLoad(){bt.load=true;bt.err='';renderBattles();if(!btOk()){bt.err='Батлы работают только внутри Telegram';bt.load=false;return renderBattles()}
+  try{await btPoll()}catch(e){bt.err='Не удалось загрузить батлы'}bt.load=false;renderBattles()}
 function btGive(list){for(const x of list){if(S.items.length<MAX){addItem(x.name,x.t,x.p)}else{S.coins=Math.min(CAP,S.coins+x.v);S.sold++}S.best=Math.max(S.best,x.t);try{noteBest(x.v,x.name)}catch(e){}}}
-function btShow(win,mine,theirs,who,price){bt.res={win,mine,theirs,who,price};btSheet()}
+const btRoll=(c,n)=>Array.from({length:n},()=>{const pr=P(poolOf(rollTier(c)));return {name:pr.name,t:pr.t,p:pr.p,v:pr.price}});
 async function btCreate(){
-  const c=btCase(bt.cid);if(!c||bt.busy||S.coins<c.price)return;bt.busy=true;btSheet();
-  try{const pr=P(poolOf(rollTier(c)));
-    await lbReq('/battle/create',{cid:c.id,name:pr.name,t:pr.t,p:pr.p,v:pr.price});
-    S.coins-=c.price;save();render();sfx('tap');toast('Батл создан: ждём соперника')}
+  const c=btCase(bt.cid),n=Math.max(1,Math.min(BT_MAX,bt.n|0)),cost=c.price*n;if(!c||bt.busy||S.coins<cost)return;bt.busy=true;renderBattles();
+  try{const r=await lbReq('/battle/create',{cid:c.id,n,pulls:btRoll(c,n)});
+    S.coins-=cost;save();render();sfx('tap');toast('Батл создан: ждём соперника');bt.busy=false;await btPoll();return btEnter(r.id)}
   catch(e){toast(/many/.test(e.message)?'Уже есть 3 открытых батла':'Не получилось создать батл')}
   bt.busy=false;await btLoad()}
-async function btAccept(id,cid){
-  const c=btCase(cid);if(!c||bt.busy)return;if(S.coins<c.price)return toast('Не хватает монет');bt.busy=true;btSheet();
-  try{const pr=P(poolOf(rollTier(c))),r=await lbReq('/battle/accept',{id,name:pr.name,t:pr.t,p:pr.p,v:pr.price});
-    S.coins-=c.price;const me={name:r.o.name,t:r.o.t,p:r.o.p,v:r.o.v},he={name:r.c.name,t:r.c.t,p:r.c.p,v:r.c.v};
-    if(r.win==='o')btGive([me,he]);else if(r.win==='t')btGive([me]);
-    save();render();sfx(r.win==='o'?'ach':'tap');hap('n',r.win==='o'?'success':'light');
-    bt.open=bt.open.filter(x=>x.id!==id);btShow(r.win==='o'?'win':r.win==='t'?'tie':'lose',me,he,r.cn,c.price)}
-  catch(e){toast(/gone|own/.test(e.message)?'Батл уже занят':'Не получилось принять батл');bt.busy=false;return btLoad()}
-  bt.busy=false;btSheet()}
-async function btClaim(id){
-  if(bt.busy)return;bt.busy=true;btSheet();
-  try{const r=await lbReq('/battle/claim',{id}),me={name:r.c.name,t:r.c.t,p:r.c.p,v:r.c.v},he={name:r.o.name,t:r.o.t,p:r.o.p,v:r.o.v};
-    if(r.win==='c')btGive([me,he]);else if(r.win==='t')btGive([me]);
-    S.btn=Math.max(0,(S.btn|0)-1);save();render();sfx(r.win==='c'?'ach':'tap');hap('n',r.win==='c'?'success':'light');
-    bt.mine=bt.mine.filter(x=>x.id!==id);btShow(r.win==='c'?'win':r.win==='t'?'tie':'lose',me,he,r.on,r.price)}
-  catch(e){toast('Результат уже получен')}
+async function btAccept(id,cid,n){
+  const c=btCase(cid);if(!c||bt.busy)return;if(S.coins<c.price*n)return toast('Не хватает монет');bt.busy=true;renderBattles();
+  try{await lbReq('/battle/accept',{id,pulls:btRoll(c,n)});S.coins-=c.price*n;save();render();sfx('tap');bt.busy=false;await btPoll();return btEnter(id)}
+  catch(e){toast(/gone|own/.test(e.message)?'Батл уже занят':'Не получилось принять батл')}
   bt.busy=false;await btLoad()}
 async function btCancel(id){
-  if(bt.busy)return;bt.busy=true;btSheet();
+  if(bt.busy)return;bt.busy=true;renderBattles();
   try{const r=await lbReq('/battle/cancel',{id});S.coins=Math.min(CAP,S.coins+r.price);save();render();toast('Батл отменён, монеты возвращены')}catch(e){toast('Батл уже не отменить')}
-  bt.busy=false;await btLoad()}
-function btSheet(){renderBattles()}
+  bt.busy=false;btLeave();await btLoad()}
+// комната батла
+async function btEnter(id){
+  bt.room={id,d:null,round:-1,built:false,claimed:false,res:null,tm:0};renderBattles();btRoomPoll()}
+function btLeave(){if(bt.room){clearTimeout(bt.room.tm);clearInterval(bt.room.iv)}bt.room=null;renderBattles();btLoad()}
+async function btRoomPoll(){
+  const R0=bt.room;if(!R0)return;
+  try{const d=await lbReq('/battle/get?id='+R0.id);if(bt.room!==R0)return;if(d.now)bt.off=d.now-Date.now();R0.d=d;
+    if(d.st==='cancel'){toast('Батл отменён');return btLeave()}
+    if(d.st==='open'){R0.built=false;renderBattles();R0.tm=setTimeout(btRoomPoll,1800);return}
+    if(!R0.built){R0.built=true;renderBattles();R0.iv=setInterval(btTick,160)}
+  }catch(e){R0.tm=setTimeout(btRoomPoll,2500)}
+}
+const btSide=(x,cls)=>`<div class="btsd ${cls}"><b class="btnm"></b><div class="btrl"><i class="btptr"></i><div class="btst"></div></div><div class="btlist"></div><div class="bttot">0 🪙</div></div>`;
+function btFill(side,seq,RI,anim){   // лента с кейсом: перебор ников и остановка на выпавшем
+  const st=side.querySelector('.btst');if(!st)return;
+  st.innerHTML=seq.map(x=>`<div class="btc" style="--tc:${T[x.t].c}"><b>@${escH(x.name.slice(0,9))}</b><small>${T[x.t].s||T[x.t].n}</small></div>`).join('');
+  const W=92,G=6,xe=-Math.round(RI*(W+G)+W/2);
+  st.style.transition='none';st.style.transform=`translateX(${anim?-Math.round(W/2):xe}px)`;void st.offsetWidth;
+  if(anim){st.style.transition='transform 4.2s cubic-bezier(.08,.72,.12,1)';st.style.transform=`translateX(${xe}px)`}
+}
+function btTick(){
+  const R0=bt.room;if(!R0||!R0.d||R0.d.st==='open')return;const d=R0.d,el=document.getElementById('btroom');if(!el)return;
+  const t=btNow()-d.t0,n=d.n,RD=d.round,info=el.querySelector('.btinfo'),sides=[el.querySelector('.btsd.me'),el.querySelector('.btsd.he')],arr=[d.mine,d.his];
+  if(t<0){info.textContent='Старт через '+Math.ceil(-t/1000)+' с';return}
+  const r=Math.min(n-1,Math.floor(t/RD)),w=t-r*RD,done=t>=n*RD;
+  // доиграть пропущенные раунды без анимации (если зашёл поздно)
+  const ensure=(k)=>{const li=sides[0].querySelector('.btlist');while(R0.shown<k){const i=R0.shown;sides.forEach((sd,si)=>{const x=arr[si][i];sd.querySelector('.btlist').insertAdjacentHTML('beforeend',`<span style="--tc:${T[x.t].c}">@${escH(x.name)}</span>`)});R0.shown++;btTotals(el,d,R0.shown)}};
+  if(R0.shown==null)R0.shown=0;
+  if(!done){
+    ensure(r);
+    if(R0.round!==r){R0.round=r;
+      sides.forEach((sd,si)=>{const x=arr[si][r],c=btCase(d.cid),RI=22,seq=Array.from({length:30},(_,i)=>i===RI?x:(()=>{const pr=P(poolOf(rollTier(c)));return {name:pr.name,t:pr.t}})());btFill(sd,seq,RI,w<400)});
+      el.querySelectorAll('.btsd').forEach(sd=>sd.classList.remove('rv'));
+      if(w<400){sfx('tick',r);hap('i','light')}else{btFill(sides[0],[...Array(23)].map(()=>arr[0][r]),22,false);btFill(sides[1],[...Array(23)].map(()=>arr[1][r]),22,false)}
+    }
+    info.textContent=`Раунд ${r+1} из ${n}`+(w<4400?' · открываем кейс':'');
+    if(w>=4400&&R0.shown===r){ensure(r+1);sides.forEach(sd=>sd.classList.add('rv'));const a=arr[0][r].v,b=arr[1][r].v;sides[0].classList.toggle('rwin',a>b);sides[1].classList.toggle('rwin',b>a);sfx('tier',Math.max(arr[0][r].t,arr[1][r].t));hap('n','success')}
+    return}
+  ensure(n);info.textContent='Батл завершён';
+  if(t>=n*RD+d.tail&&!R0.claimed){R0.claimed=true;btClaim()}
+}
+function btTotals(el,d,k){[d.mine,d.his].forEach((a,i)=>{const sd=el.querySelectorAll('.btsd')[i];sd.querySelector('.bttot').textContent=fmt(a.slice(0,k).reduce((t,x)=>t+x.v,0))+' 🪙'})}
+async function btClaim(){
+  const R0=bt.room;if(!R0)return;
+  try{const r=await lbReq('/battle/claim',{id:R0.id});btGive(r.give);S.btn=Math.max(0,(S.btn|0)-1);save();render();
+    sfx(r.res==='win'?'ach':'tap');hap('n',r.res==='win'?'success':'light');if(r.res==='win')boom('#FFC933',4);R0.res={res:r.res,cnt:r.give.length};clearInterval(R0.iv);renderBattles()}
+  catch(e){if(/wait/.test(e.message)){R0.claimed=false}else{R0.res={res:'done',cnt:0};clearInterval(R0.iv);renderBattles()}}
+}
 function renderBattles(){
   const sh=document.getElementById('tab-battles');if(!sh)return;
   if(!sh._on){sh._on=1;
     sh.addEventListener('click',e=>{
-      if(e.target.closest('[data-btx]'))return tab('games');
       const q=s=>e.target.closest(s);let b;
-      if(q('#bt-ok')){bt.res=null;return btSheet()}
-      if(b=q('[data-btc]')){bt.cid=b.dataset.btc;return btSheet()}
+      if(q('[data-btx]'))return bt.room?btLeave():tab('games');
+      if(q('#bt-ok'))return btLeave();
+      if(b=q('[data-btc]')){bt.cid=b.dataset.btc;return renderBattles()}
+      if(b=q('[data-btn]')){bt.custom=false;bt.n=+b.dataset.btn;return renderBattles()}
+      if(q('#bt-cu')){bt.custom=true;return renderBattles()}
       if(q('#bt-new'))return btCreate();
-      if(b=q('[data-bta]'))return btAccept(+b.dataset.bta,b.dataset.bc);
-      if(b=q('[data-btk]'))return btClaim(+b.dataset.btk);
+      if(b=q('[data-bta]'))return btAccept(+b.dataset.bta,b.dataset.bc,+b.dataset.bn);
+      if(b=q('[data-btk]'))return btEnter(+b.dataset.btk);
       if(b=q('[data-btd]'))return btCancel(+b.dataset.btd);
       if(q('#bt-fair')){fgFrom='battles';return tab('fair')}
-    })}
-  const eh=escH,c0=btCase(bt.cid),pull=(x,cl)=>`<div class="btp ${cl}" style="--tc:${T[x.t].c}"><small>${T[x.t].n}</small><b>@${eh(x.name)}</b><span>${fmt(x.v)} 🪙</span></div>`;
-  let body;
-  if(bt.res){const r=bt.res,tt=r.win==='win'?'🏆 Победа! Оба ника твои':r.win==='tie'?'🤝 Ничья: каждый оставил свой':'Проиграл: ник ушёл сопернику';
-    body=`<div class="btres b-${r.win}"><b>${tt}</b></div><div class="btvs">${pull(r.mine,'me')}<i>VS</i>${pull(r.theirs,'he')}</div><small class="btwho">Соперник: ${eh(r.who||'Игрок')}</small><button class="btn main cwide" id="bt-ok">Ок</button>`}
-  else{
+    });
+    sh.addEventListener('input',e=>{if(e.target.id==='bt-num'){bt.n=Math.max(1,Math.min(BT_MAX,Math.floor(+e.target.value)||1));const c=btCase(bt.cid),nb=document.getElementById('bt-new');if(nb){nb.textContent=S.coins<c.price*bt.n?`Не хватает ${fmt(c.price*bt.n-S.coins)} 🪙`:`Создать батл · ${fmt(c.price*bt.n)} 🪙`;nb.disabled=S.coins<c.price*bt.n||bt.busy||!btOk()}}});
+  }
+  const eh=escH,R0=bt.room;let body;
+  if(R0){
+    const d=R0.d;
+    if(!d||d.st==='open'){const c=d&&btCase(d.cid);body=`<div class="btwait"><div class="btspin"></div><b>Ждём соперника…</b><small>${c?`${c.ic} ${c.n} ×${d.n} · ${fmt(d.price*d.n)} 🪙`:''}</small><p>Как только кто-то примет батл, откроется комната и начнётся розыгрыш.</p>${d?`<button class="btn" data-btd="${d.id}">Отменить батл</button>`:''}</div>`}
+    else if(R0.res){const rr=R0.res,tt=rr.res==='win'?'🏆 Победа! Все ники твои':rr.res==='tie'?'🤝 Ничья: каждый оставил свои':rr.res==='lose'?'Проиграл: ники ушли сопернику':'Результат получен';
+      body=`<div class="btinfo">Батл завершён</div>${btRoomHtml(d)}<div class="btres b-${rr.res==='win'?'win':rr.res==='lose'?'lose':'tie'}"><b>${tt}</b>${rr.cnt?`<small>получено ников: ${rr.cnt}</small>`:''}</div><button class="btn main cwide" id="bt-ok">К батлам</button>`}
+    else body=`<div class="btinfo">Старт скоро</div>${btRoomHtml(d)}<small class="btwho">Не закрывай страницу: результат получишь в конце автоматически</small>`;
+  }else{
+    const c0=btCase(bt.cid),n=Math.max(1,Math.min(BT_MAX,bt.n|0)),cost=c0.price*n;
     const chips=BTCIDS.map(id=>{const c=btCase(id);return `<button class="btch${bt.cid===id?' on':''}" data-btc="${id}" style="--cc:${c.c}">${c.ic}<b>${c.n}</b><small>${fmt(c.price)} 🪙</small></button>`}).join('');
-    const rowOpen=x=>{const c=btCase(x.cid)||{ic:'📦',n:x.cid};return `<div class="btrow"><span class="bti">${c.ic}</span><div><b>${eh(x.cn)}</b><small>${c.n} · ${agoT(x.ts)}</small></div><button class="btn main sm" data-bta="${x.id}" data-bc="${x.cid}"${bt.busy||S.coins<x.price?' disabled':''}>Принять · ${fmt(x.price)}</button></div>`};
-    const rowMine=x=>{const c=btCase(x.cid)||{ic:'📦',n:x.cid};return `<div class="btrow"><span class="bti">${c.ic}</span><div><b>${c.n}</b><small>${x.st==='done'?'соперник нашёлся':'ждёт соперника · '+agoT(x.ts)}</small></div>${x.st==='done'?`<button class="btn main sm" data-btk="${x.id}"${bt.busy?' disabled':''}>Результат</button>`:`<button class="btn sm" data-btd="${x.id}"${bt.busy?' disabled':''}>Отменить</button>`}</div>`};
-    body=`<p class="cdesc3">Выбери кейс и создай батл. Когда соперник примет, вы оба откроете такой кейс. У кого ник дороже, тот забирает оба.</p>
+    const ns=BT_NS.map(k=>`<button class="btn sm${!bt.custom&&bt.n===k?' main':''}" data-btn="${k}">${k}</button>`).join('')+`<button class="btn sm${bt.custom?' main':''}" id="bt-cu">Своё</button>`;
+    const rowOpen=x=>{const c=btCase(x.cid)||{ic:'📦',n:x.cid};return `<div class="btrow"><span class="bti">${c.ic}</span><div><b>${eh(x.cn)}</b><small>${c.n} ×${x.n} · ${agoT(x.ts)}</small></div><button class="btn main sm" data-bta="${x.id}" data-bc="${x.cid}" data-bn="${x.n}"${bt.busy||S.coins<x.price*x.n?' disabled':''}>Принять · ${fmt(x.price*x.n)}</button></div>`};
+    const rowMine=x=>{const c=btCase(x.cid)||{ic:'📦',n:x.cid};const lab=x.st==='open'?'ждёт соперника · '+agoT(x.ts):x.st==='live'?'идёт прямо сейчас':'завершён, забери результат';
+      return `<div class="btrow"><span class="bti">${c.ic}</span><div><b>${c.n} ×${x.n}</b><small>${lab}</small></div>${x.st==='open'?`<button class="btn sm" data-btd="${x.id}"${bt.busy?' disabled':''}>Отменить</button>`:`<button class="btn main sm" data-btk="${x.id}">${x.st==='live'?'Смотреть':'Результат'}</button>`}</div>`};
+    body=`<p class="cdesc3">Выбери кейс и сколько раз его открыть, потом создай батл. Когда соперник примет, вы вместе в реальном времени откроете кейсы раунд за раундом. У кого сумма дороже, тот забирает все ники.</p>
     <div class="btchips">${chips}</div>
-    <button class="btn main cwide" id="bt-new"${bt.busy||!btOk()||S.coins<c0.price?' disabled':''}>${bt.busy?'Подожди…':S.coins<c0.price?`Не хватает ${fmt(c0.price-S.coins)} 🪙`:`Создать батл · ${fmt(c0.price)} 🪙`}</button>
+    <h4 class="gmh">Сколько кейсов</h4><div class="btns">${ns}</div>
+    ${bt.custom?`<input id="bt-num" class="btnum" type="number" inputmode="numeric" min="1" max="${BT_MAX}" value="${bt.n}" placeholder="от 1 до ${BT_MAX}">`:''}
+    <button class="btn main cwide" id="bt-new"${bt.busy||!btOk()||S.coins<cost?' disabled':''}>${bt.busy?'Подожди…':S.coins<cost?`Не хватает ${fmt(cost-S.coins)} 🪙`:`Создать батл · ${fmt(cost)} 🪙`}</button>
     ${bt.err?`<div class="pcard lbmsg"><small>${eh(bt.err)}</small></div>`:''}
     ${bt.mine.length?`<h4 class="gmh">Мои батлы</h4>${bt.mine.map(rowMine).join('')}`:''}
     <h4 class="gmh">Открытые батлы</h4>${bt.load?'<div class="pcard lbmsg"><small>Загружаю…</small></div>':bt.open.length?bt.open.map(rowOpen).join(''):'<div class="pcard lbmsg"><small>Пока никто не ждёт. Создай свой батл.</small></div>'}
     <button class="gmfair" id="bt-fair">🛡 Честная игра <span>шансы и правила</span></button>`}
-    sh.innerHTML=`<div class="ahead"><button class="btn sm" data-btx="1">‹ Игры</button><h2>Батлы</h2></div><div class="gmpage">${body}</div>`;
+  sh.innerHTML=`<div class="ahead"><button class="btn sm" data-btx="1">‹ ${R0?'К батлам':'Игры'}</button><h2>Батлы</h2></div><div class="gmpage${R0&&R0.res?' fin':''}" id="btroom">${body}</div>`;
+  if(R0&&R0.d&&R0.d.st!=='open'){const el=document.getElementById('btroom'),d=R0.d,sd=el.querySelectorAll('.btsd');
+    sd[0].querySelector('.btnm').textContent=d.myName+' (ты)';sd[1].querySelector('.btnm').textContent=d.hisName;
+    R0.shown=0;R0.round=-1;btTotals(el,d,0);
+    if(R0.res){R0.shown=null;const arr=[d.mine,d.his];sd.forEach((s2,i)=>{s2.querySelector('.btlist').innerHTML=arr[i].map(x=>`<span style="--tc:${T[x.t].c}">@${eh(x.name)}</span>`).join('')});btTotals(el,d,d.n);sd[0].classList.toggle('rwin',d.win===d.me);sd[1].classList.toggle('rwin',d.win!==d.me&&d.win!=='t')}}
 }
+function btRoomHtml(d){return `<div class="btvs2">${btSide(d,'me')}<i>VS</i>${btSide(d,'he')}</div>`}
+setInterval(()=>{const el=document.getElementById('tab-battles');if(!el||el.hidden||bt.room)return;btPoll().then(()=>{if(!bt.room&&!el.hidden&&!bt.busy){const live=bt.mine.find(x=>x.st==='live'&&x.t0&&btNow()-x.t0<8000&&bt.seen!==x.id);if(live){bt.seen=live.id;btEnter(live.id)}else renderBattles()}})},3000);
 setTimeout(btPoll,4000);setInterval(btPoll,90000);
 
 document.addEventListener('click',e=>{});
@@ -3454,3 +3514,5 @@ document.addEventListener('click',e=>{});
   const L=mk(-1),R2=mk(1),upd=()=>{const m=el.scrollWidth-el.clientWidth;L.hidden=el.scrollLeft<8;R2.hidden=el.scrollLeft>m-8||m<8};
   el.addEventListener('scroll',upd,{passive:true});addEventListener('resize',upd);setInterval(upd,800);upd();
 })();
+
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#tab-games [data-b]');if(!b||b.disabled||bon.busy)return;if(/^x/.test(b.dataset.b))xBon(b)});

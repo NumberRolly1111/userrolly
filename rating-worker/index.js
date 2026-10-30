@@ -55,8 +55,8 @@ async function migrate(db) {   // добавляем новые столбцы �
   await db.prepare('CREATE TABLE IF NOT EXISTS promo_use (code TEXT NOT NULL, uid TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (code, uid))').run();
   await db.prepare("INSERT OR IGNORE INTO promos(code,kind,val,n,max,exp,uses,ts) VALUES('NAMEROULETTE','case','star',1,0,0,0,0)").run();
   await db.prepare('CREATE TABLE IF NOT EXISTS chat (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, name TEXT NOT NULL DEFAULT \'\', text TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0)').run();
-  await db.prepare("CREATE TABLE IF NOT EXISTS battles (id INTEGER PRIMARY KEY AUTOINCREMENT, cid TEXT NOT NULL, price INTEGER NOT NULL DEFAULT 0, cu TEXT NOT NULL, cn TEXT NOT NULL DEFAULT '', cname TEXT NOT NULL DEFAULT '', ct INTEGER NOT NULL DEFAULT 0, cp INTEGER NOT NULL DEFAULT 0, cv INTEGER NOT NULL DEFAULT 0, ou TEXT NOT NULL DEFAULT '', onm TEXT NOT NULL DEFAULT '', oname TEXT NOT NULL DEFAULT '', ot INTEGER NOT NULL DEFAULT 0, op INTEGER NOT NULL DEFAULT 0, ov INTEGER NOT NULL DEFAULT 0, st TEXT NOT NULL DEFAULT 'open', win TEXT NOT NULL DEFAULT '', cclaim INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)").run();
-  await db.prepare('CREATE INDEX IF NOT EXISTS idx_battles ON battles(st, ts)').run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS battles2 (id INTEGER PRIMARY KEY AUTOINCREMENT, cid TEXT NOT NULL, price INTEGER NOT NULL DEFAULT 0, n INTEGER NOT NULL DEFAULT 1, cu TEXT NOT NULL, cn TEXT NOT NULL DEFAULT '', cj TEXT NOT NULL DEFAULT '', ou TEXT NOT NULL DEFAULT '', onm TEXT NOT NULL DEFAULT '', oj TEXT NOT NULL DEFAULT '', st TEXT NOT NULL DEFAULT 'open', win TEXT NOT NULL DEFAULT '', cclaim INTEGER NOT NULL DEFAULT 0, oclaim INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0, t0 INTEGER NOT NULL DEFAULT 0)").run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_battles2 ON battles2(st, ts)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS acct (uid TEXT PRIMARY KEY, bal INTEGER NOT NULL DEFAULT 0, vip INTEGER NOT NULL DEFAULT 0, vgift TEXT NOT NULL DEFAULT \'\')').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, item TEXT NOT NULL, meta TEXT NOT NULL DEFAULT \'\', stars INTEGER NOT NULL DEFAULT 0, charge TEXT UNIQUE, via TEXT NOT NULL DEFAULT \'tg\', ts INTEGER NOT NULL DEFAULT 0, claimed INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_purch_uid ON purchases(uid, claimed)').run();
@@ -379,52 +379,77 @@ async function salesStats(db) {
   return { paid: { total: all.tg, spentFromBalance: all.bal, count: all.n, buyers: users.n }, refunded: ref, d1: await win(864e5), d7: await win(7 * 864e5), d30: await win(30 * 864e5), items, top: buyers.map((b) => ({ gid: gidOf(b.uid), name: b.name || '', stars: b.s, n: b.n })) };
 }
 
-// ---- Батлы: двое открывают один и тот же кейс, у кого дороже ник, тот забирает оба ----
+// ---- Батлы в реальном времени: оба видят одни и те же раунды по серверному времени ----
 const BT_PRICE = { start: 5200, rare: 25000, all: 52000, star: 185000, abyss: 650000 };
+const BT_ROUND = 6500, BT_LEAD = 3500, BT_TAIL = 2000, BT_MAXN = 20;
 async function battleRoutes(url, req, env, uid, json) {
   const db = env.DB, now = Date.now(), P = url.pathname;
   const body = async () => { try { return await req.json(); } catch { return {}; } };
-  const pull = (b) => ({ name: String(b.name || '').replace(/[<>&"'\\]/g, '').slice(0, 32), t: int(b.t, 6) ?? 0, p: int(b.p, 100000) ?? 0, v: int(b.v, 2e9) ?? 0 });
+  const pulls = (b, n) => {
+    if (!Array.isArray(b.pulls) || b.pulls.length !== n) return null;
+    const out = [];
+    for (const x of b.pulls) {
+      const name = String((x && x.name) || '').replace(/[<>&"'\\]/g, '').slice(0, 32);
+      if (!name) return null;
+      out.push({ name, t: int(x.t, 6) ?? 0, p: int(x.p, 100000) ?? 0, v: int(x.v, 2e9) ?? 0 });
+    }
+    return out;
+  };
   const nameOf = async () => { const r = await db.prepare('SELECT name FROM players WHERE uid=?').bind(uid).first(); return (r && r.name) || 'Игрок'; };
+  const endOf = (r) => r.t0 + r.n * BT_ROUND + BT_TAIL;
+  const sum = (a) => a.reduce((t, x) => t + x.v, 0);
   if (P === '/battle/list' && req.method === 'GET') {
-    const open = (await db.prepare("SELECT id,cid,price,cn,ts FROM battles WHERE st='open' AND cu<>? AND ts>? ORDER BY id DESC LIMIT 30").bind(uid, now - 48 * 36e5).all()).results;
-    const mine = (await db.prepare("SELECT id,cid,price,st,ts FROM battles WHERE cu=? AND (st='open' OR (st='done' AND cclaim=0)) ORDER BY id DESC LIMIT 20").bind(uid).all()).results;
-    return json({ open, mine });
+    const open = (await db.prepare("SELECT id,cid,price,n,cn,ts FROM battles2 WHERE st='open' AND cu<>? AND ts>? ORDER BY id DESC LIMIT 30").bind(uid, now - 48 * 36e5).all()).results;
+    const rows = (await db.prepare("SELECT id,cid,price,n,st,ts,t0,cu,cclaim,oclaim FROM battles2 WHERE (cu=?1 AND (st IN ('open','live') OR (st='done' AND cclaim=0))) OR (ou=?1 AND (st='live' OR (st='done' AND oclaim=0))) ORDER BY id DESC LIMIT 20").bind(uid).all()).results;
+    const mine = rows.map((r) => ({ id: r.id, cid: r.cid, price: r.price, n: r.n, ts: r.ts, t0: r.t0, st: r.st === 'live' && now >= r.t0 + r.n * BT_ROUND + BT_TAIL ? 'ready' : r.st === 'done' ? 'ready' : r.st }));
+    return json({ open, mine, now });
   }
   if (P === '/battle/create' && req.method === 'POST') {
-    const b = await body(), price = BT_PRICE[b.cid];
-    if (!price) return json({ error: 'case' }, 400);
-    const n = await db.prepare("SELECT COUNT(*) AS n FROM battles WHERE cu=? AND st='open'").bind(uid).first();
-    if (n.n >= 3) return json({ error: 'many' });
-    const c = pull(b);
-    if (!c.name) return json({ error: 'bad' }, 400);
-    const r = await db.prepare('INSERT INTO battles(cid,price,cu,cn,cname,ct,cp,cv,ts) VALUES(?,?,?,?,?,?,?,?,?)').bind(b.cid, price, uid, await nameOf(), c.name, c.t, c.p, c.v, now).run();
-    return json({ ok: true, id: r.meta.last_row_id, price });
+    const b = await body(), price = BT_PRICE[b.cid], n = int(b.n, BT_MAXN);
+    if (!price || !n || n < 1) return json({ error: 'case' }, 400);
+    const c = pulls(b, n);
+    if (!c) return json({ error: 'bad' }, 400);
+    const k = await db.prepare("SELECT COUNT(*) AS n FROM battles2 WHERE cu=? AND st='open'").bind(uid).first();
+    if (k.n >= 3) return json({ error: 'many' });
+    const r = await db.prepare('INSERT INTO battles2(cid,price,n,cu,cn,cj,ts) VALUES(?,?,?,?,?,?,?)').bind(b.cid, price, n, uid, await nameOf(), JSON.stringify(c), now).run();
+    return json({ ok: true, id: r.meta.last_row_id, price, n });
   }
   if (P === '/battle/cancel' && req.method === 'POST') {
     const b = await body(), id = int(b.id, 2e9);
-    const r = await db.prepare("UPDATE battles SET st='cancel' WHERE id=? AND cu=? AND st='open'").bind(id, uid).run();
+    const r = await db.prepare("UPDATE battles2 SET st='cancel' WHERE id=? AND cu=? AND st='open'").bind(id, uid).run();
     if (!r.meta.changes) return json({ error: 'gone' });
-    const row = await db.prepare('SELECT price FROM battles WHERE id=?').bind(id).first();
-    return json({ ok: true, price: row.price });
+    const row = await db.prepare('SELECT price,n FROM battles2 WHERE id=?').bind(id).first();
+    return json({ ok: true, price: row.price * row.n });
   }
   if (P === '/battle/accept' && req.method === 'POST') {
-    const b = await body(), id = int(b.id, 2e9), o = pull(b);
-    if (!o.name) return json({ error: 'bad' }, 400);
-    const row = await db.prepare("SELECT cid,price,cu FROM battles WHERE id=? AND st='open'").bind(id).first();
+    const b = await body(), id = int(b.id, 2e9);
+    const row = await db.prepare("SELECT cid,price,n,cu,cj FROM battles2 WHERE id=? AND st='open'").bind(id).first();
     if (!row) return json({ error: 'gone' });
     if (row.cu === uid) return json({ error: 'own' });
-    const r = await db.prepare("UPDATE battles SET st='done', ou=?1, onm=?2, oname=?3, ot=?4, op=?5, ov=?6, win=CASE WHEN ?6>cv THEN 'o' WHEN ?6<cv THEN 'c' ELSE 't' END WHERE id=?7 AND st='open' AND cu<>?1").bind(uid, await nameOf(), o.name, o.t, o.p, o.v, id).run();
+    const o = pulls(b, row.n);
+    if (!o) return json({ error: 'bad' }, 400);
+    const c = JSON.parse(row.cj), cs = sum(c), os = sum(o), win = os > cs ? 'o' : os < cs ? 'c' : 't', t0 = now + BT_LEAD;
+    const r = await db.prepare("UPDATE battles2 SET st='live', ou=?1, onm=?2, oj=?3, win=?4, t0=?5 WHERE id=?6 AND st='open' AND cu<>?1").bind(uid, await nameOf(), JSON.stringify(o), win, t0, id).run();
     if (!r.meta.changes) return json({ error: 'gone' });
-    const f = await db.prepare('SELECT * FROM battles WHERE id=?').bind(id).first();
-    return json({ ok: true, win: f.win, price: f.price, cn: f.cn, c: { name: f.cname, t: f.ct, p: f.cp, v: f.cv }, o: { name: f.oname, t: f.ot, p: f.op, v: f.ov } });
+    return json({ ok: true, id, now, t0 });
+  }
+  if (P === '/battle/get' && req.method === 'GET') {
+    const id = int(url.searchParams.get('id'), 2e9), r = await db.prepare('SELECT * FROM battles2 WHERE id=?').bind(id).first();
+    if (!r || (r.cu !== uid && r.ou !== uid)) return json({ error: 'gone' }, 404);
+    if (r.st === 'open' || r.st === 'cancel') return json({ id, st: r.st, n: r.n, cid: r.cid, price: r.price, now });
+    const me = r.cu === uid ? 'c' : 'o', c = JSON.parse(r.cj), o = JSON.parse(r.oj);
+    return json({ id, st: r.st, n: r.n, cid: r.cid, price: r.price, now, t0: r.t0, round: BT_ROUND, tail: BT_TAIL, me, myName: me === 'c' ? r.cn : r.onm, hisName: me === 'c' ? r.onm : r.cn, mine: me === 'c' ? c : o, his: me === 'c' ? o : c, win: r.win });
   }
   if (P === '/battle/claim' && req.method === 'POST') {
-    const b = await body(), id = int(b.id, 2e9);
-    const r = await db.prepare("UPDATE battles SET cclaim=1 WHERE id=? AND cu=? AND st='done' AND cclaim=0").bind(id, uid).run();
-    if (!r.meta.changes) return json({ error: 'gone' });
-    const f = await db.prepare('SELECT * FROM battles WHERE id=?').bind(id).first();
-    return json({ ok: true, win: f.win, price: f.price, on: f.onm, c: { name: f.cname, t: f.ct, p: f.cp, v: f.cv }, o: { name: f.oname, t: f.ot, p: f.op, v: f.ov } });
+    const b = await body(), id = int(b.id, 2e9), r = await db.prepare('SELECT * FROM battles2 WHERE id=?').bind(id).first();
+    if (!r || (r.cu !== uid && r.ou !== uid) || r.st === 'open' || r.st === 'cancel') return json({ error: 'gone' });
+    if (now < endOf(r)) return json({ error: 'wait' });
+    const me = r.cu === uid ? 'c' : 'o', col = me === 'c' ? 'cclaim' : 'oclaim';
+    const u = await db.prepare(`UPDATE battles2 SET ${col}=1, st='done' WHERE id=? AND ${col}=0`).bind(id).run();
+    if (!u.meta.changes) return json({ error: 'gone' });
+    const c = JSON.parse(r.cj), o = JSON.parse(r.oj), mine = me === 'c' ? c : o, his = me === 'c' ? o : c;
+    const res = r.win === 't' ? 'tie' : r.win === me ? 'win' : 'lose';
+    return json({ ok: true, res, mine, his, give: res === 'win' ? [...mine, ...his] : res === 'tie' ? mine : [] });
   }
   return json({ error: 'not found' }, 404);
 }
