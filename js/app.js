@@ -10,7 +10,7 @@ const subTabs=(g,a)=>`<div class="ptabs" role="tablist">${SUBS[g].filter(([k])=>
 function ptFix(){document.querySelectorAll('.ptabs').forEach(p=>{const b=p.querySelector('[aria-selected=true]');if(b&&p.scrollWidth>p.clientWidth){p.style.scrollBehavior='auto';p.scrollLeft=b.offsetLeft-(p.clientWidth-b.offsetWidth)/2;p.style.scrollBehavior=''}})}
 try{const g=document.getElementById('gsub');if(g)g.innerHTML=SUBS.stock.filter(([k])=>k!=='show'&&k!=='museum').map(([k,l])=>`<button role="tab" data-sub="${k}"${k==='craft'?' data-craft="1"':''} aria-selected="false">${l}</button>`).join('')}catch(e){}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-sub]');if(!b)return;const k=b.dataset.sub;if(k==='craft')return;tab(k)});
-const NAVMAP={game:'game',col:'col',up:'col',show:'col',museum:'col',shop:'shop',market:'shop',auction:'shop',top:'top',clan:'top',prof:'prof',ach:'prof',guide:'prof',help:'prof'};
+const NAVMAP={game:'game',col:'col',up:'col',show:'col',museum:'col',shop:'shop',market:'shop',auction:'shop',top:'top',clan:'top',prof:'more',ach:'more',guide:'more',help:'more'};
 // отступ сверху под системную панель Telegram («Закрыть», «…»): берём из SDK, иначе запасной
 function safeTop(){
   let t=0;try{t=((tg.safeAreaInset||{}).top||0)+((tg.contentSafeAreaInset||{}).top||0)}catch(e){}
@@ -1503,7 +1503,15 @@ function tabIn(n){
   if(n==='fair')try{renderFair()}catch(e){}
   scrollTo(0,0);setTimeout(ptFix,30);
 }
-document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+const MORE=[['prof','Профиль','Уровень, витрина, настройки'],['ach','Достижения','Награды за прогресс'],['bon','Бонусы и игры','Колесо, мини-игры, кейсы, батлы'],['season','Сезонный пропуск','50 уровней наград'],['market','Рынок','Купить и продать ники игрокам'],['auction','Аукцион','Торги за редкие ники'],['craft','Контракт','Обменять несколько ников на один'],['battles','Батлы','Кейсы против соперника'],['museum','Музей','Ники на витрине славы, доход'],['show','Витрины','Собери набор — получи награду'],['clan','Кланы','Вступи в клан или создай свой'],['guide','Гид','Как играть'],['help','Помощь','Вопросы и поддержка']];
+function moreSheet(){
+  let el=document.getElementById('more-sheet');if(el)el.remove();
+  el=document.createElement('div');el.className='usheet';el.id='more-sheet';
+  el.innerHTML=`<div class="sbg" data-mx="1"></div><div class="sbox moresb"><div class="mgrab"></div><div class="shead"><b>Ещё</b><button class="btn sm" data-mx="1">✕</button></div><p class="msub">Всё остальное в игре — в одно нажатие</p><div class="mlist">${MORE.map(([k,t,d])=>`<button class="mrow"${k==='craft'?' data-craft="1"':''} data-mgo="${k}"><span><b>${t}</b><small>${d}</small></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>`).join('')}</div></div>`;
+  document.body.append(el);
+  el.onclick=e=>{if(e.target.closest('[data-mx]'))return el.remove();const g=e.target.closest('[data-mgo]');if(!g)return;const k=g.dataset.mgo;el.remove();if(k==='craft')return;sfx('tap');tab(k)};
+}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='more'){sfx('tap');return moreSheet()}tab(b.dataset.tab)});
 // ---------- Рейтинг игроков ----------
 // Рейтинг работает через маленький сервер (папка rating-worker). Пока адрес не указан, страница показывает подсказку.
 const API='https://rt.wsmp.workers.dev';   // например: https://nr-rating.твой-аккаунт.workers.dev
@@ -3062,7 +3070,7 @@ function stHtml(){
       return `<div class="pcard svc stit${dis?' own':''}${id==='ceo'?' excs':''}"${dis?'':` data-st="${id}"`}><span class="svi">${c[0]}</span><div>${id==='ceo'?'<em class="exct">ЭКСКЛЮЗИВ</em>':''}<b>${c[1]}</b><small>${ds}</small></div><button class="btn ${dis?'':'main '}sm"${dis?' disabled':` data-st="${id}"`}>${own?'Куплено ✓':out?'Раскуплен':'⭐ '+fmt(stPr(id))}</button></div>`}).join('');
   }
   h+=`<div class="stbh"><b><i></i>Звёздный баланс</b><span>на балансе ⭐ ${fmt(bal)}</span></div>${st.first?'<div class="stfirst">🎁 Первое пополнение: +10% звёзд в подарок</div>':''}<div class="stgrid">${STUP.map(n=>`<button class="stp${n===100?' hot':''}" data-stup="${n}">${n===100?'<em>выбор игроков</em>':''}<b>+${fmt(n)} ⭐</b><small>${fmt(n)} ${n===1?'звезда':'звёзд'} Telegram${st.first&&n>=10?` · +${Math.floor(n/10)} ⭐ бонус`:''}</small></button>`).join('')}</div>`;
-  return h+`<small class="sum">Оплата идёт через Telegram Stars. Звёзды покупаются в самом Telegram, их можно потратить на баланс игры или на любой товар напрямую.</small>`;
+  return h+`<div class="stnote"><b>Про звёзды</b><p>Звёзды тратятся только внутри игры, вывода нет.</p><p>Бесплатно их не раздают: они приходят только с оплаты звёздами Telegram и с продаж на рынке.</p><p>Если покупку вернули, всё, что за неё выдано, списывается обратно.</p></div>`;
 }
 function stSheet(){
   const id=st.sel,c=STC[id];if(!c)return '';

@@ -1622,3 +1622,12 @@ body.shk{animation:none!important}
 .mopt i{width:10px;height:10px;border-radius:50%;background:var(--tc)}.mopt span{flex:1}.mopt b{color:var(--mute);margin-left:6px}.mopt em{font-style:normal;color:#8f9cf0}
 .mopt.on{border-color:#8f9cf0;background:rgba(143,156,240,.16)}
 .ainfo .big{overflow-wrap:anywhere;line-height:1.1}
+
+.moresb{padding-top:10px;max-height:86dvh}.mgrab{width:44px;height:5px;border-radius:9px;background:rgba(255,255,255,.18);margin:0 auto 6px}
+.msub{text-align:center;color:var(--mute);font-size:14px;margin:-2px 0 6px}
+.mlist{overflow:auto;border:1px solid rgba(255,255,255,.09);border-radius:20px;background:rgba(255,255,255,.03)}
+.mrow{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:14px 16px;text-align:left;border-bottom:1px solid rgba(255,255,255,.08)}
+.mrow:last-child{border-bottom:0}.mrow:active{background:rgba(255,255,255,.07)}
+.mrow b{display:block;font:800 16px var(--head)}.mrow small{display:block;color:var(--mute);font-size:13px;margin-top:3px}.mrow svg{flex:none;color:var(--mute)}
+.stnote{margin:18px 0 6px;padding:16px;border-radius:18px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04)}
+.stnote b{display:block;font:800 15px var(--head);margin-bottom:8px}.stnote p{color:#d4d0f0;font-size:14px;line-height:1.45;margin-top:6px}
