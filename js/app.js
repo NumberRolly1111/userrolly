@@ -3,7 +3,7 @@ addEventListener('error',e=>{try{if(e.message==='Script error.'&&!e.filename&&!e
 addEventListener('unhandledrejection',e=>{try{console.error(e.reason)}catch(x){}});
 const $=s=>document.querySelector(s),tg=window.Telegram&&Telegram.WebApp;
 // если на хостинге лежит старый html без новых разделов (файлы загрузили не все) — создаём недостающие, чтобы игра не падала
-['ach','show','top','clan','market','museum','shop','auction','help','guide','season'].forEach(k=>{if(!$('#tab-'+k)){const s=document.createElement('section');s.id='tab-'+k;s.className='list';s.hidden=true;($('#tab-bon')||document.body).after(s)}});
+['ach','show','top','clan','market','museum','shop','auction','help','guide','season','games','battles','fair'].forEach(k=>{if(!$('#tab-'+k)){const s=document.createElement('section');s.id='tab-'+k;s.className='list';s.hidden=true;($('#tab-bon')||document.body).after(s)}});
 // Вкладки-«таблетки» внутри разделов: Склад (ники, апгрейд, контракт, витрины, музей) и Магазин (магазин, рынок, аукцион)
 const SUBS={stock:[['col','Ники'],['up','Апгрейд'],['craft','Контракт'],['show','Витрины'],['museum','Музей']],shop:[['shop','Магазин'],['market','Рынок'],['auction','Аукцион']]};
 const subTabs=(g,a)=>`<div class="ptabs" role="tablist">${SUBS[g].filter(([k])=>g!=='stock'||k!=='up'||a==='up').map(([k,l])=>`<button role="tab" data-sub="${k}"${k==='craft'?' data-craft="1"':''} aria-selected="${k===a}">${l}</button>`).join('')}</div>`;
@@ -1460,7 +1460,7 @@ $('#prof-btn').onclick=()=>tab($('#tab-prof').hidden?'prof':'game');
 // Страницы: index.html (игра), rating.html (рейтинг), achievements.html (достижения). Состояние общее — в localStorage и облаке Telegram.
 const PAGE=document.body.dataset.page||'main',PAGES={top:'rating.html',ach:'achievements.html',clan:'clans.html',market:'market.html',museum:'museum.html',shop:'shop.html',auction:'auction.html'};
 function tab(n){
-  const here=PAGE==='main'?['game','col','up','prof','bon','show','help','guide','season']:[PAGE];
+  const here=PAGE==='main'?['game','col','up','prof','bon','show','help','guide','season','games','battles','fair']:[PAGE];
   if(here.includes(n))return tabIn(n);
   save();try{if(cloudDone)cloudPush()}catch(e){}
   const go=(PAGES[n]||'index.html')+(PAGES[n]||n==='game'?'':'#'+n);
@@ -1469,10 +1469,10 @@ function tab(n){
 }
 function tabIn(n){
   {const nn=NAVMAP[n]||'';document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===nn))}
-  ['game','col','up','prof','bon','ach','show','top','clan','market','museum','shop','auction','help','guide','season'].forEach(k=>{const e=$('#tab-'+k);if(!e)return;
+  ['game','col','up','prof','bon','ach','show','top','clan','market','museum','shop','auction','help','guide','season','games','battles','fair'].forEach(k=>{const e=$('#tab-'+k);if(!e)return;
     if(k===n){if(e.hidden){e.hidden=false;e.classList.remove('tabin');void e.offsetWidth;e.classList.add('tabin');clearTimeout(e._ti);e._ti=setTimeout(()=>e.classList.remove('tabin'),900)}}else e.hidden=true});
   $('#prof-btn').setAttribute('aria-pressed',n==='prof');
-  $('#bon-btn').setAttribute('aria-pressed',n==='bon');
+  $('#bon-btn').setAttribute('aria-pressed',['bon','games','battles','fair'].includes(n));
   if(n!=='up')document.body.classList.remove('shopen');
   if(n!=='col')colSel=null;
   if(n==='col')renderCol();else updSelbar();
@@ -1489,6 +1489,9 @@ function tabIn(n){
   if(n==='help')renderHelp();
   if(n==='guide')renderGuide();
   if(n==='season')try{renderSeason()}catch(e){}
+  if(n==='games')try{renderGames()}catch(e){}
+  if(n==='battles')try{renderBattles();btLoad()}catch(e){}
+  if(n==='fair')try{renderFair()}catch(e){}
   scrollTo(0,0);setTimeout(ptFix,30);
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
@@ -3233,7 +3236,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)ntSync()});
 setTimeout(()=>ntSync(),7000);
 renderUp();
 if(PAGE!=='main')tabIn(PAGE);
-else{const h=location.hash.slice(1);if(['col','up','prof','bon','show','help','guide','season'].includes(h))tabIn(h)}
+else{const h=location.hash.slice(1);if(['col','up','prof','bon','show','help','guide','season','games','battles','fair'].includes(h))tabIn(h)}
 try{if(PAGE!=='main'&&tg&&tg.BackButton){tg.BackButton.show();tg.BackButton.onClick(()=>{location.href=PAGE==='clan'?'rating.html':'index.html'})}}catch(e){}
 refInit();
 cloudLoad();
@@ -3323,7 +3326,7 @@ function gmHtml(){
   const eh=escH;
   const card=(id,ic,t,d,meta,cc,extra)=>`<button class="gmc" ${id?`id="${id}"`:''} ${extra||''} style="--cc:${cc}"><span class="gmci">${ic}</span><b>${t}</b><small>${d}</small><span class="gmm">${meta}</span></button>`;
   let body;
-  if(gmv==='cases')body=`<button class="btn sm gmback" data-gm="main">‹ Назад</button><div class="bcases">${casesHtml()}</div>`;
+  if(gmv==='cases')body=`<div class="bcases">${casesHtml()}</div>`;
   else body=`<h4 class="gmh">Мини-игры</h4><div class="gmg">`+
     card('lot-open','🎟️','Лотерея','Найди три одинаковых из девяти',`${limLeft('lot')} из ${LIM.lot} сегодня · ${fmt(LOTP)} 🪙`,'#FFC933')+
     card('gs-open','🔎','Дороже или дешевле','Угадай ник: серия верных — награда',`${limLeft('gs')} из ${LIM.gs} забегов · ${fmt(GSC)} 🪙`,'#27D9BD')+
@@ -3333,37 +3336,35 @@ function gmHtml(){
     card('','⚔️','Батлы','Открывай кейсы против игроков — забирай всё',S.btn?`<i class="gmdot"></i>результатов: ${S.btn}`:'создай свой','#FF5F7A','data-gm="bt"')+
     `</div><button class="gmfair" data-gm="fair">🛡 Честная игра <span>как всё работает и какие шансы</span></button>
     <p class="gmage"><b>18+</b> Игры на удачу идут на виртуальные монеты и вещи внутри игры. Они не приносят реальных денег и не обменяются на них. Играй в меру.</p>`;
-  return `<div class="sbg" data-gmx="1"></div><div class="sbox casebox gmbox"><div class="shead"><b>🎮 Игры</b><button class="btn sm" data-gmx="1">✕</button></div>${body}</div>`;
+  return `<div class="ahead"><button class="btn sm" data-gm="${gmv==='cases'?'main':'back'}">‹ ${gmv==='cases'?'Игры':'Бонусы'}</button><h2>${gmv==='cases'?'Кейсы':'Игры'}</h2></div><div class="gmpage">${body}</div>`;
 }
-function gmSheet(close){
-  let sh=document.getElementById('gmsh');
-  if(close){if(sh){clearInterval(sh._iv);sh.remove()}return}
-  if(!sh){sh=document.createElement('div');sh.id='gmsh';sh.className='usheet';document.body.append(sh);
-    sh.onclick=e=>{
-      if(e.target.closest('[data-gmx]'))return gmSheet(true);
-      const g=e.target.closest('[data-gm]');if(!g)return;const k=g.dataset.gm;
-      if(k==='main'||k==='cases'){gmv=k;return gmSheet()}
-      if(k==='bt')return btOpen();
-      if(k==='fair')return fgSheet();
-    };
-    sh._iv=setInterval(()=>{if(!document.getElementById('gmsh'))return clearInterval(sh._iv);if(document.querySelector('.usheet#casesh:not([hidden])'))return;const b=sh.querySelector('.sbox'),y=b?b.scrollTop:0,h=gmHtml();if(sh._h!==h){sh.innerHTML=h;sh._h=h;const nb=sh.querySelector('.sbox');if(nb)nb.scrollTop=y}},1500)}
-  const b=sh.querySelector('.sbox'),y=b?b.scrollTop:0,h=gmHtml();sh.innerHTML=h;sh._h=h;const nb=sh.querySelector('.sbox');if(nb)nb.scrollTop=y;
+function renderGames(){
+  const el=document.getElementById('tab-games');if(!el||el.hidden)return;
+  const h=gmHtml();if(el._h!==h){el.innerHTML=h;el._h=h}
 }
-document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#gm-open')){gmv='main';gmSheet();btPoll()}});
+document.addEventListener('click',e=>{
+  const g=e.target.closest&&e.target.closest('#tab-games [data-gm]');if(!g)return;const k=g.dataset.gm;
+  if(k==='back')return tab('bon');
+  if(k==='main'||k==='cases'){gmv=k;const el=$('#tab-games');if(el)el._h='';renderGames();return scrollTo(0,0)}
+  if(k==='bt')return tab('battles');
+  if(k==='fair'){fgFrom='games';return tab('fair')}
+});
+setInterval(()=>{const el=$('#tab-games');if(el&&!el.hidden&&!document.querySelector('.usheet:not([hidden])'))renderGames()},1500);
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#gm-open')){gmv='main';const el=$('#tab-games');if(el)el._h='';tab('games');btPoll()}});
 // --- Честная игра ---
-function fgSheet(close){
-  let sh=document.getElementById('fgsh');
-  if(close){if(sh)sh.remove();return}
-  if(!sh){sh=document.createElement('div');sh.id='fgsh';sh.className='usheet';document.body.append(sh);sh.onclick=e=>{if(e.target.closest('[data-fgx]'))fgSheet(true)}}
+var fgFrom='games';
+function renderFair(){
+  const sh=document.getElementById('tab-fair');if(!sh)return;
   const rows=CASES.filter(c=>c.price>0).map(c=>`<div class="fgr"><b>${c.ic} ${c.n}</b><small>${c.w.map(([t,w])=>`${T[t].n} ${pctw(w)}%`).join(' · ')}</small></div>`).join('');
-  sh.innerHTML=`<div class="sbg" data-fgx="1"></div><div class="sbox casebox gmbox"><div class="shead"><b>🛡 Честная игра</b><button class="btn sm" data-fgx="1">✕</button></div>
+  sh.innerHTML=`<div class="ahead"><button class="btn sm" data-fgx="1">‹ Назад</button><h2>Честная игра</h2></div><div class="gmpage">
   <div class="fgc"><b>Шансы открыты</b><p>Перед каждым кейсом в его окне показаны шансы редкости. Ниже все они в одном месте.</p>${rows}</div>
   <div class="fgc"><b>Как определяется результат</b><p>Кейсы, лотерея, колесо и «Найди слова» выбирают результат случайно прямо в твоей игре по тем шансам, что указаны. Подкруток и скрытых условий нет.</p>
   <p>В батле двое открывают один и тот же кейс. Побеждает ник с большей ценой и забирает оба. При равной цене каждый оставляет свой. Сервер только сводит двух игроков и сравнивает цены.</p></div>
   <div class="fgc"><b>Монеты виртуальные</b><p>Игровые монеты, ники и награды нельзя вывести или обменять на деньги. За ⭐ продаются только дополнительные возможности, а не шанс выиграть.</p></div>
   <p class="gmage"><b>18+</b> Игры на удачу не для несовершеннолетних. Если игра перестала быть в радость, сделай перерыв.</p>
-  <button class="btn cwide" data-fgx="1">Закрыть</button></div>`;
+  <button class="btn cwide" data-fgx="1">Назад</button></div>`;
 }
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#tab-fair [data-fgx]'))tab(fgFrom==='battles'?'battles':'games')});
 // --- Батлы ---
 var bt={open:[],mine:[],busy:false,res:null,cid:'start',err:'',load:false};
 const BTCIDS=['start','rare','all','star','abyss'],btCase=id=>CASES.find(c=>c.id===id);
@@ -3371,7 +3372,6 @@ const btOk=()=>!!(API&&tg&&tg.initData);
 async function btPoll(){if(!btOk())return;try{const r=await lbReq('/battle/list');bt.open=r.open||[];bt.mine=r.mine||[];S.btn=bt.mine.filter(x=>x.st==='done').length}catch(e){}}
 async function btLoad(){bt.load=true;bt.err='';btSheet();if(!btOk()){bt.err='Батлы работают только внутри Telegram';bt.load=false;return btSheet()}
   try{await btPoll()}catch(e){bt.err='Не удалось загрузить батлы'}bt.load=false;btSheet()}
-function btOpen(){bt.res=null;btSheet();btLoad()}
 function btGive(list){for(const x of list){if(S.items.length<MAX){addItem(x.name,x.t,x.p)}else{S.coins=Math.min(CAP,S.coins+x.v);S.sold++}S.best=Math.max(S.best,x.t);try{noteBest(x.v,x.name)}catch(e){}}}
 function btShow(win,mine,theirs,who,price){bt.res={win,mine,theirs,who,price};btSheet()}
 async function btCreate(){
@@ -3402,12 +3402,12 @@ async function btCancel(id){
   if(bt.busy)return;bt.busy=true;btSheet();
   try{const r=await lbReq('/battle/cancel',{id});S.coins=Math.min(CAP,S.coins+r.price);save();render();toast('Батл отменён, монеты возвращены')}catch(e){toast('Батл уже не отменить')}
   bt.busy=false;await btLoad()}
-function btSheet(close){
-  let sh=document.getElementById('btsh');
-  if(close){if(sh)sh.remove();return}
-  if(!sh){sh=document.createElement('div');sh.id='btsh';sh.className='usheet';document.body.append(sh);
-    sh.onclick=e=>{
-      if(e.target.closest('[data-btx]'))return btSheet(true);
+function btSheet(){renderBattles()}
+function renderBattles(){
+  const sh=document.getElementById('tab-battles');if(!sh)return;
+  if(!sh._on){sh._on=1;
+    sh.addEventListener('click',e=>{
+      if(e.target.closest('[data-btx]'))return tab('games');
       const q=s=>e.target.closest(s);let b;
       if(q('#bt-ok')){bt.res=null;return btSheet()}
       if(b=q('[data-btc]')){bt.cid=b.dataset.btc;return btSheet()}
@@ -3415,8 +3415,8 @@ function btSheet(close){
       if(b=q('[data-bta]'))return btAccept(+b.dataset.bta,b.dataset.bc);
       if(b=q('[data-btk]'))return btClaim(+b.dataset.btk);
       if(b=q('[data-btd]'))return btCancel(+b.dataset.btd);
-      if(q('#bt-fair'))return fgSheet();
-    }}
+      if(q('#bt-fair')){fgFrom='battles';return tab('fair')}
+    })}
   const eh=escH,c0=btCase(bt.cid),pull=(x,cl)=>`<div class="btp ${cl}" style="--tc:${T[x.t].c}"><small>${T[x.t].n}</small><b>@${eh(x.name)}</b><span>${fmt(x.v)} 🪙</span></div>`;
   let body;
   if(bt.res){const r=bt.res,tt=r.win==='win'?'🏆 Победа! Оба ника твои':r.win==='tie'?'🤝 Ничья: каждый оставил свой':'Проиграл: ник ушёл сопернику';
@@ -3432,8 +3432,8 @@ function btSheet(close){
     ${bt.mine.length?`<h4 class="gmh">Мои батлы</h4>${bt.mine.map(rowMine).join('')}`:''}
     <h4 class="gmh">Открытые батлы</h4>${bt.load?'<div class="pcard lbmsg"><small>Загружаю…</small></div>':bt.open.length?bt.open.map(rowOpen).join(''):'<div class="pcard lbmsg"><small>Пока никто не ждёт. Создай свой батл.</small></div>'}
     <button class="gmfair" id="bt-fair">🛡 Честная игра <span>шансы и правила</span></button>`}
-  const ob=sh.querySelector('.sbox'),y=ob?ob.scrollTop:0;
-  sh.innerHTML=`<div class="sbg" data-btx="1"></div><div class="sbox casebox gmbox"><div class="shead"><b>⚔️ Батлы</b><button class="btn sm" data-btx="1">✕</button></div>${body}</div>`;
-  const nb=sh.querySelector('.sbox');if(nb&&y)nb.scrollTop=y;
+    sh.innerHTML=`<div class="ahead"><button class="btn sm" data-btx="1">‹ Игры</button><h2>Батлы</h2></div><div class="gmpage">${body}</div>`;
 }
 setTimeout(btPoll,4000);setInterval(btPoll,90000);
+
+document.addEventListener('click',e=>{});
