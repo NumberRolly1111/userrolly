@@ -1537,6 +1537,7 @@ async function openTop(){
 }
 function renderTop(){
   const by=lb.by,d=lb.data[by],net=by==='net';
+  const bvv=r=>{try{return by==='best'&&r.bestn?nickVal(r.bestn).v:r.v}catch(e){return r.v}};
   const val2=x=>by==='lvl'?fmt(x)+' ур.':fmtC(x)+' 🪙';
   let body;
   if(!API)body='<div class="pcard lbmsg"><b>Рейтинг пока не подключён</b><small>Нужно развернуть сервер из папки rating-worker и вписать его адрес в app.js (константа API). Подробности в README.</small></div>';
@@ -1555,8 +1556,8 @@ function renderTop(){
     const top=d.top;
     const pod=k=>{const r=top[k-1];if(!r)return `<div class="pd p${k} empty"><div class="ped">${k}</div></div>`;
       return `<div class="pd p${k}${r.me?' me':''}" data-pi="${k-1}">${k===1?'<span class="crown">👑</span>':''}<div class="pava g${k}">${frameOf(r)}<b>${ini(r)}</b><i class="pbadge">${k}</i></div>
-      <div class="pn">${tagH(r)}<span class="pnk">${nick(r)}</span></div><div class="psub">${sub(r)}</div><b class="pval">${val2(r.v)}</b><div class="ped">${k}</div></div>`};
-    const rows=top.slice(3).map((r,i)=>`<div class="lrow${r.me?' me':''}" data-pi="${i+3}"><em class="lrk">${i+4}</em>${tagH(r)}<span class="lnk">${nick(r)}</span><span class="lsub">${sub(r)}</span><b class="lval">${val2(r.v)}</b></div>`).join('');
+      <div class="pn">${tagH(r)}<span class="pnk">${nick(r)}</span></div><div class="psub">${sub(r)}</div><b class="pval">${val2(bvv(r))}</b><div class="ped">${k}</div></div>`};
+    const rows=top.slice(3).map((r,i)=>`<div class="lrow${r.me?' me':''}" data-pi="${i+3}"><em class="lrk">${i+4}</em>${tagH(r)}<span class="lnk">${nick(r)}</span><span class="lsub">${sub(r)}</span><b class="lval">${val2(bvv(r))}</b></div>`).join('');
     const u=tgUser(),mine={name:u.first_name||'Игрок',me:true};
     body=(top.length?`<div class="podium">${pod(2)}${pod(1)}${pod(3)}</div>`+(rows?`<div class="lbcard">${rows}</div>`:''):'<div class="pcard lbmsg"><small>Пока никого нет. Ты можешь стать первым.</small></div>')+
     `<div class="mebar"><em>${me&&me.rank?fmt(me.rank):'—'}</em><span class="mnm">${nick(mine)}</span><span class="you">ТЫ</span><b class="lval">${val2(net?Math.round(netWorth()):by==='best'?S.bestv:by==='lvl'?S.lvl:(me&&me.v)||0)}</b></div>`;
@@ -1857,7 +1858,7 @@ function plDraw(){
     <div class="pgrid"><div class="pt"><small>Место в рейтинге</small><b>#${d.rank}</b></div><div class="pt"><small>Капитал</small><b>${fmtC(d.net)} 🪙</b></div>
     <div class="pt"><small>Уровень</small><b>${d.lvl||1}</b></div><div class="pt"><small>Клан</small><b>${d.cname?eh(d.cname):'—'}</b></div>${d.gid?`<button class="pt plid" data-plid="${d.gid}"><small>ID игрока · нажми, чтобы скопировать</small><b>${String(d.gid).padStart(6,'0')} ⧉</b></button>`:''}</div>
     ${d.vit?`<div class="pcard vitc" style="margin:10px 0 0"><small class="cap2">🏆 Витрина</small><div class="vgrid">${String(d.vit).split('|').filter(Boolean).slice(0,3).map(n=>{const x=nickVal(n);return `<div class="vslot on" style="--tc:${T[x.t].c}"><b>@${eh(n)}</b><small>${T[x.t].n}</small></div>`}).join('')}</div></div>`:''}
-    <div class="pcard" style="margin:10px 0 0"><small class="cap2">Самый дорогой ник</small>${bn?`<div class="muprev">${plate(d.bestn,bn.t)}<span>${fmtC(d.best)} 🪙</span></div>`:'<p class="sum">—</p>'}</div>`+(d.me?'':d.un?`<button class="btn main cwide" data-pltg="${eh(d.un)}" style="margin-top:12px">Открыть в Telegram ↗</button>`:`<p class="sum" style="margin-top:12px;text-align:center">Ссылка на Telegram появится, когда игрок зайдёт в игру в обновлённой версии, или у него нет username</p>`);
+    <div class="pcard" style="margin:10px 0 0"><small class="cap2">Самый дорогой ник</small>${bn?`<div class="muprev">${plate(d.bestn,bn.t)}<span>${bn.v>=1e6?tz((bn.v/1e6).toFixed(1))+' млн':fmt(bn.v)} 🪙</span></div>`:'<p class="sum">—</p>'}</div>`+(d.me?'':d.un?`<button class="btn main cwide" data-pltg="${eh(d.un)}" style="margin-top:12px">Открыть в Telegram ↗</button>`:`<p class="sum" style="margin-top:12px;text-align:center">Ссылка на Telegram появится, когда игрок зайдёт в игру в обновлённой версии, или у него нет username</p>`);
   }
   sh.innerHTML=`<div class="sbg" data-plx="1"></div><div class="sbox casebox"><div class="shead"><b>Профиль игрока</b><button class="btn sm" data-plx="1">✕</button></div>${b}</div>`;
 }
