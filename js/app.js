@@ -893,14 +893,7 @@ function renderHelp(){
   const pl=(id,t,d,ic,x='')=>`<button class="pcard achbtn" ${id} style="margin-bottom:16px"><div><b>${t}</b><small>${d}</small></div>${x||`<span class="trophy">${ic}</span>`}</button>`;
   el.innerHTML=`<div class="ahead"><h2>Помощь</h2></div>
   <button class="ghero" id="guide-open"><span class="gh-in"><span class="gh-k">Новичку</span><b>Как играть</b><small>Видео за 1 минуту и 8 коротких шагов: от первой крутки до рынка</small><span class="gh-pill">▶ Смотреть · ${GUIDE.length} шагов</span></span><span class="gh-play"><i>▶</i></span></button>
-  <h3 class="hsec">Все разделы</h3>`+
-  pl('data-season="1"','Сезон и пропуск наград','Дорожка наград, задания и рейтинг сезона','🏅')+
-  pl('id="top-open"','Рейтинг','Топ игроков по капиталу и лучшему нику','🏆')+
-  pl('id="clan-open"','Кланы','Вступи в клан или создай свой','🛡️')+
-  pl('id="ach-open"','Достижения',`${ACH.filter(achOk).length} из ${ACH.length}`,'🎖️')+
-  pl('id="auc-open"','Аукцион','Лоты игроков, ставки и история','🔨')+
-  showPlate()+
-  pl('id="cos-open"','Оформление','Титулы, рамки, ник и тема','✨');
+  `;
 }
 const GUIDE=[
   ['🎰','Крути рулетку','Вкладка «Крутить»: выбери режим («Любой», «Редкий+», «Эпик+») и нажми кнопку. Можно открыть 1, 3 или 5 ников. Платить можно монетами или бесплатной энергией: её запас до 15 единиц, одна восстанавливается за 15 минут.'],
@@ -1504,10 +1497,11 @@ function tabIn(n){
   scrollTo(0,0);setTimeout(ptFix,30);
 }
 const MORE=[['prof','Профиль','Уровень, витрина, настройки'],['ach','Достижения','Награды за прогресс'],['bon','Бонусы и игры','Колесо, мини-игры, кейсы, батлы'],['season','Сезонный пропуск','50 уровней наград'],['market','Рынок','Купить и продать ники игрокам'],['auction','Аукцион','Торги за редкие ники'],['craft','Контракт','Обменять несколько ников на один'],['battles','Батлы','Кейсы против соперника'],['museum','Музей','Ники на витрине славы, доход'],['show','Витрины','Собери набор — получи награду'],['clan','Кланы','Вступи в клан или создай свой'],['guide','Гид','Как играть'],['help','Помощь','Вопросы и поддержка']];
+const MEM={"prof": "👤", "ach": "🎖️", "bon": "🎁", "season": "🏅", "market": "🛒", "auction": "🔨", "craft": "🧪", "battles": "⚔️", "museum": "🏛️", "show": "🗂️", "clan": "🛡️", "guide": "📖", "help": "❓"};
 function moreSheet(){
   let el=document.getElementById('more-sheet');if(el)el.remove();
   el=document.createElement('div');el.className='usheet';el.id='more-sheet';
-  el.innerHTML=`<div class="sbg" data-mx="1"></div><div class="sbox moresb"><div class="mgrab"></div><div class="shead"><b>Ещё</b><button class="btn sm" data-mx="1">✕</button></div><p class="msub">Всё остальное в игре — в одно нажатие</p><div class="mlist">${MORE.map(([k,t,d])=>`<button class="mrow"${k==='craft'?' data-craft="1"':''} data-mgo="${k}"><span><b>${t}</b><small>${d}</small></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>`).join('')}</div></div>`;
+  el.innerHTML=`<div class="sbg" data-mx="1"></div><div class="sbox moresb"><div class="mgrab"></div><div class="shead"><b>Ещё</b><button class="btn sm" data-mx="1">✕</button></div><p class="msub">Всё остальное в игре — в одно нажатие</p><div class="mlist">${MORE.map(([k,t,d])=>`<button class="mrow"${k==='craft'?' data-craft="1"':''} data-mgo="${k}"><span><b>${t}</b><small>${d}</small></span><i class="mem">${MEM[k]||''}</i></button>`).join('')}</div></div>`;
   document.body.append(el);
   el.onclick=e=>{if(e.target.closest('[data-mx]'))return el.remove();const g=e.target.closest('[data-mgo]');if(!g)return;const k=g.dataset.mgo;el.remove();if(k==='craft')return;sfx('tap');tab(k)};
 }

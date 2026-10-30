@@ -1639,3 +1639,4 @@ html{color-scheme:dark}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:99px;border:2px solid transparent;background-clip:content-box}
 ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.35);background-clip:content-box}
 ::-webkit-scrollbar-button,::-webkit-scrollbar-corner{display:none}
+.mem{font-style:normal;font-size:26px;line-height:1;flex:none;filter:drop-shadow(0 3px 6px rgba(0,0,0,.4))}
