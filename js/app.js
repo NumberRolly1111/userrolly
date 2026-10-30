@@ -3048,7 +3048,7 @@ function stHtml(){
   for(const [g,ids] of STG){
     h+=`<h3 class="ch3">${g}</h3>`+ids.map(id=>{const c=STC[id],own=stHave(id);
       const out=id==='ceo'&&!own&&sh.ex&&sh.ex.ceo&&sh.ex.ceo.left<1,ds=id==='ceo'&&sh.ex&&sh.ex.ceo?c[2]+` · осталось ${sh.ex.ceo.left} из ${sh.ex.ceo.total}`:c[2],dis=own||out;
-      return `<div class="pcard svc stit${dis?' own':''}"${dis?'':` data-st="${id}"`}><span class="svi">${c[0]}</span><div><b>${c[1]}</b><small>${ds}</small></div><button class="btn ${dis?'':'main '}sm"${dis?' disabled':` data-st="${id}"`}>${own?'Куплено ✓':out?'Раскуплен':'⭐ '+fmt(stPr(id))}</button></div>`}).join('');
+      return `<div class="pcard svc stit${dis?' own':''}${id==='ceo'?' excs':''}"${dis?'':` data-st="${id}"`}><span class="svi">${c[0]}</span><div>${id==='ceo'?'<em class="exct">ЭКСКЛЮЗИВ</em>':''}<b>${c[1]}</b><small>${ds}</small></div><button class="btn ${dis?'':'main '}sm"${dis?' disabled':` data-st="${id}"`}>${own?'Куплено ✓':out?'Раскуплен':'⭐ '+fmt(stPr(id))}</button></div>`}).join('');
   }
   h+=`<div class="stbh"><b><i></i>Звёздный баланс</b><span>на балансе ⭐ ${fmt(bal)}</span></div>${st.first?'<div class="stfirst">🎁 Первое пополнение: +10% звёзд в подарок</div>':''}<div class="stgrid">${STUP.map(n=>`<button class="stp${n===100?' hot':''}" data-stup="${n}">${n===100?'<em>выбор игроков</em>':''}<b>+${fmt(n)} ⭐</b><small>${fmt(n)} ${n===1?'звезда':'звёзд'} Telegram${st.first&&n>=10?` · +${Math.floor(n/10)} ⭐ бонус`:''}</small></button>`).join('')}</div>`;
   return h+`<small class="sum">Оплата идёт через Telegram Stars. Звёзды покупаются в самом Telegram, их можно потратить на баланс игры или на любой товар напрямую.</small>`;

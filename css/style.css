@@ -1604,3 +1604,9 @@ body.shk{animation:none!important}
 .svc small{font-size:13px;margin-top:3px}
 .svc .btn.sm{min-height:40px;padding:0 14px;font-size:15px;border-radius:12px}
 .svc .btn small{font-size:11px}
+
+.excs{border-color:#B455FF!important;background:linear-gradient(135deg,rgba(180,85,255,.22),rgba(180,85,255,.06) 60%),var(--paper)!important;box-shadow:0 0 0 1px rgba(180,85,255,.35) inset,0 6px 22px rgba(180,85,255,.18)}
+.excs .svi{background:rgba(180,85,255,.25);box-shadow:0 0 16px rgba(180,85,255,.45)}
+.excs b{color:#e6ccff}.excs.own{opacity:.8}
+.excs .btn.main{background:#B455FF;color:#fff}
+.exct{display:inline-block;font:800 10px var(--head);letter-spacing:1px;font-style:normal;color:#d9a8ff;background:rgba(180,85,255,.2);border-radius:6px;padding:2px 7px;margin-bottom:4px}
