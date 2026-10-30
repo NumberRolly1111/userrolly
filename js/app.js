@@ -764,7 +764,7 @@ function plShow(got,spent,en){
 }
 async function spin(){
   if(busy)return;tickEn();
-  if(count===5){if(!vipOn()){toast('Крутка ×5 доступна только с VIP');count=3;render();return}if(!v5Left()){toast(`Бесплатные ×5 на сегодня закончились (${V5_DAY} в сутки)`);return}}
+  if(count===5){if(!vipOn()){toast('Крутка ×5 доступна только с VIP');count=3;render();return}}
   const free=S.src==='free'&&count!==5,m=count===5?MODES[mode]:free?MODES[0]:MODES[mode],cost=free?count:count===5?0:m.cost*count;
   if(free){if(S.en<cost){toast(`Не хватает энергии: нужно ${cost}, есть ${S.en}. Следующая через ${mmss(enLeft())}. Можно крутить за монеты.`);return}}
   else if(S.coins<cost){toast('Не хватает монет. Продай ники в коллекции или загляни в бонусы.');return}
@@ -983,7 +983,7 @@ function render(){
   {const cl=vipOn()?[1,3,5]:[1,3],ck=cl.join();if(cn.dataset.k!==ck){cn.dataset.k=ck;cn.innerHTML=cl.map(n=>`<button aria-pressed="false" data-n="${n}">×${n}<small>${n===1?'один ник':n===3?'три ника':'👑 VIP бесплатно'}</small></button>`).join('')}}
   [...seg.children].forEach((b,i)=>b.setAttribute('aria-pressed',i===mode));
   [...cn.children].forEach(b=>b.setAttribute('aria-pressed',+b.dataset.n===count));
-  const sp=$('#spin');sp.textContent=`Крутить${count>1?' ×'+count:''} · ${free?count+' ⚡':count===5?'VIP · осталось '+v5Left():fmt(m.cost*count)+' 🪙'}`;sp.disabled=busy;
+  const sp=$('#spin');sp.textContent=`Крутить${count>1?' ×'+count:''} · ${free?count+' ⚡':count===5?'VIP · без лимита':fmt(m.cost*count)+' 🪙'}`;sp.disabled=busy;
   $('#st-spins').textContent=`Круток: ${fmt(S.spins)}`;
   $('#st-best').innerHTML=`Лучший: <b class="chip" style="background:${T[S.best].c}">${S.spins?T[S.best].n:'—'}</b>`;
   renderCol();
@@ -3041,7 +3041,7 @@ var STC={
 };
 var STG=[['Наборы',['starter','pack_pro','pack_gold','energy60']],['Статус',['ceo','title_oligarch','collector','museum']],['Услуги',['wheel5','top','pass']]];
 var STUP=[1,50,100,250,500,1000],VIP_FOREVER=4102444800000;
-var VIPPERK=[['Крутка ×5','Пять ников одной кнопкой, бесплатно и с выбором редкости. До '+V5_DAY+' раз в сутки. Обычным игрокам ×5 недоступна.'],['Энергия быстрее','Новая энергия за 8 минут вместо 15.'],['+10 мест в коллекции','Сверх обычных 30 мест, пока действует VIP.'],['Комиссия 2% вместо 5%','На продажах на рынке и в аукционе.'],['Доход музея +30%','Ко всем экспонатам в твоём зале.'],['Подарок каждый день','100 000 🪙 и 5 ⚡ просто за заход.'],['Корона 👑 в профиле','Значок VIP рядом с именем и в чате.']];
+var VIPPERK=[['Крутка ×5','Пять ников одной кнопкой, бесплатно и с выбором редкости. Без ограничений по числу раз. Обычным игрокам ×5 недоступна.'],['Энергия быстрее','Новая энергия за 8 минут вместо 15.'],['+10 мест в коллекции','Сверх обычных 30 мест, пока действует VIP.'],['Комиссия 2% вместо 5%','На продажах на рынке и в аукционе.'],['Доход музея +30%','Ко всем экспонатам в твоём зале.'],['Подарок каждый день','100 000 🪙 и 5 ⚡ просто за заход.'],['Корона 👑 в профиле','Значок VIP рядом с именем и в чате.']];
 var stPr=id=>(st.cat&&st.cat[id])||STC[id][3];
 var stHave=id=>{const c=STC[id];if(!c)return false;if(id==='vip')return vipPerm();if(id==='luck')return (+S.luck||0)>=4e12||!!(S.sx.luck||st.owned.luck);if(id==='ceo')return !!(S.exc.ceo||st.owned.ceo||(sh.ex&&sh.ex.ceo&&sh.ex.ceo.mine));if(id==='pass'){try{return !!(st.owned.pass||szState().paid)}catch(e){return !!st.owned.pass}}return !!(c[4]&&(S.sx[id]||st.owned[id]))};
 function goStar(id){try{sessionStorage.setItem('nr_st',id)}catch(e){}if(PAGE==='shop'){sh.tab='stars';st.sel=id;renderShop()}else tab('shop')}
