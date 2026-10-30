@@ -58,3 +58,4 @@ html.v2 .pcard:active{transform:scale(.995)}
 @keyframes rwv{to{transform:scale(22);opacity:0}}
 .rrays{position:fixed;left:50%;top:30%;width:160vmax;height:160vmax;margin:-80vmax 0 0 -80vmax;z-index:69;pointer-events:none;border-radius:50%;background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--rc) 40%,transparent) 0 6deg,transparent 6deg 18deg);-webkit-mask:radial-gradient(circle,#000 0,transparent 55%);mask:radial-gradient(circle,#000 0,transparent 55%);animation:rry 1.8s ease-out forwards}
 @keyframes rry{from{opacity:0;transform:rotate(0) scale(.4)}25%{opacity:.9}to{opacity:0;transform:rotate(40deg) scale(1)}}
+html.v2 .stage.hit{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.02)),var(--paper);border:1px solid var(--tc)}

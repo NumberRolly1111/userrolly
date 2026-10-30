@@ -820,7 +820,7 @@ function boom(col,tr=3){
 function rareFx(col,tr){
   const f=document.createElement('div');f.className='rfl';f.style.setProperty('--rc',col);document.body.append(f);setTimeout(()=>f.remove(),1100);
   if(tr>=4){const r=document.createElement('div');r.className='rwave';r.style.setProperty('--rc',col);document.body.append(r);setTimeout(()=>r.remove(),1300);
-    if(tr>=5){const y=document.createElement('div');y.className='rrays';y.style.setProperty('--rc',col);document.body.append(y);setTimeout(()=>y.remove(),1900)}}
+}
 }
 function tick(){
   cx.clearRect(0,0,fx.width,fx.height);
