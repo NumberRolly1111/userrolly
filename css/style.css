@@ -1476,7 +1476,7 @@ body.shk{animation:none!important}
 .btchips{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0}
 .btch{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 2px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--ink);font-size:20px}.btch b{font:800 9.5px var(--head);text-align:center}.btch small{font-size:9.5px;color:var(--mute)}.btch.on{border-color:var(--cc);background:color-mix(in srgb,var(--cc) 20%,transparent)}
 .btrow{display:flex;align-items:center;gap:10px;padding:10px;margin-bottom:8px;border-radius:14px;background:var(--tile)}.btrow .bti{font-size:24px}.btrow>div{flex:1;min-width:0}.btrow b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.btrow small{color:var(--mute);font-size:11.5px}
-.btres{text-align:center;margin:8px 0;font:800 17px var(--head)}.btres.win{color:#3CE682}.btres.lose{color:#FF6B7A}
+.btres{text-align:center;margin:8px 0;font:800 17px var(--head)}.btres.b-win{color:#3CE682}.btres.b-lose{color:#FF6B7A}
 .btvs{display:flex;align-items:center;gap:8px;margin:10px 0}.btvs i{font:900 13px var(--head);color:var(--mute);font-style:normal}
 .btp{flex:1;min-width:0;padding:14px 8px;border-radius:14px;border:2px solid var(--tc);background:color-mix(in srgb,var(--tc) 14%,transparent);text-align:center;display:flex;flex-direction:column;gap:4px}.btp b{font:800 13px var(--head);overflow:hidden;text-overflow:ellipsis}.btp small{color:var(--tc)}.btp span{font:700 12px var(--body)}
 .btwho{display:block;text-align:center;color:var(--mute);margin-bottom:10px}

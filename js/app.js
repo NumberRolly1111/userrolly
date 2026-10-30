@@ -3420,7 +3420,7 @@ function btSheet(close){
   const eh=escH,c0=btCase(bt.cid),pull=(x,cl)=>`<div class="btp ${cl}" style="--tc:${T[x.t].c}"><small>${T[x.t].n}</small><b>@${eh(x.name)}</b><span>${fmt(x.v)} 🪙</span></div>`;
   let body;
   if(bt.res){const r=bt.res,tt=r.win==='win'?'🏆 Победа! Оба ника твои':r.win==='tie'?'🤝 Ничья: каждый оставил свой':'Проиграл: ник ушёл сопернику';
-    body=`<div class="btres ${r.win}"><b>${tt}</b></div><div class="btvs">${pull(r.mine,'me')}<i>VS</i>${pull(r.theirs,'he')}</div><small class="btwho">Соперник: ${eh(r.who||'Игрок')}</small><button class="btn main cwide" id="bt-ok">Ок</button>`}
+    body=`<div class="btres b-${r.win}"><b>${tt}</b></div><div class="btvs">${pull(r.mine,'me')}<i>VS</i>${pull(r.theirs,'he')}</div><small class="btwho">Соперник: ${eh(r.who||'Игрок')}</small><button class="btn main cwide" id="bt-ok">Ок</button>`}
   else{
     const chips=BTCIDS.map(id=>{const c=btCase(id);return `<button class="btch${bt.cid===id?' on':''}" data-btc="${id}" style="--cc:${c.c}">${c.ic}<b>${c.n}</b><small>${fmt(c.price)} 🪙</small></button>`}).join('');
     const rowOpen=x=>{const c=btCase(x.cid)||{ic:'📦',n:x.cid};return `<div class="btrow"><span class="bti">${c.ic}</span><div><b>${eh(x.cn)}</b><small>${c.n} · ${agoT(x.ts)}</small></div><button class="btn main sm" data-bta="${x.id}" data-bc="${x.cid}"${bt.busy||S.coins<x.price?' disabled':''}>Принять · ${fmt(x.price)}</button></div>`};
