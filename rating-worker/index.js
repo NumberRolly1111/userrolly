@@ -1227,11 +1227,11 @@ async function marketRoutes(url, req, env, uid, json) {
 
   if (p === '/market' && req.method === 'GET') {
     const q = clean(url.searchParams.get('q') || '', 24), sort = url.searchParams.get('sort');
-    const order = '(m.top > ' + Date.now() + ') DESC, ' + (sort === 'cheap' ? 'm.price ASC' : sort === 'exp' ? 'm.price DESC' : 'm.id DESC');
+    const order = '(m.top > ' + Date.now() + ') DESC, ' + (sort === 'cheap' ? 'm.price ASC' : sort === 'exp' ? 'm.price DESC' : sort === 'old' ? 'm.id ASC' : 'm.id DESC');
     const base = `SELECT m.id,m.name,m.price,m.seller,m.top,p.name AS sname,p.hide FROM market m LEFT JOIN players p ON p.uid=m.seller WHERE m.status=0`;
     const rows = (q
       ? await db.prepare(base + " AND m.name LIKE ?1 ESCAPE '\\' ORDER BY " + order + ' LIMIT 60').bind(like(q)).all()
-      : await db.prepare(base + ' ORDER BY ' + order + ' LIMIT 60').all()).results;
+      : await db.prepare(base + ' ORDER BY ' + order + ' LIMIT 200').all()).results;
     return json({ lots: rows.map((r) => ({ id: r.id, name: r.name, price: r.price, seller: r.hide ? 'Игрок' : (r.sname || 'Игрок'), mine: r.seller === uid ? 1 : 0, top: r.top > Date.now() ? 1 : 0 })) });
   }
 

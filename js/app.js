@@ -2042,7 +2042,7 @@ renderCases();
 // ---------- Рынок между игроками ----------
 // Лоты хранит сервер (rating-worker). Тип и цену ника покупатель считает сам по названию, а не берёт у продавца.
 const ME={already:'Этот лот уже в топе',poor:'Не хватает монет (по данным сервера)',sync:'Подожди пару секунд: профиль ещё не отправлен на сервер',gone:'Лот уже продан или снят',own:'Это твой лот',changed:'Цена изменилась, обнови список',toomany:'Не больше 10 лотов одновременно',price:'Цена: от 10 до 2 000 000 000 🪙',name:'Этот ник нельзя выставить'};
-const mk={hist:null,tab:'buy',q:'',sort:'new',lots:null,my:null,load:false,err:'',sheet:false,sel:'',price:'',busy:false};
+const mk={rar:-1,pr:0,hist:null,tab:'buy',q:'',sort:'new',lots:null,my:null,load:false,err:'',sheet:false,sel:'',price:'',busy:false};
 const merr=e=>{const m=String(e&&e.message||e).replace(/^e:/,'');return ME[m]||(m==='http 401'?'Ошибка проверки Telegram':m==='http 500'?'Ошибка сервера':m==='wait'?'Подожди несколько секунд':'Нет связи с сервером')};
 const nickVal=n=>{const s=score(n);return {t:s.t,p:s.p,v:val(s.t,s.p,n)}};
 async function openMarket(){
@@ -2061,7 +2061,7 @@ async function mAuto(){
   try{await mLoad()}catch(e){}
 }
 async function mLoad(){
-  const [l,m]=await Promise.all([lbReq(`/market?sort=${mk.sort}&q=${encodeURIComponent(mk.q)}`),lbReq('/market/my')]);mk.lots=l.lots;mk.my=m;
+  const [l,m]=await Promise.all([lbReq(`/market?sort=${mk.sort==='rar'?'new':mk.sort}&q=${encodeURIComponent(mk.q)}`),lbReq('/market/my')]);mk.lots=l.lots;mk.my=m;
 }
 async function mAct(path,body,fn){
   if(mk.busy)return false;mk.busy=true;
@@ -2083,6 +2083,23 @@ function marketSheet(){
   <small class="sum">Оценка: ${fmt(v)} 🪙${pr>=10?` · ты получишь ${fmt(Math.floor(pr*(1-fee)))} 🪙 (комиссия ${Math.round(fee*100)}%)`:''}</small>`:''}
   <button class="btn main" id="m-ok"${sel&&pr>=10?'':' disabled'}>Выставить на рынок</button></div></div>`;
 }
+
+const mpl=n=>n%10===1&&n%100!==11?'лот':[2,3,4].includes(n%10)&&![12,13,14].includes(n%100)?'лота':'лотов';
+const MPR=[[0,Infinity,'Любая цена'],[0,1e4,'до 10K'],[1e4,1e5,'10K–100K'],[1e5,1e6,'100K–1M'],[1e6,Infinity,'от 1M']];
+const MSORT=[['new','Новые'],['old','Старые'],['cheap','Дешёвые'],['exp','Дорогие'],['rar','Редкость']];
+const mLotT=l=>{try{return nickVal(l.name).t}catch(e){return 0}};
+function mApply(ls){
+  let r=ls.filter(l=>(mk.rar<0||mLotT(l)===mk.rar)&&l.price>=MPR[mk.pr][0]&&l.price<MPR[mk.pr][1]);
+  if(mk.sort==='rar')r=r.map((l,i)=>[l,i]).sort((a,b)=>(b[0].top-a[0].top)||(mLotT(b[0])-mLotT(a[0]))||(b[0].price-a[0].price)||(a[1]-b[1])).map(x=>x[0]);
+  return r;
+}
+function mFilters(){
+  const chip=(attr,v,on,l,c)=>`<button class="crch${on?' on':''}" ${attr}="${v}"${c?` style="--tc:${c}"`:''}>${c?'<i></i>':''}${l}</button>`;
+  const cnt={};(mk.lots||[]).forEach(l=>{const t=mLotT(l);cnt[t]=(cnt[t]|0)+1});
+  return `<div class="mflh">Сортировка</div><div class="crchips">${MSORT.map(([k,l])=>chip('data-sort',k,mk.sort===k,l)).join('')}</div>
+  <div class="mflh">Редкость</div><div class="crchips">${chip('data-mrar',-1,mk.rar<0,'Все')}${T.map((x,t)=>cnt[t]||mk.rar===t?chip('data-mrar',t,mk.rar===t,`${x.n} <b>${cnt[t]|0}</b>`,x.c):'').join('')}</div>
+  <div class="mflh">Цена</div><div class="crchips">${MPR.map((x,i)=>chip('data-mpr',i,mk.pr===i,x[2])).join('')}</div>`;
+}
 function renderMarket(){
   const el=$('#tab-market');if(!el)return;
   let body;
@@ -2092,8 +2109,8 @@ function renderMarket(){
   else if(mk.err&&!mk.lots)body=`<div class="pcard lbmsg"><b>${escH(mk.err)}</b><button class="btn main" id="m-retry">Повторить</button></div>`;
   else if(mk.tab==='hist')body=!mk.hist?'<div class="pcard lbmsg"><small>Загружаю…</small></div>':(mk.hist.length?mk.hist.map(h=>{const n=nickVal(h.name),sold=h.kind==='sold';return `<div class="mlot hrow2" style="--tc:${T[n.t].c}"><div class="mi"><b>${sold?'💰 Продано':'🛒 Куплено'} · @${escH(h.name)}</b><small>${T[n.t].n} · ${sold?'покупатель':'продавец'}: ${escH(h.who)}</small><small>${fmtDate(h.ts)}</small></div><div class="mpr"><b class="${sold?'hplus':'hminus'}">${sold?'+':'−'}${fmt(sold?h.get:h.price)} 🪙</b>${sold?`<small>цена ${fmt(h.price)}</small>`:''}</div></div>`}).join(''):'<div class="pcard lbmsg"><small>Сделок пока нет.</small></div>')
   else if(mk.tab==='buy')body=`<input class="csearch" id="m-q" type="search" placeholder="Поиск ника" value="${escH(mk.q)}" autocomplete="off">
-    <div class="seg" style="margin:0 0 12px">${[['new','Новые'],['cheap','Дешёвые'],['exp','Дорогие']].map(([k,l])=>`<button data-sort="${k}" aria-pressed="${mk.sort===k}">${l}</button>`).join('')}</div>`+
-    ((mk.lots||[]).length?mk.lots.map(mLot).join(''):'<div class="pcard lbmsg"><small>Лотов нет. Выстави свой ник во вкладке «Мои лоты».</small></div>');
+    ${mFilters()}`+
+    (()=>{const all=mk.lots||[],ls=mApply(all);return `<div class="mcnt"><b>${ls.length}</b> ${mpl(ls.length)}${ls.length!==all.length?` из ${all.length}`:''}</div>`+(ls.length?ls.map(mLot).join(''):`<div class="pcard lbmsg"><small>${all.length?'По этим фильтрам лотов нет. Сбрось фильтры.':'Лотов нет. Выстави свой ник во вкладке «Мои лоты».'}</small></div>`)})()
   else{
     const m=mk.my||{active:[],sold:[],fee:.05,max:10},tot=m.sold.reduce((s,x)=>s+x.get,0);
     body=(S.toppick?`<div class="pcard msold toppick"><div><b>🔝 Выбери лот для топа</b><small>Оплачено ⭐ · лот будет первым на рынке 24 часа</small></div><button class="btn sm" id="m-topx">Отмена</button></div>`:'')+`<button class="btn main cwide" id="m-new">＋ Выставить ник</button>${S.toppick?'':'<button class="btn cwide" data-stgo="top">🔝 Лот в топ · ⭐ 19</button>'}`+
@@ -2119,7 +2136,8 @@ $('#tab-market').onclick=async e=>{
   if(t.closest('#m-back'))return tab('help');
   if(t.closest('#m-retry'))return openMarket();
   const mt=t.closest('[data-mt]');if(mt){mk.tab=mt.dataset.mt;renderMarket();if(mk.tab==='hist'){mk.hist=null;renderMarket();lbReq('/market/history').then(r=>{mk.hist=r.items||[];if(mk.tab==='hist')renderMarket()}).catch(e=>{mk.hist=[];toast(merr(e));if(mk.tab==='hist')renderMarket()})}return}
-  const so=t.closest('[data-sort]');if(so){mk.sort=so.dataset.sort;try{await mLoad()}catch(x){}return renderMarket()}
+  const so=t.closest('[data-sort]');if(so){const ef=x=>x==='rar'?'new':x,o=mk.sort;mk.sort=so.dataset.sort;if(ef(o)!==ef(mk.sort)){try{await mLoad()}catch(x){}}return renderMarket()}
+  {const ra=t.closest('[data-mrar]');if(ra){mk.rar=+ra.dataset.mrar;return renderMarket()}const pr=t.closest('[data-mpr]');if(pr){mk.pr=+pr.dataset.mpr;return renderMarket()}}
   if(t.closest('[data-mclose]')){mk.sheet=false;return renderMarket()}
   if(t.closest('#m-topx')){S.toppick=0;save();return renderMarket()}
   {const tp=t.closest('[data-top]');if(tp){
