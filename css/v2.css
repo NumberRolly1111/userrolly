@@ -1,0 +1,54 @@
+/* Новый дизайн (v2): мягкое тёмное стекло вместо жёстких теней. Выключается в Профиле → «Новый дизайн». */
+html.v2{--bw:1px;--r:20px;--glass:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));--ring:rgba(255,255,255,.09);--sh:rgba(0,0,0,.35)}
+html.v2 body{background:radial-gradient(120% 50% at 50% -8%,color-mix(in srgb,var(--blue) 30%,transparent) 0,transparent 62%),radial-gradient(70% 40% at 100% 100%,color-mix(in srgb,var(--blue) 14%,transparent) 0,transparent 70%),var(--bg)}
+html.v2 .pcard,html.v2 .stage,html.v2 .item,html.v2 .seg,html.v2 .sbox,html.v2 .mfil,html.v2 .msrch,html.v2 .mlot,html.v2 .pill{
+  background:var(--glass),var(--paper);border:1px solid var(--ring);box-shadow:0 10px 30px -12px var(--sh),0 1px 0 rgba(255,255,255,.07) inset}
+html.v2 .pcard{border-radius:var(--r);padding:16px 16px}
+html.v2 .stage{border-radius:28px;box-shadow:0 24px 60px -24px color-mix(in srgb,var(--blue) 45%,#000),0 1px 0 rgba(255,255,255,.08) inset}
+html.v2 .stage.hit{border-color:var(--tc);box-shadow:0 0 0 1px var(--tc),0 0 50px -6px var(--tc),0 24px 60px -24px #000}
+html.v2 .item{border-left:4px solid var(--tc);border-radius:16px}
+html.v2 .mlot{border-radius:16px}
+html.v2 .seg{border-radius:16px;padding:4px;box-shadow:0 1px 0 rgba(255,255,255,.06) inset}
+html.v2 .seg [aria-pressed=true]{background:rgba(255,255,255,.14);color:var(--fg);box-shadow:0 2px 10px rgba(0,0,0,.35)}
+html.v2 .cell{border:1px solid var(--ring);background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.02)),var(--tile);box-shadow:0 6px 16px -6px rgba(0,0,0,.6);border-radius:.22em}
+html.v2 .cell::after{height:1px;opacity:.35}
+html.v2 .btn{background:var(--glass),var(--tile);border:1px solid var(--ring);border-radius:14px;box-shadow:0 6px 16px -8px rgba(0,0,0,.6);transition:transform .12s,filter .15s}
+html.v2 .btn:active:not(:disabled){transform:scale(.97);box-shadow:0 2px 6px -4px rgba(0,0,0,.6)}
+html.v2 .btn.main{background:linear-gradient(180deg,color-mix(in srgb,var(--tc) 100%,#fff 22%),var(--tc));border-color:transparent;color:var(--dark);box-shadow:0 8px 22px -8px var(--tc)}
+html.v2 .spin{border:0;border-radius:20px;position:relative;overflow:hidden;box-shadow:0 16px 38px -10px rgba(31,184,92,.65),0 1px 0 rgba(255,255,255,.45) inset;transition:transform .12s}
+html.v2 .spin::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.4) 50%,transparent 65%);transform:translateX(-120%);animation:v2shine 3.6s 1s infinite}
+@keyframes v2shine{60%,100%{transform:translateX(120%)}}
+html.v2 .spin:active:not(:disabled){transform:scale(.98)}
+html.v2 .bonus{border:0;box-shadow:0 8px 22px -8px #FFD23F}
+html.v2 .pill{border-radius:999px}
+html.v2 .badge{box-shadow:0 8px 24px -8px var(--tc)}
+html.v2 .tag{border:1px solid var(--ring);background:rgba(255,255,255,.06);border-radius:10px}
+html.v2 .tag.odd{background:var(--tc);border-color:transparent}
+html.v2 nav{background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border-top:1px solid var(--ring)}
+html.v2 nav [aria-selected=true]{background:rgba(255,255,255,.1)}
+html.v2 .sbox{border-radius:26px 26px 0 0;border-bottom:0;box-shadow:0 -24px 70px rgba(0,0,0,.6)}
+html.v2 .sbg{background:rgba(4,3,12,.62);backdrop-filter:blur(4px)}
+html.v2 .csearch,html.v2 input[type=search],html.v2 .mlab input{border:1px solid var(--ring);background:var(--glass),var(--paper);border-radius:14px}
+html.v2 .mdd,html.v2 .crch,html.v2 .mopt{border:1px solid var(--ring);background:rgba(255,255,255,.06)}
+html.v2 .mdd.on,html.v2 .mopt.on{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 22%,transparent)}
+html.v2 .sw{border:1px solid var(--ring)}
+html.v2 .ch3{letter-spacing:.01em}
+html.v2 h1{letter-spacing:-.01em}
+html.v2 .pcard.svc.excs{border-color:#B455FF!important}
+/* появление карточек */
+@keyframes v2in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+html.v2 section:not([hidden])>.pcard,html.v2 section:not([hidden])>.mlot,html.v2 section:not([hidden])>.item{animation:v2in .4s both}
+html.v2 section:not([hidden])>.pcard:nth-child(2){animation-delay:.04s}html.v2 section:not([hidden])>.pcard:nth-child(3){animation-delay:.08s}html.v2 section:not([hidden])>.pcard:nth-child(4){animation-delay:.12s}html.v2 section:not([hidden])>.pcard:nth-child(n+5){animation-delay:.16s}
+@media (prefers-reduced-motion:reduce){html.v2 *{animation-duration:.01ms!important}}
+
+/* усиление: живой фон, неоновая рамка рулетки, объём ячеек */
+html.v2 body::before{content:"";position:fixed;inset:-20% -20% auto;height:70vh;z-index:-1;pointer-events:none;background:radial-gradient(40% 40% at 25% 30%,color-mix(in srgb,var(--blue) 38%,transparent),transparent 70%),radial-gradient(35% 35% at 78% 20%,rgba(180,85,255,.28),transparent 70%);filter:blur(30px);animation:v2aur 14s ease-in-out infinite alternate}
+@keyframes v2aur{to{transform:translate3d(6%,8%,0) scale(1.12)}}
+html.v2 .stage{border:1px solid transparent;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.015)) padding-box,linear-gradient(var(--paper),var(--paper)) padding-box,linear-gradient(135deg,color-mix(in srgb,var(--blue) 80%,#fff),rgba(255,255,255,.08) 40%,rgba(180,85,255,.7)) border-box;box-shadow:0 30px 70px -28px color-mix(in srgb,var(--blue) 70%,#000),0 0 40px -18px var(--blue)}
+html.v2 .stage.hit{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.02)) padding-box,linear-gradient(var(--paper),var(--paper)) padding-box,linear-gradient(135deg,var(--tc),rgba(255,255,255,.2),var(--tc)) border-box}
+html.v2 .cell{box-shadow:0 10px 22px -8px rgba(0,0,0,.75),0 1px 0 rgba(255,255,255,.18) inset}
+html.v2 .stage.hit .cell{box-shadow:0 0 22px -2px var(--tc),0 1px 0 rgba(255,255,255,.4) inset}
+html.v2 .reel .at{text-shadow:0 0 18px var(--blue)}
+html.v2 .pill{backdrop-filter:blur(10px)}
+html.v2 .pcard>b,html.v2 .pt b{letter-spacing:-.01em}
+html.v2 .pcard:active{transform:scale(.995)}

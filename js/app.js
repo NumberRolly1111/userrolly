@@ -1377,6 +1377,7 @@ function renderProf(){
     <div class="pt"><small>В игре за всё время</small><b id="tm-all">${fmtT(S.time)}</b></div><div class="pt"><small>В игре сегодня</small><b id="tm-day">${fmtT(todaySec())}</b></div></div>
     <div class="pgrid tiers">${T.map((t,i)=>`<div class="pt${i===99?' last':''}" style="--tc:${t.c}"><small>${TN[i]}</small><b>${fmt(S.cnt[i])}</b></div>`).join('')}</div></div>
   <div class="pcard sndrow"><div><b>Звуки</b><small>Эффекты рулетки, наград и колеса</small></div><button class="sw${S.snd?' on':''}" id="snd-tg" role="switch" aria-checked="${S.snd}" aria-label="Звуки"><i></i></button></div>
+  <div class="pcard sndrow"><div><b>Новый дизайн</b><small>Мягкое тёмное оформление. Выключи, чтобы вернуть прежний вид.</small></div><button class="sw${S.ui2===0?'':' on'}" id="ui2-tg" role="switch" aria-checked="${S.ui2!==0}" aria-label="Новый дизайн"><i></i></button></div>
   <div class="pcard anrow"><b>Анимация крутки</b><small>Как открываются буквы ника. Выбери стиль, он сразу покажется ниже.</small><div class="anopts">${ANIMN.map(a=>`<button class="anb" data-an="${a[0]}" aria-pressed="${animMode()===a[0]}"><b>${a[1]}</b><small>${animSub(a)}</small></button>`).join('')}</div><div class="stage anprev"><div class="reel" id="anreel"></div></div></div>${ntfCard()}`;
   requestAnimationFrame(()=>{const r=document.getElementById('anreel');if(r)build('hjaajh',false,r)});
 }
@@ -1405,6 +1406,7 @@ $('#tab-prof').onclick=e=>{
   if(e.target.closest('#nt-test'))return ntTest();
   const anb=e.target.closest('[data-an]');if(anb){animPick(anb.dataset.an,()=>{document.querySelectorAll('[data-an]').forEach(x=>{x.setAttribute('aria-pressed',x.dataset.an===S.anim);const a=ANIMN.find(y=>y[0]===x.dataset.an);x.querySelector('small').textContent=animSub(a)});anPrev();anBtn()});return}
   {const mb=e.target.closest('[data-mus]');if(mb){S.mus=mb.dataset.mus;try{sessionStorage.removeItem('nr_mt')}catch(x){}save();musApply();renderProf();return}}
+  if(e.target.closest('#ui2-tg')){S.ui2=S.ui2===0?1:0;save();document.documentElement.classList.toggle('v2',S.ui2!==0);renderProf();return}
   if(e.target.closest('#snd-tg')){S.snd=!S.snd;save();renderProf();if(S.snd){sfx('ach')}return}
   if(e.target.closest('#idcopy')){(async()=>{try{await navigator.clipboard.writeText(String(S.uid).padStart(6,'0'));toast('ID скопирован')}catch(x){toast('Не удалось скопировать ID')}})();return}
   if(e.target.closest('#ref-claim'))return claimRefs();
