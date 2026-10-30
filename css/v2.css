@@ -1,6 +1,6 @@
 /* Новый дизайн (v2): мягкое тёмное стекло вместо жёстких теней. Выключается в Профиле → «Новый дизайн». */
 html.v2{--bw:1px;--r:20px;--glass:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));--ring:rgba(255,255,255,.09);--sh:rgba(0,0,0,.35)}
-html.v2 body{background:radial-gradient(rgba(255,255,255,.13) 1.2px,transparent 1.4px) 0 0/22px 22px,radial-gradient(120% 50% at 50% -8%,color-mix(in srgb,var(--blue) 30%,transparent) 0,transparent 62%),radial-gradient(70% 40% at 100% 100%,color-mix(in srgb,var(--blue) 14%,transparent) 0,transparent 70%),var(--bg)}
+html.v2 body{background:radial-gradient(120% 50% at 50% -8%,color-mix(in srgb,var(--blue) 30%,transparent) 0,transparent 62%),radial-gradient(70% 40% at 100% 100%,color-mix(in srgb,var(--blue) 14%,transparent) 0,transparent 70%),var(--bg)}
 html.v2 .pcard,html.v2 .stage,html.v2 .item,html.v2 .seg,html.v2 .sbox,html.v2 .mfil,html.v2 .msrch,html.v2 .mlot,html.v2 .pill{
   background:var(--glass),var(--paper);border:1px solid var(--ring);box-shadow:0 10px 30px -12px var(--sh),0 1px 0 rgba(255,255,255,.07) inset}
 html.v2 .pcard{border-radius:var(--r);padding:16px 16px}
@@ -59,3 +59,4 @@ html.v2 .pcard:active{transform:scale(.995)}
 .rrays{position:fixed;left:50%;top:30%;width:160vmax;height:160vmax;margin:-80vmax 0 0 -80vmax;z-index:69;pointer-events:none;border-radius:50%;background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--rc) 40%,transparent) 0 6deg,transparent 6deg 18deg);-webkit-mask:radial-gradient(circle,#000 0,transparent 55%);mask:radial-gradient(circle,#000 0,transparent 55%);animation:rry 1.8s ease-out forwards}
 @keyframes rry{from{opacity:0;transform:rotate(0) scale(.4)}25%{opacity:.9}to{opacity:0;transform:rotate(40deg) scale(1)}}
 html.v2 .stage.hit{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.02)),var(--paper);border:1px solid var(--tc)}
+html.v2 body{background-image:radial-gradient(120% 50% at 50% -8%,color-mix(in srgb,var(--blue) 30%,transparent) 0,transparent 62%),radial-gradient(70% 40% at 100% 100%,color-mix(in srgb,var(--blue) 14%,transparent) 0,transparent 70%)}
