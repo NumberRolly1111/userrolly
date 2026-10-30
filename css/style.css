@@ -1640,3 +1640,8 @@ html{color-scheme:dark}
 ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.35);background-clip:content-box}
 ::-webkit-scrollbar-button,::-webkit-scrollbar-corner{display:none}
 .mem{font-style:normal;font-size:26px;line-height:1;flex:none;filter:drop-shadow(0 3px 6px rgba(0,0,0,.4))}
+/* «Ещё»: отдельные карточки без тесной внешней рамки */
+.mlist{display:flex;flex-direction:column;gap:8px;border:0;background:none;border-radius:0;padding:2px 2px 12px;margin:0 -2px}
+.mrow{border:1px solid rgba(255,255,255,.09);border-bottom:1px solid rgba(255,255,255,.09);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02)),var(--paper);padding:13px 16px}
+.mrow:last-child{border-bottom:1px solid rgba(255,255,255,.09)}
+.moresb{padding-left:16px;padding-right:16px}
