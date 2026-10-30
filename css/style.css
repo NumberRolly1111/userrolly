@@ -1556,3 +1556,12 @@ body.shk{animation:none!important}
 .mflh{font:800 11px var(--head);letter-spacing:1px;text-transform:uppercase;color:var(--mute);margin:10px 2px 6px}
 .crch b{margin-left:2px}
 .mcnt{margin:12px 2px 8px;color:var(--mute);font-size:13px}.mcnt b{color:var(--ink);font:800 15px var(--head)}
+
+.vitc{margin-top:12px}.vith{display:grid;gap:2px;margin-bottom:10px}.vith small{color:var(--mute);font-size:12px}
+.vgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.vslot{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:92px;padding:10px 4px;border-radius:14px;border:1.5px dashed var(--line);background:rgba(255,255,255,.03);color:var(--ink);text-align:center;min-width:0}
+.vslot i{font-style:normal;font-size:24px;color:var(--mute)}.vslot small{font-size:10.5px;color:var(--mute)}
+.vslot.on{border:1.5px solid var(--tc);background:color-mix(in srgb,var(--tc) 14%,#14101c)}
+.vslot.on b{font:800 12.5px var(--head);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vslot.on small{color:var(--tc)}.vslot.on span{font:700 11px var(--body)}
+.vx{position:absolute;right:4px;top:4px;width:20px;height:20px;border-radius:50%;border:0;background:rgba(0,0,0,.45);color:var(--mute);font-size:10px;padding:0}
+#vitsh{z-index:70}

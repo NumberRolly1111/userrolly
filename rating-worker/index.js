@@ -31,7 +31,7 @@ let migrated = false;
 async function migrate(db) {   // добавляем новые столбцы сами, SQL вручную выполнять не нужно
   if (migrated) return;
   const have = (await db.prepare('PRAGMA table_info(players)').all()).results.map((r) => r.name);
-  for (const [c, d] of [['flag', 'INTEGER NOT NULL DEFAULT 0'], ['cos', "TEXT NOT NULL DEFAULT ''"], ['allow', 'INTEGER NOT NULL DEFAULT 0'], ['un', "TEXT NOT NULL DEFAULT ''"], ['first', 'INTEGER NOT NULL DEFAULT 0']]) {
+  for (const [c, d] of [['flag', 'INTEGER NOT NULL DEFAULT 0'], ['cos', "TEXT NOT NULL DEFAULT ''"], ['allow', 'INTEGER NOT NULL DEFAULT 0'], ['un', "TEXT NOT NULL DEFAULT ''"], ['first', 'INTEGER NOT NULL DEFAULT 0'], ['vit', "TEXT NOT NULL DEFAULT ''"]]) {
     if (!have.includes(c)) {
       await db.prepare(`ALTER TABLE players ADD COLUMN ${c} ${d}`).run();
       if (c === 'first') await db.prepare('UPDATE players SET first=upd WHERE first=0').run();
@@ -603,10 +603,10 @@ function topSql(by, tail, full) {
   const tag = '(SELECT c.tag FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=p.uid) AS tag';
   const extra = full ? ',p.un,p.net,p.best,(SELECT c.name FROM members m JOIN clans c ON c.id=m.clan WHERE m.uid=p.uid) AS cname' : '';
   if (by === 'museum') {
-    return `SELECT p.uid,p.name,x.s AS v,x.s AS mv,x.c AS mc,p.bestn,p.lvl,p.cos,${tag}${extra} FROM (SELECT owner, SUM(v) AS s, COUNT(*) AS c FROM museum GROUP BY owner) x JOIN players p ON p.uid=x.owner WHERE p.hide=0 AND p.flag=0 AND x.s>0 ORDER BY x.s DESC, p.upd ASC ${tail}`;
+    return `SELECT p.uid,p.name,x.s AS v,x.s AS mv,x.c AS mc,p.bestn,p.lvl,p.cos,p.vit,${tag}${extra} FROM (SELECT owner, SUM(v) AS s, COUNT(*) AS c FROM museum GROUP BY owner) x JOIN players p ON p.uid=x.owner WHERE p.hide=0 AND p.flag=0 AND x.s>0 ORDER BY x.s DESC, p.upd ASC ${tail}`;
   }
   const col = by === 'best' ? 'best' : by === 'lvl' ? 'lvl' : 'net';
-  return `SELECT p.uid,p.name,p.${col} AS v,p.bestn,p.lvl,p.cos,${tag}${extra},(SELECT COUNT(*) FROM museum WHERE owner=p.uid) AS mc FROM players p WHERE p.hide=0 AND p.flag=0 AND p.${col}>0 ORDER BY p.${col} DESC, p.upd ASC ${tail}`;
+  return `SELECT p.uid,p.name,p.${col} AS v,p.bestn,p.lvl,p.cos,p.vit,${tag}${extra},(SELECT COUNT(*) FROM museum WHERE owner=p.uid) AS mc FROM players p WHERE p.hide=0 AND p.flag=0 AND p.${col}>0 ORDER BY p.${col} DESC, p.upd ASC ${tail}`;
 }
 
 export default {
@@ -846,6 +846,7 @@ async function handle(req, env) {
       const now = Date.now();
       const old = await env.DB.prepare('SELECT net,best,upd,flag,allow FROM players WHERE uid=?').bind(uid).first();
       if (old && now - old.upd < MIN_GAP_MS) return json({ error: 'wait' }, 429);
+      const vit = String(b.vit || '').split('|').slice(0, 3).map((x) => clean(x, 32)).filter(Boolean).join('|');
       const cos = String(b.cos || '').match(/^[a-z0-9_]{0,16}\|[a-z0-9_]{0,16}(\|[a-z0-9_]{0,16})?(\|[a-z,]{0,60})?$/) ? String(b.cos) : '';
       if (!isAdmin(uid, env)) {
         const el = old ? Math.min(MAX_ELAPSED_S, Math.max(0, (now - old.upd) / 1000)) : 0;
@@ -857,9 +858,9 @@ async function handle(req, env) {
         }
       }
       await env.DB.prepare(
-        `INSERT INTO players(uid,name,net,best,bestn,lvl,hide,upd,flag,cos,allow) VALUES(?,?,?,?,?,?,?,?,0,?,0)
-         ON CONFLICT(uid) DO UPDATE SET name=excluded.name,net=excluded.net,best=excluded.best,bestn=excluded.bestn,lvl=excluded.lvl,hide=excluded.hide,upd=excluded.upd,flag=0,cos=excluded.cos,allow=0`
-      ).bind(uid, clean(b.name, 24) || 'Игрок', net, best, clean(b.bestn, 32), lvl, b.hide ? 1 : 0, now, cos).run();
+        `INSERT INTO players(uid,name,net,best,bestn,lvl,hide,upd,flag,cos,allow,vit) VALUES(?,?,?,?,?,?,?,?,0,?,0,?)
+         ON CONFLICT(uid) DO UPDATE SET name=excluded.name,net=excluded.net,best=excluded.best,bestn=excluded.bestn,lvl=excluded.lvl,hide=excluded.hide,upd=excluded.upd,flag=0,cos=excluded.cos,allow=0,vit=excluded.vit`
+      ).bind(uid, clean(b.name, 24) || 'Игрок', net, best, clean(b.bestn, 32), lvl, b.hide ? 1 : 0, now, cos, vit).run();
       try { await env.DB.prepare('UPDATE players SET un=?1, first=CASE WHEN first=0 THEN ?3 ELSE first END WHERE uid=?2').bind(tgUn(req.headers.get('X-Init-Data')), uid, now).run(); } catch {}
       return json({ ok: true });
     }
@@ -938,7 +939,7 @@ async function handle(req, env) {
       const r = await env.DB.prepare(topSql(by, 'LIMIT 1 OFFSET ?', true)).bind(i).first();
       if (!r) return json({ error: 'none' }, 404);
       let pv = 0; try { const a = await env.DB.prepare('SELECT vip FROM acct WHERE uid=?').bind(r.uid).first(); pv = a && a.vip > Date.now() ? 1 : 0; } catch (e) {}
-      return json({ vip: pv, rank: i + 1, name: r.name, net: r.net, best: r.best, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', tag: r.tag || '', cname: r.cname || '', un: r.un || '', mc: r.mc || 0, mv: r.mv || 0, gid: gidOf(r.uid), me: r.uid === uid });
+      return json({ vip: pv, rank: i + 1, name: r.name, net: r.net, best: r.best, bestn: r.bestn, lvl: r.lvl, cos: r.cos || '', vit: r.vit || '', tag: r.tag || '', cname: r.cname || '', un: r.un || '', mc: r.mc || 0, mv: r.mv || 0, gid: gidOf(r.uid), me: r.uid === uid });
     }
     // ---- LIVE-лента: крупные выпадения игроков ----
     if (url.pathname === '/chat' && req.method === 'GET') {   // общий чат и личные сообщения
