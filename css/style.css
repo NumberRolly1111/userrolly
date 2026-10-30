@@ -1645,3 +1645,12 @@ html{color-scheme:dark}
 .mrow{border:1px solid rgba(255,255,255,.09);border-bottom:1px solid rgba(255,255,255,.09);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02)),var(--paper);padding:13px 16px}
 .mrow:last-child{border-bottom:1px solid rgba(255,255,255,.09)}
 .moresb{padding-left:16px;padding-right:16px}
+
+.frhero{padding:16px}.frhero>b{font:800 18px var(--head)}.frhero p{color:#d4d0f0;font-size:14px;margin:8px 0 12px;line-height:1.45}.frhero .btn{margin-top:8px}
+.frsl{display:flex;flex-direction:column;gap:8px}
+.frs{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:16px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.04)}
+.frs b{display:block;font:800 14.5px var(--head)}.frs small{color:var(--mute);font-size:12.5px}.frs>div{flex:1}
+.frn{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--tile);font:800 15px var(--head)}
+.frs.ok{border-color:#36e07c}.frs.got{opacity:.6}.frs em{font-style:normal;color:#36e07c;font-size:18px}.frl{flex:none}
+.frlist{padding:6px 14px}.frf{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.07)}.frf:last-child{border:0}
+.frf b{flex:1;font-size:14px}.frf small{color:var(--mute)}.frf span{color:#FFD23F;font-weight:700;font-size:13px}

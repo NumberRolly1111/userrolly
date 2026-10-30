@@ -62,6 +62,8 @@ async function migrate(db) {   // добавляем новые столбцы �
   try { const ah2 = (await db.prepare('PRAGMA table_info(acct)').all()).results.map((r) => r.name); if (!ah2.includes('luck')) await db.prepare('ALTER TABLE acct ADD COLUMN luck INTEGER NOT NULL DEFAULT 0').run(); } catch (e) {}
   await db.prepare('CREATE TABLE IF NOT EXISTS purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, item TEXT NOT NULL, meta TEXT NOT NULL DEFAULT \'\', stars INTEGER NOT NULL DEFAULT 0, charge TEXT UNIQUE, via TEXT NOT NULL DEFAULT \'tg\', ts INTEGER NOT NULL DEFAULT 0, claimed INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_purch_uid ON purchases(uid, claimed)').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS refbonus (pid INTEGER PRIMARY KEY, inviter TEXT NOT NULL, invitee TEXT NOT NULL DEFAULT \'\', stars INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_refbonus ON refbonus(inviter)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS shop (item TEXT PRIMARY KEY, uid TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS ntf (uid TEXT PRIMARY KEY, mask INTEGER NOT NULL DEFAULT 0, wheel_at INTEGER NOT NULL DEFAULT 0, en_full INTEGER NOT NULL DEFAULT 0, tz INTEGER NOT NULL DEFAULT 0, seen INTEGER NOT NULL DEFAULT 0, nw INTEGER NOT NULL DEFAULT 0, ne INTEGER NOT NULL DEFAULT 0, nl INTEGER NOT NULL DEFAULT 0, nlast INTEGER NOT NULL DEFAULT 0, bad INTEGER NOT NULL DEFAULT 0, tst INTEGER NOT NULL DEFAULT 0)').run();
   try {
@@ -252,6 +254,8 @@ async function cron(env) {
 // ================= Оплата звёздами Telegram (XTR) =================
 // Каталог лежит на сервере: цену и состав клиент не определяет. Счёт приходит в чат с ботом, платёж подтверждает вебхук /tg.
 // Баланс звёзд (acct.bal) пополняется отдельными счетами bal25…bal1500 и тратится на любые товары одним нажатием.
+const REF_PCT = 0.05;   // доля пригласившему от платежей друга звёздами Telegram
+const refStars = (stars) => Math.max(1, Math.round(stars * REF_PCT));
 const FIRST_BONUS = 0.1;   // бонус к первому пополнению звёздного баланса
 let LAST_BONUS = 0;
 const FEED_TXT = { vip: 'купил(а) VIP 👑', ceo: 'купил(а) эксклюзивный ник @ceo 🟣', title_oligarch: 'стал(а) Олигархом 🏆', pack_gold: 'купил(а) Золотой набор 💎', collector: 'стал(а) Коллекционером', museum: 'открыл(а) свой зал в музее' };
@@ -319,6 +323,17 @@ async function payApply(db, env, uid, id, stars, charge, via) {
     await db.prepare('UPDATE acct SET bal=bal+? WHERE uid=?').bind(it.topup + bonus, uid).run();
     if (bonus) await db.prepare('UPDATE purchases SET meta=? WHERE id=?').bind(String(bonus), ins.meta.last_row_id).run();
   }
+  if (via === 'tg' && stars > 0) {   // 5% звёзд пригласившему
+    try {
+      const rf = await db.prepare('SELECT inviter FROM refs WHERE invitee=?').bind(uid).first();
+      if (rf && rf.inviter && rf.inviter !== uid) {
+        const rb = refStars(stars);
+        await acctGet(db, rf.inviter);
+        await db.prepare('UPDATE acct SET bal=bal+? WHERE uid=?').bind(rb, rf.inviter).run();
+        await db.prepare('INSERT OR IGNORE INTO refbonus(pid,inviter,invitee,stars,ts) VALUES(?,?,?,?,?)').bind(ins.meta.last_row_id, rf.inviter, uid, rb, Date.now()).run();
+      }
+    } catch (e) {}
+  }
   if (FEED_TXT[id]) {
     const pl = await db.prepare('SELECT name,hide FROM players WHERE uid=?').bind(uid).first();
     const nm = pl && !pl.hide && pl.name ? pl.name : 'Игрок';
@@ -363,6 +378,10 @@ async function refundPurchase(db, env, p) {
     await db.prepare('UPDATE acct SET bal=bal+? WHERE uid=?').bind(p.stars, p.uid).run();
     notes.push('звёзды вернулись на баланс игры');
   }
+  try {   // вернуть бонус пригласившему
+    const rb = await db.prepare('SELECT inviter,stars FROM refbonus WHERE pid=?').bind(p.id).first();
+    if (rb) { await db.prepare('UPDATE acct SET bal=MAX(0,bal-?) WHERE uid=?').bind(rb.stars, rb.inviter).run(); await db.prepare('DELETE FROM refbonus WHERE pid=?').bind(p.id).run(); }
+  } catch (e) {}
   if (it.topup) {   // пополнение отзываем с баланса (в минус не уходим)
     const a = await acctGet(db, p.uid), take = it.topup + (Number(p.meta) || 0);
     await db.prepare('UPDATE acct SET bal=MAX(0,bal-?) WHERE uid=?').bind(take, p.uid).run();
@@ -1041,7 +1060,7 @@ async function handle(req, env) {
       return json({ sum, nicks });
     }
     // ---- друзья ----
-    const REF_MAX = 20;
+    const REF_MAX = 200;
     if (url.pathname === '/ref' && req.method === 'POST') {
       let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
       const inviter = String(b.inviter || '');
@@ -1057,6 +1076,12 @@ async function handle(req, env) {
     if (url.pathname === '/refs' && req.method === 'GET') {
       const r = await env.DB.prepare('SELECT COUNT(*) AS n FROM refs WHERE inviter=? AND claimed=0').bind(uid).first();
       return json({ n: r.n });
+    }
+    if (url.pathname === '/ref/stats' && req.method === 'GET') {
+      const tot = await env.DB.prepare('SELECT COUNT(*) AS n FROM refs WHERE inviter=?').bind(uid).first();
+      const st = await env.DB.prepare('SELECT COALESCE(SUM(stars),0) AS s FROM refbonus WHERE inviter=?').bind(uid).first();
+      const fr = await env.DB.prepare('SELECT r.invitee AS u, r.ts AS ts, p.name AS name, p.hide AS hide, (SELECT COALESCE(SUM(b.stars),0) FROM refbonus b WHERE b.inviter=r.inviter AND b.invitee=r.invitee) AS st FROM refs r LEFT JOIN players p ON p.uid=r.invitee WHERE r.inviter=? ORDER BY r.ts DESC LIMIT 30').bind(uid).all();
+      return json({ total: tot.n, stars: st.s, pct: Math.round(REF_PCT * 100), friends: fr.results.map((x) => ({ name: x.hide ? 'Игрок' : (x.name || 'Игрок'), ts: x.ts, stars: x.st })) });
     }
     if (url.pathname === '/ref/claim' && req.method === 'POST') {
       const done = await env.DB.prepare('SELECT COUNT(*) AS n FROM refs WHERE inviter=? AND claimed=1').bind(uid).first();

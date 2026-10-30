@@ -3,14 +3,14 @@ addEventListener('error',e=>{try{if(e.message==='Script error.'&&!e.filename&&!e
 addEventListener('unhandledrejection',e=>{try{console.error(e.reason)}catch(x){}});
 const $=s=>document.querySelector(s),tg=window.Telegram&&Telegram.WebApp;
 // если на хостинге лежит старый html без новых разделов (файлы загрузили не все) — создаём недостающие, чтобы игра не падала
-['ach','show','top','clan','market','museum','shop','auction','help','guide','season','games','battles','fair'].forEach(k=>{if(!$('#tab-'+k)){const s=document.createElement('section');s.id='tab-'+k;s.className='list';s.hidden=true;($('#tab-bon')||document.body).after(s)}});
+['ach','show','top','clan','market','museum','shop','auction','help','guide','season','games','battles','fair','friends'].forEach(k=>{if(!$('#tab-'+k)){const s=document.createElement('section');s.id='tab-'+k;s.className='list';s.hidden=true;($('#tab-bon')||document.body).after(s)}});
 // Вкладки-«таблетки» внутри разделов: Склад (ники, апгрейд, контракт, витрины, музей) и Магазин (магазин, рынок, аукцион)
 const SUBS={stock:[['col','Ники'],['up','Апгрейд'],['craft','Контракт'],['battles','Батлы'],['show','Витрины'],['museum','Музей']],shop:[['shop','Магазин'],['market','Рынок'],['auction','Аукцион']]};
 const subTabs=(g,a)=>`<div class="ptabs" role="tablist">${SUBS[g].filter(([k])=>g!=='stock'||k!=='up'||a==='up').map(([k,l])=>`<button role="tab" data-sub="${k}"${k==='craft'?' data-craft="1"':''} aria-selected="${k===a}">${l}</button>`).join('')}</div>`;
 function ptFix(){document.querySelectorAll('.ptabs').forEach(p=>{const b=p.querySelector('[aria-selected=true]');if(b&&p.scrollWidth>p.clientWidth){p.style.scrollBehavior='auto';p.scrollLeft=b.offsetLeft-(p.clientWidth-b.offsetWidth)/2;p.style.scrollBehavior=''}})}
 try{const g=document.getElementById('gsub');if(g)g.innerHTML=SUBS.stock.filter(([k])=>k!=='show'&&k!=='museum').map(([k,l])=>`<button role="tab" data-sub="${k}"${k==='craft'?' data-craft="1"':''} aria-selected="false">${l}</button>`).join('')}catch(e){}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-sub]');if(!b)return;const k=b.dataset.sub;if(k==='craft')return;tab(k)});
-const NAVMAP={game:'game',col:'col',up:'col',show:'col',museum:'col',shop:'shop',market:'shop',auction:'shop',top:'top',clan:'top',prof:'more',ach:'more',guide:'more',help:'more'};
+const NAVMAP={game:'game',col:'col',up:'col',show:'col',museum:'col',shop:'shop',market:'shop',auction:'shop',top:'top',clan:'top',prof:'more',ach:'more',guide:'more',help:'more',friends:'more'};
 // отступ сверху под системную панель Telegram («Закрыть», «…»): берём из SDK, иначе запасной
 function safeTop(){
   let t=0;try{t=((tg.safeAreaInset||{}).top||0)+((tg.contentSafeAreaInset||{}).top||0)}catch(e){}
@@ -1369,7 +1369,7 @@ function renderProf(){
     <button class="ptile" id="hist-open"><span class="pti">🧾</span><b>Покупки</b><small>история за звёзды</small></button>
     <button class="ptile" data-craft="1"><span class="pti">🧪</span><b>Контракт</b><small>3 ника → 1 новый</small></button>
   </div>
-  <div class="pcard inv invx"><div><b>Позвать друзей</b><small>За каждого друга: +${fmt(REF_C)} 🪙 и +${REF_E} ⚡ · приглашено ${S.refc} из ${REF_MAX}</small></div><div class="invb">${lb.refn>0?`<button class="btn main" id="ref-claim">Забрать +${fmt(lb.refn*REF_C)} 🪙</button>`:''}<button class="btn${lb.refn>0?'':' main'}" id="invite">Позвать</button></div></div>
+  <div class="pcard inv invx"><div><b>Позвать друзей</b><small>За каждого друга: +${fmt(REF_C)} 🪙 и +${REF_E} ⚡ и 5% ⭐ с его покупок · приглашено ${S.refc}</small></div><div class="invb">${lb.refn>0?`<button class="btn main" id="ref-claim">Забрать +${fmt(lb.refn*REF_C)} 🪙</button>`:''}<button class="btn${lb.refn>0?'':' main'}" id="invite">Позвать</button></div></div>
   <div class="pcard"><h3>Статистика</h3>
     <div class="pgrid"><div class="pt"><small>Круток</small><b>${fmt(S.spins)}</b></div><div class="pt"><small>Удачных апгрейдов</small><b>${fmt(S.upw)}</b></div>
     <div class="pt"><small>В игре за всё время</small><b id="tm-all">${fmtT(S.time)}</b></div><div class="pt"><small>В игре сегодня</small><b id="tm-day">${fmtT(todaySec())}</b></div></div>
@@ -1462,7 +1462,7 @@ $('#prof-btn').onclick=()=>tab($('#tab-prof').hidden?'prof':'game');
 // Страницы: index.html (игра), rating.html (рейтинг), achievements.html (достижения). Состояние общее — в localStorage и облаке Telegram.
 const PAGE=document.body.dataset.page||'main',PAGES={top:'rating.html',ach:'achievements.html',clan:'clans.html',market:'market.html',museum:'museum.html',shop:'shop.html',auction:'auction.html'};
 function tab(n){
-  const here=PAGE==='main'?['game','col','up','prof','bon','show','help','guide','season','games','battles','fair']:[PAGE];
+  const here=PAGE==='main'?['game','col','up','prof','bon','show','help','guide','season','games','battles','fair','friends']:[PAGE];
   if(here.includes(n))return tabIn(n);
   save();try{if(cloudDone)cloudPush()}catch(e){}
   const go=(PAGES[n]||'index.html')+(PAGES[n]||n==='game'?'':'#'+n);
@@ -1471,7 +1471,7 @@ function tab(n){
 }
 function tabIn(n){
   {const nn=NAVMAP[n]||'';document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===nn))}
-  ['game','col','up','prof','bon','ach','show','top','clan','market','museum','shop','auction','help','guide','season','games','battles','fair'].forEach(k=>{const e=$('#tab-'+k);if(!e)return;
+  ['game','col','up','prof','bon','ach','show','top','clan','market','museum','shop','auction','help','guide','season','games','battles','fair','friends'].forEach(k=>{const e=$('#tab-'+k);if(!e)return;
     if(k===n){if(e.hidden){e.hidden=false;e.classList.remove('tabin');void e.offsetWidth;e.classList.add('tabin');clearTimeout(e._ti);e._ti=setTimeout(()=>e.classList.remove('tabin'),900)}}else e.hidden=true});
   $('#prof-btn').setAttribute('aria-pressed',n==='prof');
   $('#bon-btn').setAttribute('aria-pressed',['bon','games','battles','fair'].includes(n));
@@ -1494,10 +1494,11 @@ function tabIn(n){
   if(n==='games')try{renderGames()}catch(e){}
   if(n==='battles')try{if(!bt.room)btLoad();else renderBattles()}catch(e){}
   if(n==='fair')try{renderFair()}catch(e){}
+  if(n==='friends')try{renderFriends();frLoad()}catch(e){}
   scrollTo(0,0);setTimeout(ptFix,30);
 }
-const MORE=[['prof','Профиль','Уровень, витрина, настройки'],['ach','Достижения','Награды за прогресс'],['bon','Бонусы и игры','Колесо, мини-игры, кейсы, батлы'],['season','Сезонный пропуск','50 уровней наград'],['market','Рынок','Купить и продать ники игрокам'],['auction','Аукцион','Торги за редкие ники'],['craft','Контракт','Обменять несколько ников на один'],['battles','Батлы','Кейсы против соперника'],['museum','Музей','Ники на витрине славы, доход'],['show','Витрины','Собери набор — получи награду'],['clan','Кланы','Вступи в клан или создай свой'],['guide','Гид','Как играть'],['help','Помощь','Вопросы и поддержка']];
-const MEM={"prof": "👤", "ach": "🎖️", "bon": "🎁", "season": "🏅", "market": "🛒", "auction": "🔨", "craft": "🧪", "battles": "⚔️", "museum": "🏛️", "show": "🗂️", "clan": "🛡️", "guide": "📖", "help": "❓"};
+const MORE=[['prof','Профиль','Уровень, витрина, настройки'],['ach','Достижения','Награды за прогресс'],['bon','Бонусы и игры','Колесо, мини-игры, кейсы, батлы'],['season','Сезонный пропуск','50 уровней наград'],['market','Рынок','Купить и продать ники игрокам'],['auction','Аукцион','Торги за редкие ники'],['craft','Контракт','Обменять несколько ников на один'],['battles','Батлы','Кейсы против соперника'],['museum','Музей','Ники на витрине славы, доход'],['show','Витрины','Собери набор — получи награду'],['friends','Друзья','Приглашай друзей и получай награды'],['clan','Кланы','Вступи в клан или создай свой'],['guide','Гид','Как играть'],['help','Помощь','Вопросы и поддержка']];
+const MEM={"friends":"🤝","prof": "👤", "ach": "🎖️", "bon": "🎁", "season": "🏅", "market": "🛒", "auction": "🔨", "craft": "🧪", "battles": "⚔️", "museum": "🏛️", "show": "🗂️", "clan": "🛡️", "guide": "📖", "help": "❓"};
 function moreSheet(){
   let el=document.getElementById('more-sheet');if(el)el.remove();
   el=document.createElement('div');el.className='usheet';el.id='more-sheet';
@@ -2449,7 +2450,7 @@ $('#tab-museum').onclick=async e=>{
 // ---------- Друзья: награды за приглашённых ----------
 // Друг открывает игру по ссылке с ?startapp=r<id>. Сервер записывает пару «кто пригласил — кто пришёл»
 // и только для нового игрока (которого ещё не было в таблице). Пригласивший забирает награду кнопкой в профиле.
-const REF_C=60000,REF_E=2,REF_NEW_C=30000,REF_NEW_E=2,REF_MAX=20;   // награды и предел приглашений
+const REF_C=60000,REF_E=2,REF_NEW_C=30000,REF_NEW_E=2,REF_MAX=200;   // награды и предел приглашений
 lb.refn=0;
 async function refInit(){
   if(!API||!tg||!tg.initData)return;
@@ -3065,7 +3066,7 @@ function stHtml(){
       return `<div class="pcard svc stit${dis?' own':''}${id==='ceo'?' excs':''}"${dis?'':` data-st="${id}"`}><span class="svi">${c[0]}</span><div>${id==='ceo'?'<em class="exct">ЭКСКЛЮЗИВ</em>':''}<b>${c[1]}</b><small>${ds}</small></div><button class="btn ${dis?'':'main '}sm"${dis?' disabled':` data-st="${id}"`}>${own?'Куплено ✓':out?'Раскуплен':'⭐ '+fmt(stPr(id))}</button></div>`}).join('');
   }
   h+=`<div class="stbh"><b><i></i>Звёздный баланс</b><span>на балансе ⭐ ${fmt(bal)}</span></div>${st.first?'<div class="stfirst">🎁 Первое пополнение: +10% звёзд в подарок</div>':''}<div class="stgrid">${STUP.map(n=>`<button class="stp${n===100?' hot':''}" data-stup="${n}">${n===100?'<em>выбор игроков</em>':''}<b>+${fmt(n)} ⭐</b><small>${fmt(n)} ${n===1?'звезда':'звёзд'} Telegram${st.first&&n>=10?` · +${Math.floor(n/10)} ⭐ бонус`:''}</small></button>`).join('')}</div>`;
-  return h+`<div class="stnote"><b>Про звёзды</b><p>Звёзды тратятся только внутри игры, вывода нет.</p><p>Бесплатно их не раздают: они приходят только с оплаты звёздами Telegram и с продаж на рынке.</p><p>Если покупку вернули, всё, что за неё выдано, списывается обратно.</p></div>`;
+  return h+`<div class="stnote"><b>Про звёзды</b><p>Звёзды тратятся только внутри игры, вывода нет.</p><p>Бесплатно их не раздают: они приходят только с оплаты звёздами Telegram, с продаж на рынке и как 5% с платежей приглашённых друзей.</p><p>Если покупку вернули, всё, что за неё выдано, списывается обратно.</p></div>`;
 }
 function stSheet(){
   const id=st.sel,c=STC[id];if(!c)return '';
@@ -3321,7 +3322,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)ntSync()});
 setTimeout(()=>ntSync(),7000);
 renderUp();
 if(PAGE!=='main')tabIn(PAGE);
-else{const h=location.hash.slice(1);if(['col','up','prof','bon','show','help','guide','season','games','battles','fair'].includes(h))tabIn(h)}
+else{const h=location.hash.slice(1);if(['col','up','prof','bon','show','help','guide','season','games','battles','fair','friends'].includes(h))tabIn(h)}
 try{if(PAGE!=='main'&&tg&&tg.BackButton){tg.BackButton.show();tg.BackButton.onClick(()=>{location.href=PAGE==='clan'?'rating.html':'index.html'})}}catch(e){}
 refInit();
 cloudLoad();
@@ -3441,6 +3442,41 @@ setInterval(()=>{const el=$('#tab-games');if(el&&!el.hidden&&!document.querySele
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#gm-open')){gmv='main';const el=$('#tab-games');if(el)el._h='';tab('games');btPoll()}});
 // --- Честная игра ---
 var fgFrom='games';
+
+// ---------- Страница «Друзья» ----------
+const REF_STEPS=[[1,100000,3],[3,250000,5],[5,500000,10],[10,1500000,20],[25,5000000,40],[50,15000000,80]];
+var fr={load:false,total:0,stars:0,pct:5,friends:[],err:''};
+function refLink(){const me=tgUser().id;return APP_LINK+(APP_LINK.includes('?')?'&':'?')+'startapp=r'+(me||'')}
+async function frLoad(){
+  if(!API||!tg||!tg.initData){fr.err='Доступно в Telegram';return renderFriends()}
+  fr.load=true;fr.err='';renderFriends();
+  try{const r=await lbReq('/ref/stats');fr.total=r.total|0;fr.stars=r.stars|0;fr.pct=r.pct||5;fr.friends=r.friends||[];await refPoll()}catch(e){fr.err='Не удалось загрузить'}
+  fr.load=false;renderFriends();
+}
+function renderFriends(){
+  const el=document.getElementById('tab-friends');if(!el)return;
+  S.refm=Array.isArray(S.refm)?S.refm:[];
+  const open=lb.refn|0,tot=Math.max(fr.total,S.refc|0);
+  const steps=REF_STEPS.map(([n,c,e])=>{const got=S.refm.includes(n),ok=tot>=n;return `<div class="frs${got?' got':''}${ok&&!got?' ok':''}"><span class="frn">${n}</span><div><b>${n} ${n===1?'друг':n<5?'друга':'друзей'}</b><small>${fmt(c)} 🪙 и ${e} ⚡</small></div>${got?'<em>✓</em>':ok?`<button class="btn main sm" data-frs="${n}">Забрать</button>`:`<small class="frl">${tot}/${n}</small>`}</div>`}).join('');
+  const list=fr.friends.length?fr.friends.map(f=>`<div class="frf"><b>${escH(f.name)}</b><small>${new Date(f.ts).toLocaleDateString('ru-RU',{day:'numeric',month:'short'})}</small><span>${f.stars?'+'+f.stars+' ⭐':''}</span></div>`).join(''):'<p class="sum">Пока никого. Отправь ссылку другу.</p>';
+  el.innerHTML=`<div class="ahead"><button class="btn sm" data-frx="1">‹ Назад</button><h2>Друзья</h2></div><div class="gmpage">
+  <div class="pcard frhero"><b>Приглашай друзей</b><p>Друг получит <b>${fmt(REF_NEW_C)} 🪙</b> и <b>${REF_NEW_E} ⚡</b>. Ты получишь <b>${fmt(REF_C)} 🪙</b> и <b>${REF_E} ⚡</b> за каждого и <b>${fr.pct}% ⭐</b> с его платежей звёздами Telegram.</p>
+  <button class="btn main cwide" id="fr-inv">Позвать друга</button><button class="btn cwide" id="fr-copy">Скопировать ссылку</button></div>
+  <div class="pgrid"><div class="pt"><small>Приглашено</small><b>${fmt(tot)}</b></div><div class="pt"><small>Заработано ⭐</small><b>${fmt(fr.stars)}</b></div></div>
+  ${open?`<button class="btn main cwide" id="fr-claim">Забрать за новых друзей: +${fmt(open*REF_C)} 🪙 и +${open*REF_E} ⚡</button>`:''}
+  <h3 class="ch3">Награды за этапы</h3><div class="frsl">${steps}</div>
+  <h3 class="ch3">Твои друзья${fr.friends.length?' · '+fr.friends.length:''}</h3><div class="pcard frlist">${fr.load&&!fr.friends.length?'<p class="sum">Загружаю…</p>':fr.err?`<p class="sum">${fr.err}</p>`:list}</div>
+  <small class="sum">⭐ с покупок друга приходят на твой звёздный баланс. Если платёж вернули, бонус списывается.</small></div>`;
+}
+document.addEventListener('click',async e=>{
+  const t=e.target.closest&&e.target.closest('#tab-friends *');if(!t)return;
+  if(t.closest('[data-frx]'))return tab('game');
+  if(t.closest('#fr-inv')){addQuest('invite',1);S.inv=1;save();return openTg(`https://t.me/share/url?url=${encodeURIComponent(refLink())}&text=${encodeURIComponent('Заходи в Нейм-рулетку: выбивай редкие юзернеймы и собирай коллекцию!')}`)}
+  if(t.closest('#fr-copy')){try{await navigator.clipboard.writeText(refLink());toast('Ссылка скопирована')}catch(x){toast('Не удалось скопировать')}return}
+  if(t.closest('#fr-claim')){await claimRefs();return frLoad()}
+  const g=t.closest('[data-frs]');if(g){const n=+g.dataset.frs,st=REF_STEPS.find(x=>x[0]===n);S.refm=Array.isArray(S.refm)?S.refm:[];if(!st||S.refm.includes(n)||Math.max(fr.total,S.refc|0)<n)return;S.refm.push(n);S.coins=Math.min(CAP,S.coins+st[1]);S.en+=st[2];save();render();sfx('ach');toast(`🎁 +${fmt(st[1])} 🪙 и +${st[2]} ⚡`);renderFriends()}
+});
+
 function renderFair(){
   const sh=document.getElementById('tab-fair');if(!sh)return;
   const rows=CASES.filter(c=>c.price>0).map(c=>`<div class="fgr"><b>${c.ic} ${c.n}</b><small>${c.w.map(([t,w])=>`${T[t].n} ${pctw(w)}%`).join(' · ')}</small></div>`).join('');
