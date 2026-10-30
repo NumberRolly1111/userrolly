@@ -2626,26 +2626,31 @@ const rkRefresh=()=>{const el=$('#tab-bon');if(el)el._h='';renderBon()};
 const RK_W=74,RK_G=8;
 const rkCell=i=>`<div class="rkc rc${i}" style="width:${RK_W}px"><i>${RKS[i][2]}</i><b>${RKS[i][3]}</b></div>`;
 const rkIdle=()=>[0,1,0,2,0,3,0,1,0,4,0,2,0,1,0];
-const rkIdleX=()=>{const vw=Math.min(window.innerWidth-48,380);return Math.round(vw/2-(7*(RK_W+RK_G)+RK_W/2))};
+const rkX=i=>-Math.round(i*(RK_W+RK_G)+RK_W/2);
+const rkIdleX=()=>rkX(7);
+const rkSeq=[0,1,2,3,4,0,1,2,3,4,0,1,2,3,4];
+function rkReelHtml(){const w=rk.lw;if(w==null||w<0)return `<div class="rkreel" id="rkreel"><i class="rkptr"></i><div class="rkstrip" id="rkstrip" style="transform:translateX(${rkIdleX()}px)">${rkIdle().map(rkCell).join('')}</div></div>`;
+  const RI=5+w;return `<div class="rkreel ${RKS[w][0]?'won':'lost'}" id="rkreel"><i class="rkptr"></i><div class="rkstrip" id="rkstrip" style="transform:translateX(${rkX(RI)}px)">${rkSeq.map((m,n)=>rkCell(m).replace('class="rkc','class="rkc'+(n===RI?' hit':' dim'))).join('')}</div></div>`}
 function rkPlay(){
   const stake=RK_ST[rk.st],q=rkEnsure();if(bon.busy)return;
   if(S.rkp>0)return toast('Сначала забери выигрыш или рискни им');
   if(q.n>=RK_DAY)return toast('На сегодня попытки закончились');
   if(S.coins<stake)return toast('Не хватает монет на ставку');
-  const w=rkRoll();S.coins-=stake;q.n++;S.rkN=(S.rkN|0)+1;save();setCoins();bon.busy=true;rk.res='';rk.last=stake;
+  const w=rkRoll();S.coins-=stake;q.n++;S.rkN=(S.rkN|0)+1;save();setCoins();bon.busy=true;rk.res='';rk.last=stake;rk.lw=-1;
   const reel=document.getElementById('rkreel'),strip=document.getElementById('rkstrip'),btn=document.querySelector('#tab-bon [data-b="xrk"]');
   if(btn)btn.disabled=true;
   if(!reel||!strip){setTimeout(()=>fin(),50)}
-  else{   // без прокрутки: результат сразу встаёт под указатель
-    const vw=reel.clientWidth,step=RK_W+RK_G,seq=[0,1,2,3,4,0,1,2,3,4,0,1,2,3,4],RI=5+w;
-    strip.innerHTML=seq.map(rkCell).join('');strip.style.transition='none';
-    strip.style.transform=`translateX(${Math.round(vw/2-(RI*step+RK_W/2))}px)`;
-    const cells=[...strip.children];cells.forEach((c,n)=>c.classList.toggle('dim',n!==RI));cells[RI].classList.add('hit');
-    reel.classList.add(RKS[w][0]?'won':'lost');
-    setTimeout(()=>fin(),700);
+  else{   // короткий плавный выезд результата под указатель
+    const RI=5+w;
+    strip.innerHTML=rkSeq.map(rkCell).join('');reel.classList.remove('won','lost');
+    strip.style.transition='none';strip.style.transform=`translateX(${rkX(RI+(w%2?4:-4))}px)`;void strip.offsetWidth;
+    strip.style.transition='transform 900ms cubic-bezier(.22,.8,.25,1)';strip.style.transform=`translateX(${rkX(RI)}px)`;
+    const cells=[...strip.children];
+    setTimeout(()=>{cells.forEach((c,n)=>c.classList.toggle('dim',n!==RI));cells[RI].classList.add('hit');reel.classList.add(RKS[w][0]?'won':'lost');sfx(RKS[w][0]?'coins':'tap')},950);
+    setTimeout(()=>fin(),1500);
   }
   const fin=()=>{
-    const m=RKS[w][0],pay=Math.round(stake*m);
+    rk.lw=w;const m=RKS[w][0],pay=Math.round(stake*m);
     S.rkH=[...(Array.isArray(S.rkH)?S.rkH:[]),m].slice(-10);
     if(m){S.rkWin=(S.rkWin|0)+1;S.rkW=Math.max(S.rkW|0,m);if(m>=5)S.rk5=(S.rk5|0)+1;S.rkBig=Math.max(S.rkBig|0,pay);S.rkp=pay;S.rkS=0;S.rkStr=(S.rkStr|0)+1;S.rkStrB=Math.max(S.rkStrB|0,S.rkStr);
       rk.res=`${RKS[w][2]} ${RKS[w][3]}: выигрыш ${fmt(pay)} 🪙`;sfx(m>=5?'ach':'coins');hap('n','success');if(m>=2)boom('#FFC933',m>=20?5:m>=5?4:3)}
@@ -2682,7 +2687,7 @@ function extraBon(){
   const q=rkEnsure(),stake=RK_ST[rk.st],left=RK_DAY-q.n,pot=S.rkp>0?S.rkp:0,stp=S.rkS|0,hist=(Array.isArray(S.rkH)?S.rkH:[]).slice().reverse();
   const wr=S.rkN?Math.round((S.rkWin|0)/S.rkN*100):0;
   h+=`<details class="pcard fold" data-fold="rk"${fo('rk',0)}><summary class="bhead"><h3>🎲 Крутка с риском</h3><span class="bsub">${pot?'ждёт выигрыш!':`осталось ${left} из ${RK_DAY}`}</span></summary>${hintCard('risk')}
-    <div class="rkreel" id="rkreel"><i class="rkptr"></i><div class="rkstrip" id="rkstrip" style="transform:translateX(${rkIdleX()}px)">${rkIdle().map(rkCell).join('')}</div></div>
+    ${rkReelHtml()}
     <div class="rkleg">${RKS.map((s,i)=>`<span class="rl${i}"><i>${s[2]}</i>${s[3]} <small>${String(s[1]).replace('.',',')}%</small></span>`).join('')}</div>`+
   (pot?`<div class="rkpot"><small>Твой выигрыш</small><b class="rkcoin">🪙</b><strong>${fmt(pot)} 🪙</strong>
       <div class="rkl">${Array.from({length:RK_L},(_,i)=>`<i class="${i<stp?'on':''}">×${2<<i}</i>`).join('')}</div>
