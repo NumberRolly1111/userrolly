@@ -78,3 +78,6 @@ html.v2 .podium>*,html.v2 .pod>*{filter:drop-shadow(0 14px 22px rgba(0,0,0,.5))}
 .vterm{padding:9px 6px}.vterm b{font-size:14px}.vterm span{font-size:15px}
 .cnplate{padding:10px}.cnplate b{font-size:22px}
 .stnote{padding:13px}.stnote p{font-size:13px}
+html.v2 .msrch input,html.v2 .msrch input[type=search]{border:0!important;background:none!important;box-shadow:none!important;border-radius:0!important;padding:0!important;outline:0}
+html.v2 .msrch{border-radius:14px}
+.msrch input:focus-visible{outline:0}.msrch:focus-within{border-color:var(--blue)}
