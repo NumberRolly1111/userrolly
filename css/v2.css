@@ -52,3 +52,9 @@ html.v2 .reel .at{text-shadow:0 0 18px var(--blue)}
 html.v2 .pill{backdrop-filter:blur(10px)}
 html.v2 .pcard>b,html.v2 .pt b{letter-spacing:-.01em}
 html.v2 .pcard:active{transform:scale(.995)}
+
+/* эффекты редких выпадений */
+.rwave{position:fixed;left:50%;top:30%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;border:3px solid var(--rc);box-shadow:0 0 40px var(--rc),0 0 40px var(--rc) inset;z-index:70;pointer-events:none;animation:rwv 1.2s cubic-bezier(.1,.7,.3,1) forwards}
+@keyframes rwv{to{transform:scale(22);opacity:0}}
+.rrays{position:fixed;left:50%;top:30%;width:160vmax;height:160vmax;margin:-80vmax 0 0 -80vmax;z-index:69;pointer-events:none;border-radius:50%;background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--rc) 40%,transparent) 0 6deg,transparent 6deg 18deg);-webkit-mask:radial-gradient(circle,#000 0,transparent 55%);mask:radial-gradient(circle,#000 0,transparent 55%);animation:rry 1.8s ease-out forwards}
+@keyframes rry{from{opacity:0;transform:rotate(0) scale(.4)}25%{opacity:.9}to{opacity:0;transform:rotate(40deg) scale(1)}}

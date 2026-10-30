@@ -810,16 +810,21 @@ function renderPicks(){
 // confetti
 const fx=$('#fx'),cx=fx.getContext('2d');let ps=[],raf=0;
 function boom(col,tr=3){
-  if(reduce)return;try{if(tr>=4)rareFx(col,tr)}catch(e){}const w=fx.width=innerWidth,h=fx.height=innerHeight;
-  ps=Array.from({length:tr>=5?300:tr===4?160:100},()=>({x:w/2,y:h*.3,vx:(Math.random()-.5)*15,vy:-Math.random()*13-3,r:3+Math.random()*4,c:Math.random()<.6?col:'#fff',a:1}));
+  if(reduce)return;try{if(tr>=3)rareFx(col,tr)}catch(e){}const w=fx.width=innerWidth,h=fx.height=innerHeight;
+  const n=tr>=5?320:tr===4?190:tr===3?120:90,glow=tr>=4;
+  ps=Array.from({length:n},()=>{const an=Math.random()*Math.PI*2,sp=glow?4+Math.random()*13:Math.random()*8;return glow
+    ?{x:w/2,y:h*.3,vx:Math.cos(an)*sp,vy:Math.sin(an)*sp-3,r:2+Math.random()*4.5,c:Math.random()<.65?col:'#fff',a:1,g:1,d:.012+Math.random()*.01}
+    :{x:w/2,y:h*.3,vx:(Math.random()-.5)*15,vy:-Math.random()*13-3,r:3+Math.random()*4,c:Math.random()<.6?col:'#fff',a:1,d:.012}});
   if(!raf)tick();
 }
 function rareFx(col,tr){
   const f=document.createElement('div');f.className='rfl';f.style.setProperty('--rc',col);document.body.append(f);setTimeout(()=>f.remove(),1100);
+  if(tr>=4){const r=document.createElement('div');r.className='rwave';r.style.setProperty('--rc',col);document.body.append(r);setTimeout(()=>r.remove(),1300);
+    if(tr>=5){const y=document.createElement('div');y.className='rrays';y.style.setProperty('--rc',col);document.body.append(y);setTimeout(()=>y.remove(),1900)}}
 }
 function tick(){
   cx.clearRect(0,0,fx.width,fx.height);
-  ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.35;p.a-=.012;cx.globalAlpha=Math.max(p.a,0);cx.fillStyle=p.c;cx.fillRect(p.x,p.y,p.r,p.r*1.6)});
+  ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=p.g?.18:.35;if(p.g){p.vx*=.985}p.a-=p.d||.012;cx.globalAlpha=Math.max(p.a,0);cx.fillStyle=p.c;if(p.g){cx.shadowColor=p.c;cx.shadowBlur=12;cx.beginPath();cx.arc(p.x,p.y,p.r*Math.max(p.a,.2),0,6.283);cx.fill();cx.shadowBlur=0}else cx.fillRect(p.x,p.y,p.r,p.r*1.6)});
   ps=ps.filter(p=>p.a>0);raf=ps.length?requestAnimationFrame(tick):0;
 }
 
