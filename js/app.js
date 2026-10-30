@@ -1511,8 +1511,10 @@ function bestOwn(){   // лучший ник из коллекции, если �
   if(S.bestn||!S.items.length)return;
   let b=null,bv=0;S.items.forEach(x=>{const v=val(x.t,x.p,x.n);if(v>bv){bv=v;b=x.n}});if(b&&bv>=S.bestv*.999){S.bestn=b}
 }
-async function lbReq(path,body){
-  const r=await fetch(API.replace(/\/$/,'')+path,{method:body?'POST':'GET',headers:{'X-Init-Data':tg&&tg.initData||'','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+async function lbReq(path,body,_n){
+  _n=_n|0;let r;
+  try{r=await fetch(API.replace(/\/$/,'')+path,{method:body?'POST':'GET',headers:{'X-Init-Data':tg&&tg.initData||'','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined})}
+  catch(e){if(!body&&_n<3){await new Promise(z=>setTimeout(z,500*(_n+1)));return lbReq(path,body,_n+1)}throw e}
   if(!r.ok){let code='';try{code=(await r.json()).error}catch(e){}throw new Error(r.status===429?'wait':(r.status===401||r.status>=500)?'http '+r.status:'e:'+code)}return r.json();
 }
 async function lbPush(force){
@@ -2066,7 +2068,7 @@ async function openMarket(){
   if(S.toppick)mk.tab='my';
   renderMarket();if(!API||!tg||!tg.initData)return;
   mk.load=true;mk.err='';renderMarket();
-  try{await lbPush(true);await mLoad();await mAuto()}catch(e){mk.err=merr(e)}
+  try{await lbPush(true);try{await mLoad()}catch(e){await new Promise(z=>setTimeout(z,800));await lbPush(true);await mLoad()}await mAuto()}catch(e){mk.err=merr(e)}
   mk.load=false;if(!$('#tab-market').hidden)renderMarket();
 }
 // выручка с проданных лотов зачисляется сама (без кнопки)
@@ -2113,9 +2115,10 @@ function mApply(ls){
 function mFilters(){
   const chip=(attr,v,on,l,c)=>`<button class="crch${on?' on':''}" ${attr}="${v}"${c?` style="--tc:${c}"`:''}>${c?'<i></i>':''}${l}</button>`;
   const cnt={};(mk.lots||[]).forEach(l=>{const t=mLotT(l);cnt[t]=(cnt[t]|0)+1});
-  return `<div class="mflh">Сортировка</div><div class="crchips">${MSORT.map(([k,l])=>chip('data-sort',k,mk.sort===k,l)).join('')}</div>
-  <div class="mflh">Редкость</div><div class="crchips">${chip('data-mrar',-1,mk.rar<0,'Все')}${T.map((x,t)=>cnt[t]||mk.rar===t?chip('data-mrar',t,mk.rar===t,`${x.n} <b>${cnt[t]|0}</b>`,x.c):'').join('')}</div>
-  <div class="mflh">Цена</div><div class="crchips">${MPR.map((x,i)=>chip('data-mpr',i,mk.pr===i,x[2])).join('')}</div>`;
+  const dirty=mk.sort!=='new'||mk.rar>=0||mk.pr>0;
+  return `<div class="mfil"><div class="mfr"><span>Сортировка</span><div class="crchips">${MSORT.map(([k,l])=>chip('data-sort',k,mk.sort===k,l)).join('')}</div></div>
+  <div class="mfr"><span>Редкость</span><div class="crchips">${chip('data-mrar',-1,mk.rar<0,'Все')}${T.map((x,t)=>cnt[t]||mk.rar===t?chip('data-mrar',t,mk.rar===t,`${x.n} <b>${cnt[t]|0}</b>`,x.c):'').join('')}</div></div>
+  <div class="mfr"><span>Цена</span><div class="crchips">${MPR.map((x,i)=>chip('data-mpr',i,mk.pr===i,x[2])).join('')}</div></div>${dirty?'<button class="mreset" id="m-reset">Сбросить фильтры</button>':''}</div>`;
 }
 function renderMarket(){
   const el=$('#tab-market');if(!el)return;
@@ -2153,6 +2156,7 @@ $('#tab-market').onclick=async e=>{
   if(t.closest('#m-back'))return tab('help');
   if(t.closest('#m-retry'))return openMarket();
   const mt=t.closest('[data-mt]');if(mt){mk.tab=mt.dataset.mt;renderMarket();if(mk.tab==='hist'){mk.hist=null;renderMarket();lbReq('/market/history').then(r=>{mk.hist=r.items||[];if(mk.tab==='hist')renderMarket()}).catch(e=>{mk.hist=[];toast(merr(e));if(mk.tab==='hist')renderMarket()})}return}
+  if(t.closest('#m-reset')){mk.sort='new';mk.rar=-1;mk.pr=0;try{await mLoad()}catch(x){}return renderMarket()}
   const so=t.closest('[data-sort]');if(so){const ef=x=>x==='rar'?'new':x,o=mk.sort;mk.sort=so.dataset.sort;if(ef(o)!==ef(mk.sort)){try{await mLoad()}catch(x){}}return renderMarket()}
   {const ra=t.closest('[data-mrar]');if(ra){mk.rar=+ra.dataset.mrar;return renderMarket()}const pr=t.closest('[data-mpr]');if(pr){mk.pr=+pr.dataset.mpr;return renderMarket()}}
   if(t.closest('[data-mclose]')){mk.sheet=false;return renderMarket()}

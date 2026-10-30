@@ -1581,3 +1581,19 @@ body.shk{animation:none!important}
 .cnplate b{font:900 30px var(--head);letter-spacing:2px;color:#E8C468;text-shadow:0 2px 0 #7a5a1a,0 0 14px rgba(232,196,104,.4);white-space:nowrap}.cnplate i{font-style:normal;color:#C9A24A;font-size:14px}
 .cnt{font:800 18px var(--head);margin-top:4px}.cnd{margin:0;color:var(--mute);font-size:14px}.cns{color:var(--mute);opacity:.8;font-size:12.5px;line-height:1.4}
 .cnb{justify-self:end;margin-top:6px;padding:10px 20px;border:0;border-radius:14px;background:linear-gradient(#F8D56E,#E8A93A);color:#2a1a00;font:900 16px var(--head);box-shadow:0 6px 16px rgba(240,180,60,.35)}
+
+/* v-big: крупнее карточки услуг и фильтры рынка */
+.svc{gap:14px;padding:18px 16px}
+.svi{width:60px;height:60px;border-radius:18px;font-size:30px}
+.svc b{font-size:18px;line-height:1.2}
+.svc small{font-size:14px;line-height:1.35;margin-top:4px}
+.svc .btn.sm{min-height:46px;padding:0 18px;font-size:16px;border-radius:14px}
+.svc .btn small{font-size:12px}
+.mfil{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:12px 0 6px;margin:0 0 4px}
+.mfr{margin-bottom:12px}.mfr>span{display:block;padding:0 14px 7px;font:800 12px var(--head);letter-spacing:1px;text-transform:uppercase;color:var(--mute)}
+.mfr .crchips{padding:0 14px 2px;gap:8px;scrollbar-width:none}.mfr .crchips::-webkit-scrollbar{display:none}
+.mfil .crch{min-height:42px;padding:0 16px;font-size:15px;border-radius:14px}
+.mfil .crch i{width:10px;height:10px}
+.mreset{display:block;margin:0 14px 10px;padding:0;background:none;border:0;color:var(--acc,#8f9cf0);font:700 14px var(--body)}
+.mcnt{font-size:15px}.mcnt b{font-size:18px}
+.csearch{padding:14px 16px;font-size:16px;border-radius:16px}
