@@ -1546,3 +1546,5 @@ body.shk{animation:none!important}
 .btres{text-align:center;margin:12px 0;animation:rkin .5s ease both}.btres small{display:block;color:var(--mute);margin-top:3px;font-weight:500}
 .btres.b-tie b{color:#9fb0ff}
 .fin .btrl{display:none}
+.btvs2{grid-template-columns:1fr;gap:8px}.btvs2>i{justify-self:center;align-self:auto;padding:2px 12px;border-radius:99px;background:var(--tile)}
+.btrl{height:72px}.btsd{padding:10px}
