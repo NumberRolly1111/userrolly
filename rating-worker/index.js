@@ -261,6 +261,9 @@ const STARS_SHOP = {
   pack_gold: { t: 'Золотой набор', d: '7 000 000 🪙, 150 ⚡, ник «Легендарный+» и золотая рамка', stars: 249, allow: 12e6 },
   energy60: { t: 'Энергия ×60', d: '+60 ⚡ в запас', stars: 39 },
   vip: { t: 'VIP навсегда', d: 'Крутка ×5 бесплатно, энергия за 8 минут, +10 мест, комиссия 2%, музей +30%, подарок каждый день', stars: 149, once: 1 },
+  vip_w: { t: 'VIP на 7 дней', d: 'Все бонусы VIP на неделю: крутка ×5, энергия за 8 минут, +10 мест, комиссия 2%, музей +30%', stars: 99, days: 7 },
+  vip_m: { t: 'VIP на 30 дней', d: 'Все бонусы VIP на месяц: крутка ×5, энергия за 8 минут, +10 мест, комиссия 2%, музей +30%, подарок каждый день', stars: 229, days: 30 },
+  vip_3m: { t: 'VIP на 90 дней', d: 'Все бонусы VIP на 3 месяца, выгоднее месячной покупки', stars: 549, days: 90 },
   museum: { t: 'Музей', d: 'Открывает зал музея без монет', stars: 115, once: 1 },
   collector: { t: 'Коллекционер', d: 'Открывает все места в коллекции', stars: 399, once: 1 },
   wheel5: { t: 'Мульти-крутка ×5', d: '5 дополнительных кручений ежедневного колеса', stars: 29 },
@@ -319,6 +322,7 @@ async function payApply(db, env, uid, id, stars, charge, via) {
     bg(db.prepare('DELETE FROM evfeed WHERE id < (SELECT MAX(id) FROM evfeed) - 60').run());
   }
   if (id === 'vip') await db.prepare('UPDATE acct SET vip=? WHERE uid=?').bind(VIP_FOREVER, uid).run();
+  if (it.days) { const ms = it.days * 864e5, nw = Date.now(); await db.prepare('UPDATE acct SET vip = CASE WHEN vip>=4000000000000 THEN vip WHEN vip>? THEN vip+? ELSE ?+? END WHERE uid=?').bind(nw, ms, nw, ms, uid).run(); }
   if (id === 'custom_nick' && env) for (const a of String(env.ADMIN_IDS || '').split(',').map((x) => x.trim()).filter(Boolean)) bg(tgSend(env, a, `🛒 Заказ именного юзернейма: игрок ${uid} оплатил ${stars} ⭐. Он напишет в поддержку, выдай ник вручную.`));
   ins.bonus = bonus;
   LAST_BONUS = bonus;
@@ -359,6 +363,7 @@ async function refundPurchase(db, env, p) {
     if (a.bal < take) notes.push(`на балансе игрока было меньше (${a.bal} ⭐): часть уже потрачена`);
   }
   if (p.item === 'vip') await db.prepare('UPDATE acct SET vip=0 WHERE uid=?').bind(p.uid).run();
+  if (it.days) await db.prepare('UPDATE acct SET vip = CASE WHEN vip>=4000000000000 THEN vip ELSE MAX(0, vip-?) END WHERE uid=?').bind(it.days * 864e5, p.uid).run();
   if (p.item === 'ceo') await db.prepare("DELETE FROM shop WHERE uid=? AND item IN ('ceo','ceo2','ceo3')").bind(p.uid).run();
   if (['starter', 'pack_pro', 'pack_gold', 'energy60', 'wheel5'].includes(p.item)) notes.push('выданные монеты и энергию вернуть нельзя');
   return { ok: true, notes };
@@ -478,7 +483,7 @@ async function payRoutes(url, req, env, uid, json) {
   let b; try { b = await req.json(); } catch { b = {}; }
   const id = String(b.item || ''), it = STARS_SHOP[id];
   if (p === '/pay/invoice') {
-    if (!it) return json({ error: 'bad' }, 400);
+    if (!it || id === 'vip') return json({ error: 'bad' }, 400);
     if (await owned(db, uid, id)) return json({ error: 'owned' });
     if (id === 'ceo' && (await ceoLeft(db)) < 1) return json({ error: 'sold' });
     const r = await tgApi(env, 'sendInvoice', {
@@ -488,7 +493,7 @@ async function payRoutes(url, req, env, uid, json) {
     return json(r.ok ? { ok: true } : { error: 'nochat' });
   }
   if (p === '/pay/balance') {
-    if (!it || it.topup) return json({ error: 'bad' }, 400);
+    if (!it || it.topup || id === 'vip') return json({ error: 'bad' }, 400);
     if (await owned(db, uid, id)) return json({ error: 'owned' });
     if (id === 'ceo' && (await ceoLeft(db)) < 1) return json({ error: 'sold' });
     await acctGet(db, uid);

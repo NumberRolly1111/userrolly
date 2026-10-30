@@ -1565,3 +1565,9 @@ body.shk{animation:none!important}
 .vslot.on b{font:800 12.5px var(--head);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vslot.on small{color:var(--tc)}.vslot.on span{font:700 11px var(--body)}
 .vx{position:absolute;right:4px;top:4px;width:20px;height:20px;border-radius:50%;border:0;background:rgba(0,0,0,.45);color:var(--mute);font-size:10px;padding:0}
 #vitsh{z-index:70}
+
+.vterms{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.vterm{position:relative;display:grid;justify-items:center;gap:2px;padding:12px 4px 10px;border-radius:14px;border:1.5px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink)}
+.vterm b{font:800 13px var(--head)}.vterm small{color:var(--mute);font-size:11px}.vterm span{margin-top:4px;font:800 14px var(--head);color:#FFC933}
+.vterm.hot{border-color:#FFC933;background:rgba(255,201,51,.1)}
+.vterm em{position:absolute;right:-4px;top:-8px;font:800 10px var(--head);font-style:normal;padding:2px 6px;border-radius:99px;background:#27D96B;color:#052a14}
