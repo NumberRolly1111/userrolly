@@ -37,6 +37,7 @@ async function migrate(db) {   // добавляем новые столбцы �
       if (c === 'first') await db.prepare('UPDATE players SET first=upd WHERE first=0').run();
     }
   }
+  try { const ah = (await db.prepare('PRAGMA table_info(acct)').all()).results.map((r) => r.name); if (ah.length && !ah.includes('luck')) await db.prepare('ALTER TABLE acct ADD COLUMN luck INTEGER NOT NULL DEFAULT 0').run(); } catch (e) {}
   await db.prepare('CREATE TABLE IF NOT EXISTS stat_snap (ts INTEGER PRIMARY KEY, online INTEGER NOT NULL DEFAULT 0, a1h INTEGER NOT NULL DEFAULT 0, total INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS grants (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, amount INTEGER NOT NULL, claimed INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_grants_uid ON grants(uid, claimed)').run();
@@ -57,7 +58,8 @@ async function migrate(db) {   // добавляем новые столбцы �
   await db.prepare('CREATE TABLE IF NOT EXISTS chat (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, name TEXT NOT NULL DEFAULT \'\', text TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare("CREATE TABLE IF NOT EXISTS battles2 (id INTEGER PRIMARY KEY AUTOINCREMENT, cid TEXT NOT NULL, price INTEGER NOT NULL DEFAULT 0, n INTEGER NOT NULL DEFAULT 1, cu TEXT NOT NULL, cn TEXT NOT NULL DEFAULT '', cj TEXT NOT NULL DEFAULT '', ou TEXT NOT NULL DEFAULT '', onm TEXT NOT NULL DEFAULT '', oj TEXT NOT NULL DEFAULT '', st TEXT NOT NULL DEFAULT 'open', win TEXT NOT NULL DEFAULT '', cclaim INTEGER NOT NULL DEFAULT 0, oclaim INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0, t0 INTEGER NOT NULL DEFAULT 0)").run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_battles2 ON battles2(st, ts)').run();
-  await db.prepare('CREATE TABLE IF NOT EXISTS acct (uid TEXT PRIMARY KEY, bal INTEGER NOT NULL DEFAULT 0, vip INTEGER NOT NULL DEFAULT 0, vgift TEXT NOT NULL DEFAULT \'\')').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS acct (uid TEXT PRIMARY KEY, bal INTEGER NOT NULL DEFAULT 0, vip INTEGER NOT NULL DEFAULT 0, vgift TEXT NOT NULL DEFAULT \'\', luck INTEGER NOT NULL DEFAULT 0)').run();
+  try { const ah2 = (await db.prepare('PRAGMA table_info(acct)').all()).results.map((r) => r.name); if (!ah2.includes('luck')) await db.prepare('ALTER TABLE acct ADD COLUMN luck INTEGER NOT NULL DEFAULT 0').run(); } catch (e) {}
   await db.prepare('CREATE TABLE IF NOT EXISTS purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, item TEXT NOT NULL, meta TEXT NOT NULL DEFAULT \'\', stars INTEGER NOT NULL DEFAULT 0, charge TEXT UNIQUE, via TEXT NOT NULL DEFAULT \'tg\', ts INTEGER NOT NULL DEFAULT 0, claimed INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_purch_uid ON purchases(uid, claimed)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS shop (item TEXT PRIMARY KEY, uid TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0)').run();
@@ -264,6 +266,8 @@ const STARS_SHOP = {
   vip_w: { t: 'VIP на 7 дней', d: 'Все бонусы VIP на неделю: крутка ×5, энергия за 8 минут, +10 мест, комиссия 2%, музей +30%', stars: 99, days: 7 },
   vip_m: { t: 'VIP на 30 дней', d: 'Все бонусы VIP на месяц: крутка ×5, энергия за 8 минут, +10 мест, комиссия 2%, музей +30%, подарок каждый день', stars: 229, days: 30 },
   vip_3m: { t: 'VIP на 90 дней', d: 'Все бонусы VIP на 3 месяца, выгоднее месячной покупки', stars: 549, days: 90 },
+  luck_m: { t: 'Талисман удачи · 30 дней', d: 'Удача на всех крутках: ×3 шанс на редкий–легендарный ник, ×1,5 на мифический и секретный', stars: 249, ldays: 30 },
+  luck: { t: 'Талисман удачи навсегда', d: 'Удача на всех крутках навсегда: ×3 на редкий–легендарный, ×1,5 на мифический и секретный', stars: 1690, once: 1 },
   museum: { t: 'Музей', d: 'Открывает зал музея без монет', stars: 115, once: 1 },
   collector: { t: 'Коллекционер', d: 'Открывает все места в коллекции', stars: 399, once: 1 },
   wheel5: { t: 'Мульти-крутка ×5', d: '5 дополнительных кручений ежедневного колеса', stars: 29 },
@@ -283,7 +287,7 @@ async function tgApi(env, method, body) {
 }
 async function acctGet(db, uid) {
   await db.prepare('INSERT OR IGNORE INTO acct(uid) VALUES(?)').bind(uid).run();
-  return await db.prepare('SELECT bal,vip,vgift FROM acct WHERE uid=?').bind(uid).first();
+  return await db.prepare('SELECT bal,vip,vgift,luck FROM acct WHERE uid=?').bind(uid).first();
 }
 async function feeOf(db, uid, base) {   // комиссия продавца: у VIP она ниже
   try { const a = await db.prepare('SELECT vip FROM acct WHERE uid=?').bind(uid).first(); if (a && a.vip > Date.now()) return Math.min(base, VIP_FEE); } catch (e) {}
@@ -322,6 +326,8 @@ async function payApply(db, env, uid, id, stars, charge, via) {
     bg(db.prepare('DELETE FROM evfeed WHERE id < (SELECT MAX(id) FROM evfeed) - 60').run());
   }
   if (id === 'vip') await db.prepare('UPDATE acct SET vip=? WHERE uid=?').bind(VIP_FOREVER, uid).run();
+  if (it.ldays) { const ms = it.ldays * 864e5, nw = Date.now(); await db.prepare('UPDATE acct SET luck = CASE WHEN luck>=4000000000000 THEN luck WHEN luck>? THEN luck+? ELSE ?+? END WHERE uid=?').bind(nw, ms, nw, ms, uid).run(); }
+  if (id === 'luck') await db.prepare('UPDATE acct SET luck=? WHERE uid=?').bind(VIP_FOREVER, uid).run();
   if (it.days) { const ms = it.days * 864e5, nw = Date.now(); await db.prepare('UPDATE acct SET vip = CASE WHEN vip>=4000000000000 THEN vip WHEN vip>? THEN vip+? ELSE ?+? END WHERE uid=?').bind(nw, ms, nw, ms, uid).run(); }
   if (id === 'custom_nick' && env) for (const a of String(env.ADMIN_IDS || '').split(',').map((x) => x.trim()).filter(Boolean)) bg(tgSend(env, a, `🛒 Заказ именного юзернейма: игрок ${uid} оплатил ${stars} ⭐. Он напишет в поддержку, выдай ник вручную.`));
   ins.bonus = bonus;
@@ -363,6 +369,8 @@ async function refundPurchase(db, env, p) {
     if (a.bal < take) notes.push(`на балансе игрока было меньше (${a.bal} ⭐): часть уже потрачена`);
   }
   if (p.item === 'vip') await db.prepare('UPDATE acct SET vip=0 WHERE uid=?').bind(p.uid).run();
+  if (it.ldays) await db.prepare('UPDATE acct SET luck = CASE WHEN luck>=4000000000000 THEN luck ELSE MAX(0, luck-?) END WHERE uid=?').bind(it.ldays * 864e5, p.uid).run();
+  if (p.item === 'luck') await db.prepare('UPDATE acct SET luck=0 WHERE uid=?').bind(p.uid).run();
   if (it.days) await db.prepare('UPDATE acct SET vip = CASE WHEN vip>=4000000000000 THEN vip ELSE MAX(0, vip-?) END WHERE uid=?').bind(it.days * 864e5, p.uid).run();
   if (p.item === 'ceo') await db.prepare("DELETE FROM shop WHERE uid=? AND item IN ('ceo','ceo2','ceo3')").bind(p.uid).run();
   if (['starter', 'pack_pro', 'pack_gold', 'energy60', 'wheel5'].includes(p.item)) notes.push('выданные монеты и энергию вернуть нельзя');
@@ -469,7 +477,7 @@ async function payRoutes(url, req, env, uid, json) {
     const fp = await db.prepare("SELECT COUNT(*) AS n FROM purchases WHERE uid=? AND item LIKE 'bal%'").bind(uid).first();
     const rv = (await db.prepare('SELECT DISTINCT item FROM purchases WHERE uid=? AND ref=1').bind(uid).all()).results, revoked = {};
     for (const r of rv) if (!have[r.item] && !(r.item === 'vip' && a.vip > Date.now())) revoked[r.item] = 1;
-    return json({ first: fp.n ? 0 : 1, revoked, bal: a.bal, vip: a.vip, vgift: a.vgift, now: Date.now(), ceoLeft: await ceoLeft(db), owned: have, cat, topups: TOPUPS });
+    return json({ first: fp.n ? 0 : 1, revoked, bal: a.bal, vip: a.vip, luck: a.luck, vgift: a.vgift, now: Date.now(), ceoLeft: await ceoLeft(db), owned: have, cat, topups: TOPUPS });
   }
   if (p === '/pay/history' && req.method === 'GET') {
     const rows = (await db.prepare('SELECT item,stars,via,ts,ref FROM purchases WHERE uid=? ORDER BY id DESC LIMIT 40').bind(uid).all()).results;
@@ -501,7 +509,7 @@ async function payRoutes(url, req, env, uid, json) {
     if (!d.meta.changes) return json({ error: 'poor' });
     await payApply(db, env, uid, id, it.stars, 'bal:' + uid + ':' + Date.now() + ':' + Math.random().toString(36).slice(2, 8), 'bal');
     const a = await acctGet(db, uid);
-    return json({ ok: true, bal: a.bal, vip: a.vip });
+    return json({ ok: true, bal: a.bal, vip: a.vip, luck: a.luck });
   }
   if (p === '/pay/claim') {
     const a = await acctGet(db, uid);
@@ -514,7 +522,7 @@ async function payRoutes(url, req, env, uid, json) {
       allow += (STARS_SHOP[r.item] && STARS_SHOP[r.item].allow) || 0;
     }
     if (allow > 0) await db.prepare('UPDATE players SET allow = allow + ? WHERE uid=?').bind(allow, uid).run();
-    return json({ items: out, bal: a.bal, vip: a.vip });
+    return json({ items: out, bal: a.bal, vip: a.vip, luck: a.luck });
   }
   if (p === '/pay/vipgift') {   // подарок дня для VIP (одна выдача за сутки по времени сервера)
     const a = await acctGet(db, uid), day = new Date().toISOString().slice(0, 10);

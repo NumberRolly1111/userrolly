@@ -297,7 +297,7 @@ function fixState(){
   if(!S.q||typeof S.q!=='object'||!Array.isArray(S.q.list))S.q={wk:'',list:[]};
   S.q.list=S.q.list.filter(q=>q&&typeof q.id==='string'&&+q.n>0).map(q=>({id:q.id,n:+q.n,p:Math.max(0,+q.p||0),got:!!q.got}));
   S.items=(Array.isArray(S.items)?S.items:[]).filter(x=>x&&typeof x.n==='string'&&x.n&&Number.isInteger(x.t)&&x.t>=0&&x.t<=7).map(x=>({id:String(x.id||Date.now()+''+R(1000)),n:x.n,t:x.t,p:+x.p||0}));
-  S.vip=Math.max(0,+S.vip||0);S.vit=Array.isArray(S.vit)?[...new Set(S.vit.filter(x=>typeof x==='string'&&x))].slice(0,3):[];S.vipT=Math.max(0,Math.min(+S.vipT||0,Date.now()+400*864e5));S.sx=S.sx&&typeof S.sx==='object'?S.sx:{};S.v5=S.v5&&typeof S.v5==='object'?{d:String(S.v5.d||''),n:Math.max(0,+S.v5.n||0)}:{d:'',n:0};S.topfree=Math.max(0,Math.floor(+S.topfree)||0);S.sbal=Math.max(0,Math.floor(+S.sbal)||0);
+  S.vip=Math.max(0,+S.vip||0);S.luck=Math.max(0,+S.luck||0);S.vit=Array.isArray(S.vit)?[...new Set(S.vit.filter(x=>typeof x==='string'&&x))].slice(0,3):[];S.vipT=Math.max(0,Math.min(+S.vipT||0,Date.now()+400*864e5));S.sx=S.sx&&typeof S.sx==='object'?S.sx:{};S.v5=S.v5&&typeof S.v5==='object'?{d:String(S.v5.d||''),n:Math.max(0,+S.v5.n||0)}:{d:'',n:0};S.topfree=Math.max(0,Math.floor(+S.topfree)||0);S.sbal=Math.max(0,Math.floor(+S.sbal)||0);
   S.slots=Math.min(MAXSLOTS,Math.max(MAX0,Math.floor(+S.slots)||MAX0));setMax();
   S.items=S.items.slice(0,Math.max(MAX,S.slots+10));   // после окончания VIP ники сверх лимита остаются, но новые не добавить
   if(!(S.auto>=0&&S.auto<=5))S.auto=0;S.auto=Math.floor(S.auto);
@@ -746,7 +746,12 @@ function playStage(st,reel,r,fresh){
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const mkRow=()=>{const d=document.createElement('div');d.className='stage rrow';d.innerHTML='<div class="reel" aria-live="polite"></div><div class="picks"></div><div class="rmeta"></div>';return d};
 function showIdle(){plHide();const box=$('#reels');box.innerHTML='';const r=mkRow();box.append(r);build('??????',false,r.querySelector('.reel'));$('#idle').hidden=false}
-function roll(m){let best=null;for(let i=0;i<3000;i++){const s=gen(),r=score(s);if(r.t>6)continue;if(!best||r.t>best.t)best={name:s,...r};if(r.t>=m.min)break}return{...best,kept:false,res:''}}
+var LKA=null;
+function luckAcc(){   // шанс принять образец каждой редкости: даёт нужное смещение распределения
+  if(LKA)return LKA;const c=[0,0,0,0,0,0,0],N=6000;for(let i=0;i<N;i++){const r=score(gen());if(r.t<=6)c[r.t]++}
+  const p=c.map(x=>x/N),hi=3*(p[2]+p[3]+p[4])+1.5*(p[5]+p[6]),lo=p[0]+p[1],rl=lo>0?Math.max(.05,Math.min(1,(1-hi)/lo)):1;
+  return LKA=[rl,rl,3,3,3,1.5,1.5].map(x=>x/3)}
+function roll(m){let best=null;const lk=luckOn()?luckAcc():null;for(let i=0;i<3000;i++){const s=gen(),r=score(s);if(r.t>6)continue;if(lk&&Math.random()>lk[r.t])continue;if(!best||r.t>best.t)best={name:s,...r};if(r.t>=m.min)break}return{...best,kept:false,res:''}}
 function flushPrev(){const left=cur.filter(c=>!c.kept);cur.forEach(c=>c.kept=true);S.pend=null;if(left.length)toast('Прошлые ники: '+stashAll(left))}
 // Итог крутки: в плюсе или в минусе (стоимость выпавших ников минус потраченные монеты)
 var sessPL=0;
@@ -1687,7 +1692,18 @@ const CASES=[
 let cs={id:'',busy:false,res:null,tiles:[]},tierPool=null;
 const poolOf=t=>{if(!tierPool){tierPool=[[],[],[],[],[],[],[]];prizePool().forEach(x=>tierPool[x.t].push(x))}return tierPool[t]};
 const pctw=w=>w%1?w.toFixed(1).replace('.',','):String(w);
-function rollTier(c){let r=Math.random()*c.w.reduce((s,x)=>s+x[1],0);for(const [t,w] of c.w){r-=w;if(r<0)return t}return c.w[c.w.length-1][0]}
+const luckOn=()=>(+S.luck||0)>Date.now();
+// Талисман удачи: ×3 к шансу редкого–легендарного, ×1,5 к мифическому и секретному; недостающее берётся у обычных
+function luckWeights(w){
+  const m=new Map(w.map(([t,x])=>[t,x])),tot=[...m.values()].reduce((a,b)=>a+b,0);
+  const take=(need,order)=>{let got=0;for(const t of order){if(!m.has(t)||got>=need)continue;const d=Math.min(m.get(t),need-got);m.set(t,m.get(t)-d);got+=d}return got};
+  const hi=[...m.entries()].filter(([t])=>t>=5);let add=0;for(const [t,x] of hi)add+=x*.5;
+  if(add>0){const g=take(add,[0,1,2,3,4]);let k=g/add;for(const [t,x] of hi)m.set(t,x+x*.5*k)}
+  const mid=[2,3,4].filter(t=>m.has(t)),orig=mid.reduce((a,t)=>a+m.get(t),0);
+  if(orig>0){const g=take(Math.min(orig*2,.7*[0,1].reduce((a,t)=>a+(m.get(t)||0),0)),[0,1]);for(const t of mid)m.set(t,m.get(t)+g*m.get(t)/orig)}
+  return [...m.entries()].filter(([,x])=>x>0)
+}
+function rollTier(c){const ws=luckOn()?luckWeights(c.w):c.w;let r=Math.random()*ws.reduce((s,x)=>s+x[1],0);for(const [t,w] of ws){r-=w;if(r<0)return t}return ws[ws.length-1][0]}
 const cdLeft=c=>c&&c.cd?Math.max(0,(+(S.cdt&&S.cdt[c.id])||0)+c.cd-Date.now()):0;
 const dClaimed=()=>cdLeft(CASES[0])>0;
 function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${(c.id==='week'||S.coins<c.price)&&!(S.cfree&&S.cfree[c.id]>0)?' poor':''}${cdLeft(c)?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.cd?(cdLeft(c)?'Через '+leftT(cdLeft(c)):'Бесплатно · раз в '+(c.daily?'сутки':'неделю')):(S.cfree&&S.cfree[c.id]>0?'Бесплатно · '+(S.cfree[c.id]|0)+' шт.':fmt(c.price)+' 🪙')}</span></button>`).join('')+'</div>'}
@@ -2989,6 +3005,8 @@ var STC={
   ceo:['🟣','Эксклюзивный ник @ceo','Фиолетовый эксклюзивный ник, редкость выше секретных. Всего 3 на весь сервер',2499,1],
   title_oligarch:['🏆','Титул «Олигарх»','Эксклюзивный титул, за монеты его не купить',349,1],
   collector:['🗂️','Коллекционер','Открывает все 30 мест в коллекции',399,1],
+  luck_m:['🍀','Талисман удачи · 30 дней','×3 на редкий–легендарный, ×1,5 на мифический и секретный',249,0],
+  luck:['🍀','Талисман удачи навсегда','×3 на редкий–легендарный, ×1,5 на мифический и секретный, навсегда',1690,1],
   vip_w:['👑','VIP на 7 дней','Все бонусы VIP на неделю',99,0],
   vip_m:['👑','VIP на 30 дней','Все бонусы VIP на месяц',229,0],
   vip_3m:['👑','VIP на 90 дней','Все бонусы VIP на 3 месяца',549,0],
@@ -2998,11 +3016,11 @@ var STC={
   pass:['🎫','Платный пропуск','Платная дорожка наград текущего сезона',99,0],
   custom_nick:['✏️','Именной юзернейм','Любой свободный юзернейм по твоему выбору. Выдаёт поддержка @ddwwks',349,0]
 };
-var STG=[['Наборы',['starter','pack_pro','pack_gold','energy60']],['Статус',['ceo','title_oligarch','collector','museum']],['Услуги',['wheel5','top','pass','custom_nick']]];
+var STG=[['Наборы',['starter','pack_pro','pack_gold','energy60']],['Статус',['ceo','title_oligarch','collector','museum']],['Услуги',['wheel5','top','pass']]];
 var STUP=[1,50,100,250,500,1000],VIP_FOREVER=4102444800000;
 var VIPPERK=[['Крутка ×5','Пять ников одной кнопкой, бесплатно и с выбором редкости. До '+V5_DAY+' раз в сутки. Обычным игрокам ×5 недоступна.'],['Энергия быстрее','Новая энергия за 8 минут вместо 15.'],['+10 мест в коллекции','Сверх обычных 30 мест, пока действует VIP.'],['Комиссия 2% вместо 5%','На продажах на рынке и в аукционе.'],['Доход музея +30%','Ко всем экспонатам в твоём зале.'],['Подарок каждый день','100 000 🪙 и 5 ⚡ просто за заход.'],['Корона 👑 в профиле','Значок VIP рядом с именем и в чате.']];
 var stPr=id=>(st.cat&&st.cat[id])||STC[id][3];
-var stHave=id=>{const c=STC[id];if(!c)return false;if(id==='vip')return vipPerm();if(id==='ceo')return !!(S.exc.ceo||st.owned.ceo||(sh.ex&&sh.ex.ceo&&sh.ex.ceo.mine));if(id==='pass'){try{return !!(st.owned.pass||szState().paid)}catch(e){return !!st.owned.pass}}return !!(c[4]&&(S.sx[id]||st.owned[id]))};
+var stHave=id=>{const c=STC[id];if(!c)return false;if(id==='vip')return vipPerm();if(id==='luck')return (+S.luck||0)>=4e12||!!(S.sx.luck||st.owned.luck);if(id==='ceo')return !!(S.exc.ceo||st.owned.ceo||(sh.ex&&sh.ex.ceo&&sh.ex.ceo.mine));if(id==='pass'){try{return !!(st.owned.pass||szState().paid)}catch(e){return !!st.owned.pass}}return !!(c[4]&&(S.sx[id]||st.owned[id]))};
 function goStar(id){try{sessionStorage.setItem('nr_st',id)}catch(e){}if(PAGE==='shop'){sh.tab='stars';st.sel=id;renderShop()}else tab('shop')}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-stgo]');if(b)goStar(b.dataset.stgo)});
 var agoT=ts=>{const m=Math.max(1,Math.floor((Date.now()-ts)/60000));return m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':Math.floor(m/1440)+' дн назад'};
@@ -3017,6 +3035,12 @@ function stHtml(){
   h+=`<div class="pcard vipc"><div class="vch"><span class="vci">👑</span><div><b>VIP</b><small>${fv?'Активен навсегда':un?'Активен до '+du(un):'Выбери срок, подписка не нужна'}</small></div>${un?'<span class="vok">✓</span>':''}</div>
   <div class="vterms">${VT.map(([id,d,l])=>`<button class="vterm${id==='vip_m'?' hot':''}" data-st="${id}"><b>${l}</b><small>${d}</small><span>⭐ ${fmt(stPr(id))}</span>${id==='vip_3m'?`<em>−${Math.round((1-stPr('vip_3m')/(stPr('vip_m')*3))*100)}%</em>`:''}</button>`).join('')}</div>
   <ul class="vipl">${VIPPERK.map(x=>`<li><b>${x[0]}</b><small>${x[1]}</small></li>`).join('')}</ul></div>`;}
+  {const lu=(+S.luck||0)>Date.now()?+S.luck:0,lf=lu>=4e12,du=d=>new Date(d).toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
+  h+=`<div class="pcard luckc"><div class="vch"><span class="vci">🍀</span><div><b>Талисман удачи</b><small>${lf?'Активен навсегда':lu?'Активен до '+du(lu):'Удача на всех крутках'}</small></div>${lu?'<span class="vok">✓</span>':''}</div>
+  <div class="lkpf"><span><b>×3</b> шанс на редкий — легендарный</span><span><b>×1,5</b> шанс на мифический и секретный</span></div>
+  <div class="vterms two"><button class="vterm hot" data-st="luck_m"><b>30 дней</b><small>можно продлить</small><span>⭐ ${fmt(stPr('luck_m'))}</span></button><button class="vterm" data-st="luck"${lf?' disabled':''}><b>Навсегда</b><small>один раз</small><span>⭐ ${fmt(stPr('luck'))}</span></button></div></div>`;}
+  {const tu=(()=>{try{return tgUser()}catch(e){return {}}})(),nm=String(S.nick||tu.username||tu.first_name||'username').toUpperCase().slice(0,14);
+  h+=`<div class="stsec"><h3 class="ch3">Именной юзернейм</h3><span>навсегда</span></div><div class="pcard cnc"><div class="cnplate"><i>★</i><b>@${escH(nm)}</b><i>★</i></div><b class="cnt">Именной юзернейм</b><p class="cnd">Ник с твоим текстом, навсегда</p><small class="cns">Свой текст · один на всю игру · не сгорает · добавим в твою коллекцию</small><button class="cnb" data-st="custom_nick">⭐ ${fmt(stPr('custom_nick'))}</button></div>`+'</div>'.slice(0,0);}
   for(const [g,ids] of STG){
     h+=`<h3 class="ch3">${g}</h3>`+ids.map(id=>{const c=STC[id],own=stHave(id);
       const out=id==='ceo'&&!own&&sh.ex&&sh.ex.ceo&&sh.ex.ceo.left<1,ds=id==='ceo'&&sh.ex&&sh.ex.ceo?c[2]+` · осталось ${sh.ex.ceo.left} из ${sh.ex.ceo.total}`:c[2],dis=own||out;
@@ -3039,6 +3063,7 @@ async function stLoad(){
   const [r,f]=await Promise.all([lbReq('/pay/state'),lbReq('/pay/feed').catch(()=>({items:[]}))]);
   st.bal=r.bal;S.sbal=r.bal;st.owned=r.owned||{};st.cat=r.cat||null;st.first=!!r.first;st.feed=f.items||[];
   if(r.vip&&r.vip>S.vip)S.vip=r.vip;else if(!r.vip)S.vip=0;
+  S.luck=r.luck&&r.luck>Date.now()?r.luck:0;
   stOwned();if(r.revoked)stRevoke(r.revoked);save();setMax();
 }
 function stOwned(){   // восстановить разовые покупки, если на устройстве потерялось локальное состояние
@@ -3049,6 +3074,7 @@ function stOwned(){   // восстановить разовые покупки,
   if(o.pass){try{szState().paid=1}catch(e){}}
   if(o.starter)S.sx.starter=1;
   if(o.vip){S.sx.vip=1;S.vip=VIP_FOREVER}
+  if(o.luck){S.sx.luck=1;S.luck=VIP_FOREVER}
   if(o.ceo){S.exc.ceo=1;if(!S.items.some(i=>i.n==='ceo'))addItem('ceo',7,0)}
 }
 function stGive(min){const c=roll({min,cost:0});let sold=0;if(S.items.length<MAX)addItem(c.name,c.t,c.p);else{sold=val(c.t,c.p,c.name);S.coins=Math.min(CAP,S.coins+sold)}return{c,sold}}
@@ -3064,6 +3090,8 @@ function stApply(r,out,fx){
   else if(id==='pack_gold')pk(7e6,150,4,1);
   else if(id==='energy60'){S.en+=60;card('⚡','+60','энергии в запас','#FFB62E')}
   else if(id==='vip'){S.sx.vip=1;S.vip=VIP_FOREVER;card('👑','VIP навсегда','все преимущества открыты','#FFC933')}
+  else if(id==='luck_m')card('🍀','Талисман удачи','+30 дней удачи на всех крутках','#5CE695');
+  else if(id==='luck'){S.sx.luck=1;S.luck=VIP_FOREVER;card('🍀','Талисман удачи','удача навсегда','#5CE695')}
   else if(/^vip_/.test(id)){card('👑',STC[id][1],'бонусы VIP активны, срок прибавлен','#FFC933')}
   else if(id==='ceo'){S.exc.ceo=1;if(!S.items.some(i=>i.n==='ceo'))addItem('ceo',7,0);card('🟣','@ceo','эксклюзивный ник','#B455FF')}
   else if(id==='museum'){S.sx.museum=1;S.hall=1;card('🏛️','Свой зал','музей открыт','#9B7BFF')}
@@ -3088,6 +3116,7 @@ function buyFx(list){
 function stRevoke(rv){   // админ вернул платёж: отзываем купленное на устройстве
   let ch=0;
   if(rv.vip&&S.vip){S.vip=0;S.sx.vip=0;ch=1}
+  if(rv.luck&&S.luck){S.luck=0;S.sx.luck=0;ch=1}
   if(rv.title_oligarch&&(S.sx.title_oligarch||S.cown.includes('oligarch'))){S.sx.title_oligarch=0;S.cown=S.cown.filter(x=>x!=='oligarch');if(S.ct==='oligarch')S.ct='';ch=1}
   if(rv.ceo&&(S.exc.ceo||S.items.some(i=>i.n==='ceo'))){S.exc.ceo=0;S.items=S.items.filter(i=>i.n!=='ceo');ch=1}
   if(rv.museum&&S.sx.museum){S.sx.museum=0;S.hall=0;ch=1}
@@ -3097,7 +3126,7 @@ function stRevoke(rv){   // админ вернул платёж: отзывае
 async function payClaim(){
   if(!API||!tg||!tg.initData||payClaim.b)return;payClaim.b=1;
   try{
-    const r=await lbReq('/pay/claim',{}),pb=S.sbal;st.bal=r.bal;S.sbal=r.bal;if(typeof r.vip==='number'&&r.vip>0)S.vip=Math.max(S.vip,r.vip);
+    const r=await lbReq('/pay/claim',{}),pb=S.sbal;st.bal=r.bal;S.sbal=r.bal;if(typeof r.vip==='number'&&r.vip>0)S.vip=Math.max(S.vip,r.vip);if(typeof r.luck==='number'&&r.luck>0)S.luck=Math.max(S.luck||0,r.luck);
     const out=[],fx=[];(r.items||[]).forEach(it=>{try{stApply(it,out,fx)}catch(e){}});
     if(r.items&&r.items.length){st.sent='';st.msg='';st.sel='';cosFix();setMax();save();render();lb.sent='';
       if(fx.length)buyFx(fx);
