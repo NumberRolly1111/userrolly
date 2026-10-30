@@ -1447,7 +1447,7 @@ function renderAch(){
   const list=ACH.map((x,i)=>({x,i,ok:achOk(x,i)})).sort((a,b)=>rank(a)-rank(b)||a.i-b.i);
   const h=`<div class="ahead"><h2>Достижения</h2></div>
   <div class="asum"><div class="ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" class="rb"/><circle cx="60" cy="60" r="54" class="rf" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-n/tot)}"/></svg><div><b>${n}</b><small>из ${tot}</small></div></div>
-    <div class="ainfo"><small class="cap2">Получено наград</small><b class="big">${fmt(got)} 🪙</b><div class="chips"><span class="chip2">🏆 ${n} открыто</span><span class="chip2">🔒 ${tot-n} осталось</span></div>${near?`<p>Ближайшее: ${near.x.n}, ${fmt(Math.min(near.x.cur(),near.x.goal))} из ${fmt(near.x.goal)}</p>`:'<p>Все достижения открыты!</p>'}</div></div>
+    <div class="ainfo"><small class="cap2">Получено наград</small><b class="big">${fmtC(got)} 🪙</b><div class="chips"><span class="chip2">🏆 ${n} открыто</span><span class="chip2">🔒 ${tot-n} осталось</span></div>${near?`<p>Ближайшее: ${near.x.n}, ${fmt(Math.min(near.x.cur(),near.x.goal))} из ${fmt(near.x.goal)}</p>`:'<p>Все достижения открыты!</p>'}</div></div>
   ${(()=>{try{return tqHtml()}catch(e){return ''}})()}
   ${rd?`<button class="btn main cwide" data-claim="all">Забрать все награды · +${fmt(achReady().reduce((s,i)=>s+ACH[i].r,0))} 🪙</button>`:''}
   <div class="alist">`+list.map(({x,i,ok})=>{const c=Math.min(x.cur(),x.goal),cl=S.achGot.includes(i);

@@ -1621,3 +1621,4 @@ body.shk{animation:none!important}
 .mopt{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--ink);font:700 15px var(--body);text-align:left}
 .mopt i{width:10px;height:10px;border-radius:50%;background:var(--tc)}.mopt span{flex:1}.mopt b{color:var(--mute);margin-left:6px}.mopt em{font-style:normal;color:#8f9cf0}
 .mopt.on{border-color:#8f9cf0;background:rgba(143,156,240,.16)}
+.ainfo .big{overflow-wrap:anywhere;line-height:1.1}
