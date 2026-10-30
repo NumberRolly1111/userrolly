@@ -3497,24 +3497,29 @@ document.addEventListener('click',async e=>{
 
 
 // ---------- Страница «Шансы» (значения получены моделированием сотен тысяч круток и округлены) ----------
-var chx={m:'any'};
-const CHM=[['any','Обычная'],['rare','Редкий+'],['epic','Эпик+'],['luck','Талисман']];
-const CHP={any:[72.9,17.9,8.0,1.06,.092,.065,0],rare:[0,0,86.4,11.8,1.07,.71,0],epic:[0,0,0,87.0,7.6,5.4,0],luck:[57.7,14.1,24.4,3.4,.29,.10,0]};
+var chx={m:'luck'};
+const CHM=[['luck','Талисман'],['rare','Редкий+'],['epic','Эпик+']];
+const CHN=[72.9,17.9,8.0,1.06,.092,.065,0];   // обычная крутка, %
+const CHP={rare:[0,0,86.4,11.8,1.07,.71,0],epic:[0,0,0,87.0,7.6,5.4,0],luck:[57.7,14.1,24.4,3.4,.29,.10,0]};
 const CHPR=[['Обычный','84 – 790'],['Необычный','830 – 2 200'],['Редкий','2 500 – 7 900'],['Эпический','11 000 – 34 000'],['Легендарный','40 000 – 85 000'],['Мифический','300 000 – 1 млн'],['Секретный','1 – 12 млн'],['Эксклюзивный','25 млн']];
-function chFmt(x,t){if(x<=0)return t===6?'реже 1 из 1 000 000':'—';if(x>=1)return (x>=10?x.toFixed(0):x.toFixed(1)).replace('.',',')+'%';return '1 из '+fmt(Math.round(100/x))}
+function chFmt(x,t){if(t===6)return 'не выпадает';if(x<=0)return '—';if(x>=10)return Math.round(x)+'%';return '1 из '+fmt(Math.round(100/x))}
 function renderChances(){
   const el=document.getElementById('tab-chances');if(!el)return;
-  const pr=CHP[chx.m];
-  const rows=[0,1,2,3,4,5,6].map(t=>`<div class="chr" style="--tc:${T[t].c}"><span><i></i>${T[t].n}</span><b>${t===6&&chx.m==='any'?'реже 1 из 1 000 000':chFmt(pr[t],t)}</b></div>`).join('');
+  const pr=CHP[chx.m],ml=(CHM.find(x=>x[0]===chx.m)||CHM[0])[1];
+  const rows=[0,1,2,3,4,5,6].map(t=>`<div class="chr3" style="--tc:${T[t].c}"><span><i></i>${T[t].n}</span><b>${chFmt(CHN[t],t)}</b><b class="chb">${chFmt(pr[t],t)}</b></div>`).join('');
   const prices=CHPR.map((x,i)=>`<div class="chr" style="--tc:${T[i].c}"><span><i></i>${x[0]}</span><b>${x[1]} 🪙</b></div>`).join('');
-  const note={any:'Обычная крутка: случайный ник, без условий.',rare:'«Редкий+»: крутка повторяется, пока не выпадет редкий или выше. Стоит 10 500 🪙 за ник.',epic:'«Эпик+»: крутка повторяется, пока не выпадет эпический или выше. Стоит 40 000 🪙 за ник.',luck:'С «Талисманом удачи» шансы на редкий–легендарный выше в 3 раза, на мифический и секретный в 1,5 раза.'}[chx.m];
+  const note={rare:'«Редкий+» повторяет крутку, пока не выпадет редкий или выше. Стоит 10 500 🪙 за ник.',epic:'«Эпик+» повторяет крутку, пока не выпадет эпический или выше. Стоит 40 000 🪙 за ник.',luck:'«Талисман удачи» увеличивает шансы на редкий–легендарный в 3 раза, на мифический в 1,5 раза. Обычные при этом выпадают реже.'}[chx.m];
+  const sec=CASES.filter(c=>c.w.some(x=>x[0]===6)).map(c=>`${c.ic} ${c.n} — ${pctw(c.w.find(x=>x[0]===6)[1])}%`).join('<br>');
   el.innerHTML=`<div class="ahead"><button class="btn sm" data-chx="1">‹ Назад</button><h2>Шансы</h2></div><div class="gmpage">
-  <div class="pcard chok"><b>Одинаковые для всех · открытые</b><p>Шансы не зависят от игрока и покупок. Единственное, что их меняет, — «Талисман удачи». Все числа ниже открыты.</p></div>
-  <h3 class="ch3">Редкость ника</h3>
-  <div class="crchips chtabs">${CHM.map(([k,l])=>`<button class="crch${chx.m===k?' on':''}" data-chm="${k}" style="--tc:#8f9cf0">${l}</button>`).join('')}</div>
-  <div class="pcard chtab">${rows}</div>
+  <div class="pcard chok"><span class="chsh">🛡️</span><div><b>Одинаковые для всех · открытые</b><p>Шансы не зависят от игрока и покупок. Все шансы и множители в таблицах ниже, без скрытых условий. Меняет их только «Талисман удачи».</p></div></div>
+  <h3 class="ch3 chh">Редкость ника</h3>
+  <div class="chtabs">${CHM.map(([k,l])=>`<button class="chtb${chx.m===k?' on':''}" data-chm="${k}">${l}</button>`).join('')}</div>
+  <div class="pcard chtab"><div class="chr3 chhd"><span>Редкость</span><b>Обычная крутка</b><b class="chb">${ml}</b></div>${rows}</div>
   <div class="pcard chnote"><p>${note}</p></div>
-  <h3 class="ch3">Цена ника</h3><div class="pcard chtab">${prices}</div>
+  <small class="sum">Обычный ник — всё остальное, около ${Math.round(CHN[0])}% круток.</small>
+  <h3 class="ch3 chh">Секретные ники</h3>
+  <div class="pcard chnote"><p>В обычной крутке секретные не выпадают. Их можно получить из кейсов, апгрейдом или купить у игроков.</p><p style="margin-top:8px">${sec}</p></div>
+  <h3 class="ch3 chh">Цена ника</h3><div class="pcard chtab">${prices}</div>
   <small class="sum">Цена зависит от самого ника: длины, слова, символов. Шансы получены моделированием сотен тысяч круток и округлены.</small>
   <button class="btn cwide" id="ch-fair" style="margin-top:12px">Шансы кейсов и «Честная игра»</button></div>`;
 }
