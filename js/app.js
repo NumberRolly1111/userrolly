@@ -1370,7 +1370,6 @@ function renderProf(){
     <button class="ptile" data-craft="1"><span class="pti">🧪</span><b>Контракт</b><small>3 ника → 1 новый</small></button>
   </div>
   <div class="pcard inv invx"><div><b>Позвать друзей</b><small>За каждого друга: +${fmt(REF_C)} 🪙 и +${REF_E} ⚡ и 5% ⭐ с его покупок · приглашено ${S.refc}</small></div><div class="invb">${lb.refn>0?`<button class="btn main" id="ref-claim">Забрать +${fmt(lb.refn*REF_C)} 🪙</button>`:''}<button class="btn${lb.refn>0?'':' main'}" id="invite">Позвать</button></div></div>
-  ${(()=>{let bn=null;try{bn=S.bestn?nickVal(S.bestn):null}catch(e){}if(!bn)return `<div class="pcard bnc"><div class="bnh"><b>Лучший ник</b></div><p class="sum">Пока нет. Выбей первый ник на вкладке «Крутить».</p></div>`;const c=T[bn.t].c;return `<div class="pcard bnc" style="--tc:${c}"><div class="bnh"><b>Лучший ник</b><span class="bnp"><i></i>${T[bn.t].n}</span></div><div class="bnpl">${plate(S.bestn,bn.t)}</div><div class="bnf"><small>@${escH(S.bestn)}</small><b>${bn.v>=1e6?tz((bn.v/1e6).toFixed(2))+' млн':fmt(bn.v)} 🪙</b></div></div>`})()}
   <div class="pcard"><h3>Статистика</h3>
     <div class="pgrid"><div class="pt"><small>Круток</small><b>${fmt(S.spins)}</b></div><div class="pt"><small>Удачных апгрейдов</small><b>${fmt(S.upw)}</b></div>
     <div class="pt"><small>В игре за всё время</small><b id="tm-all">${fmtT(S.time)}</b></div><div class="pt"><small>В игре сегодня</small><b id="tm-day">${fmtT(todaySec())}</b></div></div>
