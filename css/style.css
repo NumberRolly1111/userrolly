@@ -1597,3 +1597,10 @@ body.shk{animation:none!important}
 .mreset{display:block;margin:0 14px 10px;padding:0;background:none;border:0;color:var(--acc,#8f9cf0);font:700 14px var(--body)}
 .mcnt{font-size:15px}.mcnt b{font-size:18px}
 .csearch{padding:14px 16px;font-size:16px;border-radius:16px}
+/* svc: средний размер */
+.svc{gap:12px;padding:14px 14px}
+.svi{width:50px;height:50px;border-radius:15px;font-size:26px}
+.svc b{font-size:16px}
+.svc small{font-size:13px;margin-top:3px}
+.svc .btn.sm{min-height:40px;padding:0 14px;font-size:15px;border-radius:12px}
+.svc .btn small{font-size:11px}
