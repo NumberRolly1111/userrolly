@@ -689,11 +689,11 @@ function vigOn(reel){
 }
 const vigOff=()=>$('#vig').classList.remove('on');
 // стили анимации крутки на выбор: [старт, шаг между буквами] в мс
-const ANIM={classic:[1000,260],slot:[1250,330],wave:[1400,80],flip:[900,240],matrix:[800,220],ghost:[900,260],pop:[800,240],rain:[900,200]},
-  ANIMN=[['classic','Классика','буквы-барабаны слева направо'],['slot','Слот','с отскоком, как в автомате'],['wave','Волна','все сразу, падают волной'],['flip','Флип','буквы переворачиваются'],['matrix','Матрица','шифр, который расшифровывается'],['ghost','Призрак','буквы проявляются из тумана'],['pop','Хлопок','буквы вылетают крупно и встают на место'],['rain','Дождь','буквы падают сверху с отскоком']];
+const ANIM={classic:[1000,260],slot:[1250,330],wave:[1400,80],roul:[2100,380],matrix:[800,220],ghost:[900,260],pop:[800,240],rain:[900,200]},
+  ANIMN=[['classic','Классика','буквы-барабаны слева направо'],['slot','Слот','с отскоком, как в автомате'],['wave','Волна','все сразу, падают волной'],['roul','Рулетка','длинная прокрутка, барабаны тормозят по очереди'],['matrix','Матрица','шифр, который расшифровывается'],['ghost','Призрак','буквы проявляются из тумана'],['pop','Хлопок','буквы вылетают крупно и встают на место'],['rain','Дождь','буквы падают сверху с отскоком']];
 var ANIMP={ghost:500000,pop:1000000,rain:1600000};   // платные стили прокрутки
 const animOwn=id=>!ANIMP[id]||(S.cown||[]).includes('a_'+id);
-const animMode=()=>ANIM[S.anim]&&animOwn(S.anim)?S.anim:'classic';
+const animMode=()=>{if(S.anim==='flip')S.anim='roul';return ANIM[S.anim]&&animOwn(S.anim)?S.anim:'classic'};
 const animSub=x=>animOwn(x[0])?x[2]:'🔒 '+fmt(ANIMP[x[0]])+' 🪙 · '+x[2];
 function animPick(id,after){
   if(!ANIM[id])return;
@@ -711,14 +711,14 @@ function build(name,animate,reel=$('#reel'),kind=0){
   if(sec)vigOn(reel);
   [...name].forEach((ch,i)=>{
     const c=document.createElement('div'),st=document.createElement('div');c.className='cell'+(sec?' sec':myt?' myt':'');st.className='strip'+(animate&&!sec&&!myt?' go':'');c.style.setProperty('--i',i);
-    const m=animate&&!sec&&!myt&&!reduce?animMode():'classic',ap=ANIM[m],shuf=['flip','matrix','ghost','pop','rain'].includes(m);
-    const n=animate&&!sec&&!myt&&!shuf?(m==='wave'?14:12+i*(m==='slot'?4:3)):0,chars=Array.from({length:n},()=>P(POOL));chars.push(ch);
+    const m=animate&&!sec&&!myt&&!reduce?animMode():'classic',ap=ANIM[m],shuf=['matrix','ghost','pop','rain'].includes(m);
+    const n=animate&&!sec&&!myt&&!shuf?(m==='wave'?14:m==='roul'?30+i*7:12+i*(m==='slot'?4:3)):0,chars=Array.from({length:n},()=>P(POOL));chars.push(ch);
     st.innerHTML=chars.map(x=>`<span>${x}</span>`).join('');c.append(st);reel.append(c);
     if(animate&&!sec&&!myt&&shuf){   // буквы меняются на месте и фиксируются слева направо
-      st.className='strip';st.innerHTML=`<span>${P(POOL)}</span>`;const sp=st.firstChild,d=Math.round((ap[0]+i*ap[1])*FK());c.classList.add(m==='flip'?'flpc':m==='matrix'?'mtx':'shf-'+m);
-      const iv=setInterval(()=>{sp.textContent=P(POOL);if(m==='flip'){c.classList.remove('flp');void c.offsetWidth;c.classList.add('flp')}},m==='flip'?90:55);
-      setTimeout(()=>{clearInterval(iv);sp.textContent=ch;c.classList.remove('mtx','flpc','flp','shf-ghost','shf-pop','shf-rain');c.classList.add('land');if(m==='ghost'||m==='pop'||m==='rain')c.classList.add('ld-'+m);hap('i','light');sfx('land',i)},d)}
-    else if(n){const d=reduce?1:Math.round((ap[0]+i*ap[1])*FK());st.style.transitionDuration=d+'ms';if(m==='slot')st.style.transitionTimingFunction='cubic-bezier(.3,1.4,.45,1)';
+      st.className='strip';st.innerHTML=`<span>${P(POOL)}</span>`;const sp=st.firstChild,d=Math.round((ap[0]+i*ap[1])*FK());c.classList.add(m==='matrix'?'mtx':'shf-'+m);
+      const iv=setInterval(()=>{sp.textContent=P(POOL);},55);
+      setTimeout(()=>{clearInterval(iv);sp.textContent=ch;c.classList.remove('mtx','shf-ghost','shf-pop','shf-rain');c.classList.add('land');if(m==='ghost'||m==='pop'||m==='rain')c.classList.add('ld-'+m);hap('i','light');sfx('land',i)},d)}
+    else if(n){const d=reduce?1:Math.round((ap[0]+i*ap[1])*FK());st.style.transitionDuration=d+'ms';if(m==='slot')st.style.transitionTimingFunction='cubic-bezier(.3,1.4,.45,1)';if(m==='roul'){st.style.transitionTimingFunction='cubic-bezier(.08,.62,.1,1)';let k=0;const tk=setInterval(()=>{if(++k%2===0)sfx('tick',k)},Math.max(70,Math.round(d/26)));setTimeout(()=>clearInterval(tk),d)}
       requestAnimationFrame(()=>requestAnimationFrame(()=>st.style.transform=`translateY(${-n*1.5}em)`));
       setTimeout(()=>{st.classList.remove('go');c.classList.add('land');if(!reduce){hap('i','light');sfx('land',i)}},d)}
     if(myt){c.style.animationDelay=(MYT.start+i*MYT.step)+'ms';setTimeout(()=>{hap('i','light');sfx('myt',i)},MYT.start+i*MYT.step)}
