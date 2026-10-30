@@ -2623,24 +2623,26 @@ function rkEnsure(){const k=todayK();if(!S.rk||typeof S.rk!=='object'||S.rk.d!==
 function rkRoll(){let r=Math.random()*100;for(let i=0;i<RKS.length;i++){r-=RKS[i][1];if(r<0)return i}return 0}
 var RK_L=4,RK_P=.48;   // лесенка: до 4 удвоений, шанс каждого 48%
 const rkRefresh=()=>{const el=$('#tab-bon');if(el)el._h='';renderBon()};
+const RK_W=74,RK_G=8;
+const rkCell=i=>`<div class="rkc rc${i}" style="width:${RK_W}px"><i>${RKS[i][2]}</i><b>${RKS[i][3]}</b></div>`;
+const rkIdle=()=>[0,1,0,2,0,3,0,1,0,4,0,2,0,1,0];
+const rkIdleX=()=>{const vw=Math.min(window.innerWidth-48,380);return Math.round(vw/2-(7*(RK_W+RK_G)+RK_W/2))};
 function rkPlay(){
   const stake=RK_ST[rk.st],q=rkEnsure();if(bon.busy)return;
   if(S.rkp>0)return toast('Сначала забери выигрыш или рискни им');
   if(q.n>=RK_DAY)return toast('На сегодня попытки закончились');
   if(S.coins<stake)return toast('Не хватает монет на ставку');
   const w=rkRoll();S.coins-=stake;q.n++;S.rkN=(S.rkN|0)+1;save();setCoins();bon.busy=true;rk.res='';rk.last=stake;
-  const tiles=[...document.querySelectorAll('#tab-bon .rkt')],grid=document.querySelector('#tab-bon .rkg');
-  if(reduce||!grid||tiles.length<5){setTimeout(()=>fin(),50)}
-  else{
-    const box=document.createElement('div');box.className='rkbox';grid.append(box);
-    const st=tiles[1].offsetLeft-tiles[0].offsetLeft,dist=5*4+w,dur=4200,t0=performance.now();let lastTile=-1;
-    const ease=k=>1-Math.pow(1-k,4);
-    const frame=now=>{
-      const k=Math.min(1,(now-t0)/dur),u=dist*ease(k),x=((u%5)+5)%5,ti=Math.floor(x+.5)%5;
-      box.style.transform=`translateX(${(x<4.5?x:x-5)*st}px)`;box.style.opacity=x>4.5?0:1;
-      if(ti!==lastTile){lastTile=ti;tiles.forEach((t,n)=>t.classList.toggle('on',n===ti));if(k<1){sfx('tick',Math.floor(u));hap('i','light')}}
-      if(k<1)requestAnimationFrame(frame);else{box.style.transform=`translateX(${w*st}px)`;box.style.opacity=1;tiles.forEach((t,n)=>t.classList.toggle('on',n===w));setTimeout(()=>{box.remove();fin()},350)}
-    };requestAnimationFrame(frame);
+  const reel=document.getElementById('rkreel'),strip=document.getElementById('rkstrip'),btn=document.querySelector('#tab-bon [data-b="xrk"]');
+  if(btn)btn.disabled=true;
+  if(!reel||!strip){setTimeout(()=>fin(),50)}
+  else{   // без прокрутки: результат сразу встаёт под указатель
+    const vw=reel.clientWidth,step=RK_W+RK_G,seq=[0,1,2,3,4,0,1,2,3,4,0,1,2,3,4],RI=5+w;
+    strip.innerHTML=seq.map(rkCell).join('');strip.style.transition='none';
+    strip.style.transform=`translateX(${Math.round(vw/2-(RI*step+RK_W/2))}px)`;
+    const cells=[...strip.children];cells.forEach((c,n)=>c.classList.toggle('dim',n!==RI));cells[RI].classList.add('hit');
+    reel.classList.add(RKS[w][0]?'won':'lost');
+    setTimeout(()=>fin(),700);
   }
   const fin=()=>{
     const m=RKS[w][0],pay=Math.round(stake*m);
@@ -2680,7 +2682,8 @@ function extraBon(){
   const q=rkEnsure(),stake=RK_ST[rk.st],left=RK_DAY-q.n,pot=S.rkp>0?S.rkp:0,stp=S.rkS|0,hist=(Array.isArray(S.rkH)?S.rkH:[]).slice().reverse();
   const wr=S.rkN?Math.round((S.rkWin|0)/S.rkN*100):0;
   h+=`<details class="pcard fold" data-fold="rk"${fo('rk',0)}><summary class="bhead"><h3>🎲 Крутка с риском</h3><span class="bsub">${pot?'ждёт выигрыш!':`осталось ${left} из ${RK_DAY}`}</span></summary>${hintCard('risk')}
-    <div class="rkg">${RKS.map((s,i)=>`<div class="rkt"><i>${s[2]}</i><b>${s[3]}</b><small>${s[1]}%</small></div>`).join('')}</div>`+
+    <div class="rkreel" id="rkreel"><i class="rkptr"></i><div class="rkstrip" id="rkstrip" style="transform:translateX(${rkIdleX()}px)">${rkIdle().map(rkCell).join('')}</div></div>
+    <div class="rkleg">${RKS.map((s,i)=>`<span class="rl${i}"><i>${s[2]}</i>${s[3]} <small>${String(s[1]).replace('.',',')}%</small></span>`).join('')}</div>`+
   (pot?`<div class="rkpot"><small>Твой выигрыш</small><b class="rkcoin">🪙</b><strong>${fmt(pot)} 🪙</strong>
       <div class="rkl">${Array.from({length:RK_L},(_,i)=>`<i class="${i<stp?'on':''}">×${2<<i}</i>`).join('')}</div>
       <div class="rkb"><button class="btn main" data-b="xrkc">Забрать ${fmt(pot)}</button>${stp<RK_L?`<button class="btn" data-b="xrkd">Рискнуть: ×2 или всё (${Math.round(RK_P*100)}%)</button>`:'<button class="btn" disabled>Лестница пройдена</button>'}</div></div>`
