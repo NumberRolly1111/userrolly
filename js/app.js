@@ -3581,7 +3581,7 @@ document.addEventListener('click',e=>{});
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#tab-games [data-b]');if(!b||b.disabled||bon.busy)return;if(/^x/.test(b.dataset.b))xBon(b)});
 
 // ---------- Моя витрина: до трёх ников, видны в профиле ----------
-const vitKeep=()=>(S.vit||[]).filter(n=>S.items.some(i=>i.n===n)).slice(0,3);
+function vitKeep(){return (S.vit||[]).filter(n=>S.items.some(i=>i.n===n)).slice(0,3)}
 function vitHtml(){
   const v=vitKeep(),sl=[0,1,2].map(i=>{const n=v[i];if(!n)return `<button class="vslot" data-vit="${i}"><i>＋</i><small>Добавить ник</small></button>`;
     const x=nickVal(n);return `<div class="vslot on" style="--tc:${T[x.t].c}"><b>@${escH(n)}</b><small>${T[x.t].n}</small><span>${fmt(x.v)} 🪙</span><button class="vx" data-vitx="${i}" aria-label="Убрать">✕</button></div>`}).join('');
