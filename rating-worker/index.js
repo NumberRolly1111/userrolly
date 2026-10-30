@@ -792,7 +792,7 @@ async function handle(req, env) {
       let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
       const now = Date.now(), sid = seasonId(now);
       if (Math.floor(Number(b.sid)) !== sid) return json({ ok: false, error: 'season' });
-      let sp = int(b.sp, 12000); if (sp === null) return json({ error: 'bad' }, 400);
+      let sp = int(b.sp, 40000); if (sp === null) return json({ error: 'bad' }, 400);
       const me = await env.DB.prepare('SELECT 1 AS x FROM players WHERE uid=?').bind(uid).first();
       if (!me) return json({ ok: false, error: 'sync' });
       const old = await env.DB.prepare('SELECT sp,upd FROM season WHERE sid=? AND uid=?').bind(sid, uid).first();

@@ -1,6 +1,6 @@
 // ---------- Сезоны, пропуск наград, события и кейс недели ----------
 // Расписание (seasonId, evNow и т.д.) лежит в app.js. Здесь: состояние сезона, интерфейс и связь с рейтингом сезона.
-const SZ_LV = 30, SZ_SPL = 150, SZ_PRICE = 500000, SZ_GROW_STEP = 25000, SZ_GROW_CAP = 3000;
+const SZ_LV = 50, SZ_SPL = 300, SZ_PRICE = 500000, SZ_GROW_STEP = 25000, SZ_GROW_CAP = 3000;
 const SZ_NAMES = ['Неоновая осень', 'Ледяной шторм', 'Золотая лихорадка', 'Космический рейс', 'Тёмный лес', 'Огненный вихрь'];
 const szId = () => seasonId(Date.now());
 const szName = (id) => SZ_NAMES[((id % SZ_NAMES.length) + SZ_NAMES.length) % SZ_NAMES.length];
@@ -12,10 +12,10 @@ const szHM = (t) => { const d = new Date(t); return String(d.getHours()).padStar
 // награды уровня: бесплатная и платная дорожки
 function szReward(l, paid) {
   if (!paid) {
-    return { c: 15000 + l * 2500, e: l % 5 === 0 ? 5 : 0, cs: l === 10 ? 'start' : l === 20 ? 'rare' : l === 30 ? 'star' : '' };
+    return { c: 15000 + l * 2500, e: l % 5 === 0 ? 5 : 0, cs: l === 10 ? 'start' : l === 25 ? 'rare' : l === SZ_LV ? 'star' : '' };
   }
-  const cs = l === 30 ? 'abyss' : l % 10 === 0 ? 'star' : l % 6 === 0 ? 'rare' : l % 3 === 0 ? 'start' : '';
-  return { c: 30000 + l * 6000 + (l === 30 ? 300000 : 0), e: l % 4 === 0 ? 4 : 0, cs };
+  const cs = l === SZ_LV ? 'abyss' : l % 10 === 0 ? 'star' : l % 6 === 0 ? 'rare' : l % 3 === 0 ? 'start' : '';
+  return { c: 30000 + l * 6000 + (l === SZ_LV ? 300000 : 0), e: l % 4 === 0 ? 4 : 0, cs };
 }
 const szRwHtml = (r) => `<b>${fmtC(r.c)} 🪙</b>${r.e ? `<span>+${r.e} ⚡</span>` : ''}${r.cs ? `<span>${(CASES.find((x) => x.id === r.cs) || {}).ic || '📦'} кейс</span>` : ''}`;
 
