@@ -1631,3 +1631,11 @@ body.shk{animation:none!important}
 .mrow b{display:block;font:800 16px var(--head)}.mrow small{display:block;color:var(--mute);font-size:13px;margin-top:3px}.mrow svg{flex:none;color:var(--mute)}
 .stnote{margin:18px 0 6px;padding:16px;border-radius:18px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04)}
 .stnote b{display:block;font:800 15px var(--head);margin-bottom:8px}.stnote p{color:#d4d0f0;font-size:14px;line-height:1.45;margin-top:6px}
+/* единые тёмные скроллбары везде */
+*{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.22) transparent}
+html{color-scheme:dark}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:99px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.35);background-clip:content-box}
+::-webkit-scrollbar-button,::-webkit-scrollbar-corner{display:none}
