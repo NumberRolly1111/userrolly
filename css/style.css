@@ -1507,3 +1507,7 @@ body.shk{animation:none!important}
 @keyframes rkshk{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .rkleg{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:6px 0 12px}
 .rkleg span{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:99px;background:var(--tile);font:700 11.5px var(--head)}.rkleg small{color:var(--mute);font-size:10.5px}.rkleg i{font-style:normal}
+
+.nwrap{position:relative}
+.narr{position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:rgba(20,16,36,.88);backdrop-filter:blur(6px);color:var(--ink);font:700 20px/1 var(--head);display:grid;place-items:center;padding:0 0 3px;box-shadow:0 4px 12px rgba(0,0,0,.45)}
+.narr.l{left:-6px}.narr.r{right:-6px}.narr[hidden]{display:none}

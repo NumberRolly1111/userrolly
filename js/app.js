@@ -3282,7 +3282,7 @@ function renderNotes(){
   const can=S.wheel!==todayK(),wx=S.wheelx||0,au=nt.au,tp=nt.top;
   const ic=p=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
   const cards=[
-    {k:'games',c:'#6E7BFF',i:ic('<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="15" r="1"/>'),t:'Игры',d:'лотерея и «Угадай юзернейм»',dot:0},
+    {k:'games',c:'#6E7BFF',i:ic('<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="15" r="1"/>'),t:'Игры',d:'лотерея, слова, кейсы, батлы',dot:0},
     {k:'wheel',c:'#FFB23C',i:ic('<circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 3"/>'),t:can||wx?'Бесплатный спин':'Спин через',d:can?'ежедневное колесо готово':wx?`докупленных круток: ${wx}`:leftT(msToDay()),dot:can||wx?1:0},
     {k:'auction',c:'#36E07C',i:ic('<path d="M14 4l6 6-3 3-6-6zM11 7L4 14l3 3 7-7M3 21h10"/>'),t:'Аукцион',d:au?(au.lead&&au.lead.length?`ты лидируешь: ${au.lead.length}`:au.lots&&au.lots.length?`твоих лотов: ${au.lots.length}`:'лоты игроков и ставки'):'лоты игроков и ставки',dot:au&&(au.pend>0)?1:0},
     {k:'top',c:'#FF5FA2',i:ic('<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>'),t:'Лучшие за всё время',d:tp&&tp.top&&tp.top[0]?`№1 ${tp.top[0].name} · @${tp.top[0].bestn||'—'}`.slice(0,34):'рейтинг лучших ников',dot:0}
@@ -3305,7 +3305,7 @@ async function notesLoad(){
 }
 (function(){const el=document.getElementById('notes');if(!el)return;
   el.onclick=e=>{const b=e.target.closest('[data-n]');if(!b)return;const k=b.dataset.n;
-    if(k==='games'){try{sessionStorage.setItem('nr_gw','games')}catch(x){}return tab('bon')}
+    if(k==='games'){gmv='main';return tab('games')}
     if(k==='wheel'){try{sessionStorage.setItem('nr_gw','1')}catch(x){}return tab('bon')}
     if(k==='new'){const m=!S.spins?'Нажми «Крутить» внизу: выпадет юзернейм':!S.saved?'Под выпавшим ником нажми «Сохранить»':!(S.login&&S.login.n>=1)?'Открой «Бонусы» и забери ежедневный вход':'Вкладка «Апгрейд»: обменяй ники на более редкий';return toast(m)}
     if(k==='dc'||k==='hol')return tab('bon');
@@ -3440,3 +3440,12 @@ function renderBattles(){
 setTimeout(btPoll,4000);setInterval(btPoll,90000);
 
 document.addEventListener('click',e=>{});
+
+// стрелки для ленты карточек на главной
+(function(){
+  const el=document.getElementById('notes');if(!el||PAGE!=='main')return;
+  const w=document.createElement('div');w.className='nwrap';el.parentNode.insertBefore(w,el);w.append(el);
+  const mk=d=>{const b=document.createElement('button');b.className='narr '+(d<0?'l':'r');b.type='button';b.setAttribute('aria-label',d<0?'Назад':'Вперёд');b.textContent=d<0?'‹':'›';b.onclick=()=>{el.scrollBy({left:d*Math.round(el.clientWidth*.7),behavior:reduce?'auto':'smooth'});sfx('tick',1)};w.append(b);return b};
+  const L=mk(-1),R2=mk(1),upd=()=>{const m=el.scrollWidth-el.clientWidth;L.hidden=el.scrollLeft<8;R2.hidden=el.scrollLeft>m-8||m<8};
+  el.addEventListener('scroll',upd,{passive:true});addEventListener('resize',upd);setInterval(upd,800);upd();
+})();
