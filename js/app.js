@@ -3,14 +3,14 @@ addEventListener('error',e=>{try{if(e.message==='Script error.'&&!e.filename&&!e
 addEventListener('unhandledrejection',e=>{try{console.error(e.reason)}catch(x){}});
 const $=s=>document.querySelector(s),tg=window.Telegram&&Telegram.WebApp;
 // если на хостинге лежит старый html без новых разделов (файлы загрузили не все) — создаём недостающие, чтобы игра не падала
-['ach','show','top','clan','market','museum','shop','auction','help','guide','season','games','battles','fair','friends'].forEach(k=>{if(!$('#tab-'+k)){const s=document.createElement('section');s.id='tab-'+k;s.className='list';s.hidden=true;($('#tab-bon')||document.body).after(s)}});
+['ach','show','top','clan','market','museum','shop','auction','help','guide','season','games','battles','fair','friends','chances'].forEach(k=>{if(!$('#tab-'+k)){const s=document.createElement('section');s.id='tab-'+k;s.className='list';s.hidden=true;($('#tab-bon')||document.body).after(s)}});
 // Вкладки-«таблетки» внутри разделов: Склад (ники, апгрейд, контракт, витрины, музей) и Магазин (магазин, рынок, аукцион)
 const SUBS={stock:[['col','Ники'],['up','Апгрейд'],['craft','Контракт'],['battles','Батлы'],['show','Витрины'],['museum','Музей']],shop:[['shop','Магазин'],['market','Рынок'],['auction','Аукцион']]};
 const subTabs=(g,a)=>`<div class="ptabs" role="tablist">${SUBS[g].filter(([k])=>g!=='stock'||k!=='up'||a==='up').map(([k,l])=>`<button role="tab" data-sub="${k}"${k==='craft'?' data-craft="1"':''} aria-selected="${k===a}">${l}</button>`).join('')}</div>`;
 function ptFix(){document.querySelectorAll('.ptabs').forEach(p=>{const b=p.querySelector('[aria-selected=true]');if(b&&p.scrollWidth>p.clientWidth){p.style.scrollBehavior='auto';p.scrollLeft=b.offsetLeft-(p.clientWidth-b.offsetWidth)/2;p.style.scrollBehavior=''}})}
 try{const g=document.getElementById('gsub');if(g)g.innerHTML=SUBS.stock.filter(([k])=>k!=='show'&&k!=='museum').map(([k,l])=>`<button role="tab" data-sub="${k}"${k==='craft'?' data-craft="1"':''} aria-selected="false">${l}</button>`).join('')}catch(e){}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-sub]');if(!b)return;const k=b.dataset.sub;if(k==='craft')return;tab(k)});
-const NAVMAP={game:'game',col:'col',up:'col',show:'col',museum:'col',shop:'shop',market:'shop',auction:'shop',top:'top',clan:'top',prof:'more',ach:'more',guide:'more',help:'more',friends:'more'};
+const NAVMAP={game:'game',col:'col',up:'col',show:'col',museum:'col',shop:'shop',market:'shop',auction:'shop',top:'top',clan:'top',prof:'more',ach:'more',guide:'more',help:'more',friends:'more',chances:'more'};
 // отступ сверху под системную панель Telegram («Закрыть», «…»): берём из SDK, иначе запасной
 function safeTop(){
   let t=0;try{t=((tg.safeAreaInset||{}).top||0)+((tg.contentSafeAreaInset||{}).top||0)}catch(e){}
@@ -1463,7 +1463,7 @@ $('#prof-btn').onclick=()=>tab($('#tab-prof').hidden?'prof':'game');
 // Страницы: index.html (игра), rating.html (рейтинг), achievements.html (достижения). Состояние общее — в localStorage и облаке Telegram.
 const PAGE=document.body.dataset.page||'main',PAGES={top:'rating.html',ach:'achievements.html',clan:'clans.html',market:'market.html',museum:'museum.html',shop:'shop.html',auction:'auction.html'};
 function tab(n){
-  const here=PAGE==='main'?['game','col','up','prof','bon','show','help','guide','season','games','battles','fair','friends']:[PAGE];
+  const here=PAGE==='main'?['game','col','up','prof','bon','show','help','guide','season','games','battles','fair','friends','chances']:[PAGE];
   if(here.includes(n))return tabIn(n);
   save();try{if(cloudDone)cloudPush()}catch(e){}
   const go=(PAGES[n]||'index.html')+(PAGES[n]||n==='game'?'':'#'+n);
@@ -1472,7 +1472,7 @@ function tab(n){
 }
 function tabIn(n){
   {const nn=NAVMAP[n]||'';document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===nn))}
-  ['game','col','up','prof','bon','ach','show','top','clan','market','museum','shop','auction','help','guide','season','games','battles','fair','friends'].forEach(k=>{const e=$('#tab-'+k);if(!e)return;
+  ['game','col','up','prof','bon','ach','show','top','clan','market','museum','shop','auction','help','guide','season','games','battles','fair','friends','chances'].forEach(k=>{const e=$('#tab-'+k);if(!e)return;
     if(k===n){if(e.hidden){e.hidden=false;e.classList.remove('tabin');void e.offsetWidth;e.classList.add('tabin');clearTimeout(e._ti);e._ti=setTimeout(()=>e.classList.remove('tabin'),900)}}else e.hidden=true});
   $('#prof-btn').setAttribute('aria-pressed',n==='prof');
   $('#bon-btn').setAttribute('aria-pressed',['bon','games','battles','fair'].includes(n));
@@ -1496,16 +1496,33 @@ function tabIn(n){
   if(n==='battles')try{if(!bt.room)btLoad();else renderBattles()}catch(e){}
   if(n==='fair')try{renderFair()}catch(e){}
   if(n==='friends')try{renderFriends();frLoad()}catch(e){}
+  if(n==='chances')try{renderChances()}catch(e){}
   scrollTo(0,0);setTimeout(ptFix,30);
 }
-const MORE=[['prof','Профиль','Уровень, витрина, настройки'],['ach','Достижения','Награды за прогресс'],['bon','Бонусы и игры','Колесо, мини-игры, кейсы, батлы'],['season','Сезонный пропуск','50 уровней наград'],['market','Рынок','Купить и продать ники игрокам'],['auction','Аукцион','Торги за редкие ники'],['craft','Контракт','Обменять несколько ников на один'],['battles','Батлы','Кейсы против соперника'],['museum','Музей','Ники на витрине славы, доход'],['show','Витрины','Собери набор — получи награду'],['friends','Друзья','Приглашай друзей и получай награды'],['clan','Кланы','Вступи в клан или создай свой'],['guide','Гид','Как играть'],['help','Помощь','Вопросы и поддержка']];
-const MEM={"friends":"🤝","prof": "👤", "ach": "🎖️", "bon": "🎁", "season": "🏅", "market": "🛒", "auction": "🔨", "craft": "🧪", "battles": "⚔️", "museum": "🏛️", "show": "🗂️", "clan": "🛡️", "guide": "📖", "help": "❓"};
+const MI={
+user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',
+friends:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18 14.3c2.2.7 3.5 2.7 3.5 5.2"/>',
+clan:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+ach:'<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a2 2 0 0 0 3 4M16 6h3a2 2 0 0 1-3 4M12 13v4M8 20h8M10 17h4"/>',
+gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9M8 8a2.5 2.5 0 1 1 4-2 2.5 2.5 0 1 1 4 2"/>',
+season:'<circle cx="12" cy="9" r="5"/><path d="M8.5 13.5L7 21l5-3 5 3-1.5-7.5"/>',
+cart:'<circle cx="9" cy="20" r="1.2"/><circle cx="18" cy="20" r="1.2"/><path d="M3 4h3l2.5 11h10l2-8H7"/>',
+hammer:'<path d="M14 4l6 6-3 3-6-6zM11 9l-8 8 4 4 8-8"/>',
+flask:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/>',
+swords:'<path d="M5 4l9 9M19 4l-9 9M4 20l4-4M20 20l-4-4"/>',
+bank:'<path d="M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18"/>',
+grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+pct:'<path d="M19 5L5 19"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/>',
+send:'<path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/>',
+spark:'<path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>',
+help:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9.5 12l2 2 3.5-4"/>'};
+const MORE=[['prof','Профиль','Уровень, витрина, настройки','user'],['friends','Друзья','Приглашай друзей и получай награды','friends'],['clan','Кланы','Вступи в клан или создай свой','clan'],['ach','Достижения','Награды за прогресс','ach'],['bon','Бонусы и игры','Колесо, мини-игры, кейсы, батлы','gift'],['season','Сезонный пропуск','50 уровней наград','season'],['market','Рынок','Купить и продать ники игрокам','cart'],['auction','Аукцион','Торги за редкие ники','hammer'],['craft','Контракт','Обменять несколько ников на один','flask'],['battles','Батлы','Кейсы против соперника','swords'],['museum','Музей','Ники на витрине славы, доход','bank'],['show','Витрины','Собери набор — получи награду','grid'],['chances','Шансы','Редкости, цены, удача и честная игра','pct'],['idea','Предложить идею / Сообщить о баге','Чего не хватает — ответим в Telegram','send'],['guide','Обучение','Как играть, видео и шаги','spark'],['help','Правила и поддержка','Что можно и как с нами связаться','help']];
 function moreSheet(){
   let el=document.getElementById('more-sheet');if(el)el.remove();
   el=document.createElement('div');el.className='usheet';el.id='more-sheet';
-  el.innerHTML=`<div class="sbg" data-mx="1"></div><div class="sbox moresb"><div class="mgrab"></div><div class="shead"><b>Ещё</b><button class="btn sm" data-mx="1">✕</button></div><p class="msub">Всё остальное в игре — в одно нажатие</p><div class="mlist">${MORE.map(([k,t,d])=>`<button class="mrow"${k==='craft'?' data-craft="1"':''} data-mgo="${k}"><span><b>${t}</b><small>${d}</small></span><i class="mem">${MEM[k]||''}</i></button>`).join('')}</div></div>`;
+  el.innerHTML=`<div class="sbg" data-mx="1"></div><div class="sbox moresb"><div class="mgrab"></div><div class="shead"><b>Ещё</b><button class="btn sm" data-mx="1">✕</button></div><p class="msub">Всё остальное в игре — в одно нажатие</p><div class="mlist">${MORE.map(([k,t,d,i])=>`<button class="mrow"${k==='craft'?' data-craft="1"':''} data-mgo="${k}"><span class="mic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MI[i]}</svg></span><span class="mtx"><b>${t}</b><small>${d}</small></span><svg class="mch" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>`).join('')}</div></div>`;
   document.body.append(el);
-  el.onclick=e=>{if(e.target.closest('[data-mx]'))return el.remove();const g=e.target.closest('[data-mgo]');if(!g)return;const k=g.dataset.mgo;el.remove();if(k==='craft')return;sfx('tap');tab(k)};
+  el.onclick=e=>{if(e.target.closest('[data-mx]'))return el.remove();const g=e.target.closest('[data-mgo]');if(!g)return;const k=g.dataset.mgo;el.remove();if(k==='craft')return;sfx('tap');if(k==='idea')return openTg('https://t.me/ddwwks');tab(k)};
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='more'){sfx('tap');return moreSheet()}tab(b.dataset.tab)});
 // ---------- Рейтинг игроков ----------
@@ -3323,7 +3340,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)ntSync()});
 setTimeout(()=>ntSync(),7000);
 renderUp();
 if(PAGE!=='main')tabIn(PAGE);
-else{const h=location.hash.slice(1);if(['col','up','prof','bon','show','help','guide','season','games','battles','fair','friends'].includes(h))tabIn(h)}
+else{const h=location.hash.slice(1);if(['col','up','prof','bon','show','help','guide','season','games','battles','fair','friends','chances'].includes(h))tabIn(h)}
 try{if(PAGE!=='main'&&tg&&tg.BackButton){tg.BackButton.show();tg.BackButton.onClick(()=>{location.href=PAGE==='clan'?'rating.html':'index.html'})}}catch(e){}
 refInit();
 cloudLoad();
@@ -3476,6 +3493,36 @@ document.addEventListener('click',async e=>{
   if(t.closest('#fr-copy')){try{await navigator.clipboard.writeText(refLink());toast('Ссылка скопирована')}catch(x){toast('Не удалось скопировать')}return}
   if(t.closest('#fr-claim')){await claimRefs();return frLoad()}
   const g=t.closest('[data-frs]');if(g){const n=+g.dataset.frs,st=REF_STEPS.find(x=>x[0]===n);S.refm=Array.isArray(S.refm)?S.refm:[];if(!st||S.refm.includes(n)||Math.max(fr.total,S.refc|0)<n)return;S.refm.push(n);S.coins=Math.min(CAP,S.coins+st[1]);S.en+=st[2];save();render();sfx('ach');toast(`🎁 +${fmt(st[1])} 🪙 и +${st[2]} ⚡`);renderFriends()}
+});
+
+
+// ---------- Страница «Шансы» (значения получены моделированием сотен тысяч круток и округлены) ----------
+var chx={m:'any'};
+const CHM=[['any','Обычная'],['rare','Редкий+'],['epic','Эпик+'],['luck','Талисман']];
+const CHP={any:[72.9,17.9,8.0,1.06,.092,.065,0],rare:[0,0,86.4,11.8,1.07,.71,0],epic:[0,0,0,87.0,7.6,5.4,0],luck:[57.7,14.1,24.4,3.4,.29,.10,0]};
+const CHPR=[['Обычный','84 – 790'],['Необычный','830 – 2 200'],['Редкий','2 500 – 7 900'],['Эпический','11 000 – 34 000'],['Легендарный','40 000 – 85 000'],['Мифический','300 000 – 1 млн'],['Секретный','1 – 12 млн'],['Эксклюзивный','25 млн']];
+function chFmt(x,t){if(x<=0)return t===6?'реже 1 из 1 000 000':'—';if(x>=1)return (x>=10?x.toFixed(0):x.toFixed(1)).replace('.',',')+'%';return '1 из '+fmt(Math.round(100/x))}
+function renderChances(){
+  const el=document.getElementById('tab-chances');if(!el)return;
+  const pr=CHP[chx.m];
+  const rows=[0,1,2,3,4,5,6].map(t=>`<div class="chr" style="--tc:${T[t].c}"><span><i></i>${T[t].n}</span><b>${t===6&&chx.m==='any'?'реже 1 из 1 000 000':chFmt(pr[t],t)}</b></div>`).join('');
+  const prices=CHPR.map((x,i)=>`<div class="chr" style="--tc:${T[i].c}"><span><i></i>${x[0]}</span><b>${x[1]} 🪙</b></div>`).join('');
+  const note={any:'Обычная крутка: случайный ник, без условий.',rare:'«Редкий+»: крутка повторяется, пока не выпадет редкий или выше. Стоит 10 500 🪙 за ник.',epic:'«Эпик+»: крутка повторяется, пока не выпадет эпический или выше. Стоит 40 000 🪙 за ник.',luck:'С «Талисманом удачи» шансы на редкий–легендарный выше в 3 раза, на мифический и секретный в 1,5 раза.'}[chx.m];
+  el.innerHTML=`<div class="ahead"><button class="btn sm" data-chx="1">‹ Назад</button><h2>Шансы</h2></div><div class="gmpage">
+  <div class="pcard chok"><b>Одинаковые для всех · открытые</b><p>Шансы не зависят от игрока и покупок. Единственное, что их меняет, — «Талисман удачи». Все числа ниже открыты.</p></div>
+  <h3 class="ch3">Редкость ника</h3>
+  <div class="crchips chtabs">${CHM.map(([k,l])=>`<button class="crch${chx.m===k?' on':''}" data-chm="${k}" style="--tc:#8f9cf0">${l}</button>`).join('')}</div>
+  <div class="pcard chtab">${rows}</div>
+  <div class="pcard chnote"><p>${note}</p></div>
+  <h3 class="ch3">Цена ника</h3><div class="pcard chtab">${prices}</div>
+  <small class="sum">Цена зависит от самого ника: длины, слова, символов. Шансы получены моделированием сотен тысяч круток и округлены.</small>
+  <button class="btn cwide" id="ch-fair" style="margin-top:12px">Шансы кейсов и «Честная игра»</button></div>`;
+}
+document.addEventListener('click',e=>{
+  const t=e.target.closest&&e.target.closest('#tab-chances *');if(!t)return;
+  if(t.closest('[data-chx]'))return tab('game');
+  const m=t.closest('[data-chm]');if(m){chx.m=m.dataset.chm;return renderChances()}
+  if(t.closest('#ch-fair')){fgFrom='games';tab('fair')}
 });
 
 function renderFair(){

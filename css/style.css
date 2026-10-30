@@ -1660,3 +1660,17 @@ html{color-scheme:dark}
 .bnp i{width:8px;height:8px;border-radius:50%;background:var(--tc)}
 .bnpl{display:flex;justify-content:center;padding:18px 0 14px;transform-origin:center}.bnpl .plate{transform:scale(1.25)}
 .bnf{display:flex;justify-content:space-between;align-items:center;gap:10px}.bnf small{color:var(--mute);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis}.bnf b{font:800 15px var(--head);color:var(--tc);white-space:nowrap}
+
+/* «Ещё»: единый список с разделителями */
+.mlist{gap:0;border:1px solid rgba(255,255,255,.1);border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02)),var(--paper);padding:0;margin:0 0 12px;overflow:auto}
+.mrow{border:0;border-bottom:1px solid rgba(255,255,255,.08);border-radius:0;background:none;padding:13px 16px;gap:14px}
+.mrow:last-child{border-bottom:0}
+.mic{flex:none;display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:color-mix(in srgb,var(--blue) 20%,transparent);color:color-mix(in srgb,var(--blue) 55%,#fff)}
+.mtx{flex:1;min-width:0}.mrow b{font:700 15.5px var(--body)}.mrow small{font-size:13px}
+.mch{flex:none;color:var(--mute)}
+
+.chok{border-color:rgba(54,224,124,.45)!important;background:linear-gradient(180deg,rgba(54,224,124,.12),rgba(54,224,124,.03)),var(--paper)!important}.chok>b{font:800 15px var(--head);color:#7CF29B}.chok p{color:#d4d0f0;font-size:13.5px;line-height:1.45;margin-top:6px}
+.chtabs{margin-bottom:10px;flex-wrap:wrap}.chtab{padding:4px 16px}.chnote p{font-size:13.5px;color:#d4d0f0;line-height:1.45}
+.chr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.08)}.chr:last-child{border:0}
+.chr span{display:flex;align-items:center;gap:9px;font-weight:700;color:var(--tc)}.chr i{width:9px;height:9px;border-radius:50%;background:var(--tc)}.chr b{font:800 14.5px var(--head);text-align:right}
+.chtabs .crch.on{background:rgba(143,156,240,.25);border-color:#8f9cf0;color:#fff}.chtabs .crch{min-height:38px;padding:0 14px;font-size:14px}
