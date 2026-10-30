@@ -34,7 +34,7 @@ let MAX=MAX0;                // текущий размер коллекции (
 const slotPrice=n=>Math.round(75000*Math.pow(1.35,n-MAX0)/1000)*1000;   // цена следующего места при n местах
 const EN_CAP=15,EN_INT=15*60*1000;
 const V5_DAY=15;   // VIP: сколько бесплатных кручений ×5 в сутки
-var vipOn=()=>(+S.vip||0)>Date.now(),vipX=()=>vipOn()?10:0,enInt=()=>vipOn()?8*60*1000:EN_INT,setMax=()=>{MAX=(S.slots||MAX0)+vipX()};
+var vipPerm=()=>(+S.vip||0)>Date.now(),vipOn=()=>(+S.vip||0)>Date.now()||(+S.vipT||0)>Date.now(),vipX=()=>vipOn()?10:0,enInt=()=>vipOn()?8*60*1000:EN_INT,setMax=()=>{MAX=(S.slots||MAX0)+vipX()};
 var v5Left=()=>{const d=todayK();if(!S.v5||S.v5.d!==d)S.v5={d,n:0};return Math.max(0,V5_DAY-S.v5.n)};   // запас энергии и время накопления одной единицы (15 минут)
 const AUTO=['выключена','ниже необычного','ниже редкого','ниже эпического','ниже легендарного','ниже мифического'];
 const APP_LINK='https://t.me/NumberRollyBot';            // ссылка на Mini App для кнопки «Позвать друзей»: https://t.me/ИМЯ_БОТА/КОРОТКОЕ_ИМЯ_ПРИЛОЖЕНИЯ (из @BotFather → /newapp). С ней работают награды за друзей
@@ -297,7 +297,7 @@ function fixState(){
   if(!S.q||typeof S.q!=='object'||!Array.isArray(S.q.list))S.q={wk:'',list:[]};
   S.q.list=S.q.list.filter(q=>q&&typeof q.id==='string'&&+q.n>0).map(q=>({id:q.id,n:+q.n,p:Math.max(0,+q.p||0),got:!!q.got}));
   S.items=(Array.isArray(S.items)?S.items:[]).filter(x=>x&&typeof x.n==='string'&&x.n&&Number.isInteger(x.t)&&x.t>=0&&x.t<=7).map(x=>({id:String(x.id||Date.now()+''+R(1000)),n:x.n,t:x.t,p:+x.p||0}));
-  S.vip=Math.max(0,+S.vip||0);S.sx=S.sx&&typeof S.sx==='object'?S.sx:{};S.v5=S.v5&&typeof S.v5==='object'?{d:String(S.v5.d||''),n:Math.max(0,+S.v5.n||0)}:{d:'',n:0};S.topfree=Math.max(0,Math.floor(+S.topfree)||0);S.sbal=Math.max(0,Math.floor(+S.sbal)||0);
+  S.vip=Math.max(0,+S.vip||0);S.vipT=Math.max(0,Math.min(+S.vipT||0,Date.now()+400*864e5));S.sx=S.sx&&typeof S.sx==='object'?S.sx:{};S.v5=S.v5&&typeof S.v5==='object'?{d:String(S.v5.d||''),n:Math.max(0,+S.v5.n||0)}:{d:'',n:0};S.topfree=Math.max(0,Math.floor(+S.topfree)||0);S.sbal=Math.max(0,Math.floor(+S.sbal)||0);
   S.slots=Math.min(MAXSLOTS,Math.max(MAX0,Math.floor(+S.slots)||MAX0));setMax();
   S.items=S.items.slice(0,Math.max(MAX,S.slots+10));   // после окончания VIP ники сверх лимита остаются, но новые не добавить
   if(!(S.auto>=0&&S.auto<=5))S.auto=0;S.auto=Math.floor(S.auto);
@@ -493,7 +493,7 @@ const ACH=[
   A('🪙','Миллиардер','Накопи 300 000 000 🪙',()=>S.maxCoins,300000000,15000000),
   A('🪙','Триллионер','Накопи 3 000 000 000 🪙',()=>S.maxCoins,3000000000,50000000),
   A('🌙','100 часов в игре','Проведи в игре 100 часов',()=>Math.floor(S.time/3600),100,3000000),
-  A('👑','Королевская особа','Получи VIP навсегда',()=>vipOn()?1:0,1,2000000),
+  A('👑','Королевская особа','Получи VIP навсегда',()=>vipPerm()?1:0,1,2000000),
   A('🎯','Первый челлендж','Выполни задание челленджа дня',()=>S.dcN|0,1,300000),
   A('🎯','10 челленджей','Выполни 10 заданий челленджа дня',()=>S.dcN|0,10,1500000),
   A('🎯','50 челленджей','Выполни 50 заданий челленджа дня',()=>S.dcN|0,50,6000000),
@@ -2965,12 +2965,12 @@ var STG=[['Наборы',['starter','pack_pro','pack_gold','energy60']],['Ста
 var STUP=[1,50,100,250,500,1000],VIP_FOREVER=4102444800000;
 var VIPPERK=[['Крутка ×5','Пять ников одной кнопкой, бесплатно и с выбором редкости. До '+V5_DAY+' раз в сутки. Обычным игрокам ×5 недоступна.'],['Энергия быстрее','Новая энергия за 8 минут вместо 15.'],['+10 мест в коллекции','Сверх обычных 30 мест, навсегда.'],['Комиссия 2% вместо 5%','На продажах на рынке и в аукционе.'],['Доход музея +30%','Ко всем экспонатам в твоём зале.'],['Подарок каждый день','100 000 🪙 и 5 ⚡ просто за заход.'],['Корона 👑 в профиле','Значок VIP рядом с именем и в чате.']];
 var stPr=id=>(st.cat&&st.cat[id])||STC[id][3];
-var stHave=id=>{const c=STC[id];if(!c)return false;if(id==='vip')return vipOn();if(id==='ceo')return !!(S.exc.ceo||st.owned.ceo||(sh.ex&&sh.ex.ceo&&sh.ex.ceo.mine));if(id==='pass'){try{return !!(st.owned.pass||szState().paid)}catch(e){return !!st.owned.pass}}return !!(c[4]&&(S.sx[id]||st.owned[id]))};
+var stHave=id=>{const c=STC[id];if(!c)return false;if(id==='vip')return vipPerm();if(id==='ceo')return !!(S.exc.ceo||st.owned.ceo||(sh.ex&&sh.ex.ceo&&sh.ex.ceo.mine));if(id==='pass'){try{return !!(st.owned.pass||szState().paid)}catch(e){return !!st.owned.pass}}return !!(c[4]&&(S.sx[id]||st.owned[id]))};
 function goStar(id){try{sessionStorage.setItem('nr_st',id)}catch(e){}if(PAGE==='shop'){sh.tab='stars';st.sel=id;renderShop()}else tab('shop')}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-stgo]');if(b)goStar(b.dataset.stgo)});
 var agoT=ts=>{const m=Math.max(1,Math.floor((Date.now()-ts)/60000));return m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':Math.floor(m/1440)+' дн назад'};
 function stHtml(){
-  const vip=vipOn(),bal=st.bal!=null?st.bal:S.sbal;
+  const vip=vipPerm(),bal=st.bal!=null?st.bal:S.sbal;
   let h='';
   if(st.feed&&st.feed.length)h+=`<div class="pcard stfeed"><b>Недавно в магазине</b>${st.feed.slice(0,4).map(x=>`<div><span>${escH(x.text)}</span><small>${agoT(x.ts)}</small></div>`).join('')}</div>`;
   if(st.msg==='nochat')h+=`<div class="pcard lbmsg"><b>Бот не смог отправить счёт</b><small>Открой чат с ботом, нажми «Старт» и повтори покупку.</small><button class="btn main" id="st-chat">Открыть чат</button></div>`;

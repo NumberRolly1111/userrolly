@@ -10,14 +10,15 @@ const szLeft = (ms) => { const d = Math.floor(ms / 864e5), h = Math.floor(ms % 8
 const szHM = (t) => { const d = new Date(t); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 
 // награды уровня: бесплатная и платная дорожки
+const SZ_VIPD = { 39: 1, 44: 3, 50: 7 };   // дни VIP за уровни платной дорожки
 function szReward(l, paid) {
   if (!paid) {
     return { c: 15000 + l * 2500, e: l % 5 === 0 ? 5 : 0, cs: l === 10 ? 'start' : l === 25 ? 'rare' : l === SZ_LV ? 'star' : '' };
   }
   const cs = l === SZ_LV ? 'abyss' : l % 10 === 0 ? 'star' : l % 6 === 0 ? 'rare' : l % 3 === 0 ? 'start' : '';
-  return { c: 30000 + l * 6000 + (l === SZ_LV ? 300000 : 0), e: l % 4 === 0 ? 4 : 0, cs };
+  return { c: 30000 + l * 6000 + (l === SZ_LV ? 300000 : 0), e: l % 4 === 0 ? 4 : 0, cs, v: SZ_VIPD[l] || 0 };
 }
-const szRwHtml = (r) => `<b>${fmtC(r.c)} 🪙</b>${r.e ? `<span>+${r.e} ⚡</span>` : ''}${r.cs ? `<span>${(CASES.find((x) => x.id === r.cs) || {}).ic || '📦'} кейс</span>` : ''}`;
+const szRwHtml = (r) => `<b>${fmtC(r.c)} 🪙</b>${r.e ? `<span>+${r.e} ⚡</span>` : ''}${r.v ? `<span>👑 VIP ${r.v} ${r.v === 1 ? 'день' : r.v < 5 ? 'дня' : 'дней'}</span>` : ''}${r.cs ? `<span>${(CASES.find((x) => x.id === r.cs) || {}).ic || '📦'} кейс</span>` : ''}`;
 
 const SZQ = [
   { t: 'Крути рулетку', n: 150, r: 300, v: (z) => S.spins - z.b.sp },
@@ -73,6 +74,7 @@ async function szLoadTop(force) {
 function szGive(r) {
   S.coins = Math.min(CAP, S.coins + r.c);
   if (r.e) S.en += r.e;
+  if (r.v) S.vipT = Math.max(Date.now(), +S.vipT || 0) + r.v * 864e5;
   if (r.cs) { S.cfree = S.cfree || {}; S.cfree[r.cs] = (S.cfree[r.cs] | 0) + 1; }
 }
 function szClaim(l, paid, silent) {
