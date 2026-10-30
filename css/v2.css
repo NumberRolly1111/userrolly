@@ -81,3 +81,8 @@ html.v2 .podium>*,html.v2 .pod>*{filter:drop-shadow(0 14px 22px rgba(0,0,0,.5))}
 html.v2 .msrch input,html.v2 .msrch input[type=search]{border:0!important;background:none!important;box-shadow:none!important;border-radius:0!important;padding:0!important;outline:0}
 html.v2 .msrch{border-radius:14px}
 .msrch input:focus-visible{outline:0}.msrch:focus-within{border-color:var(--blue)}
+input[type=search]{-webkit-appearance:none;appearance:none}
+input[type=search]::-webkit-search-decoration,input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+.msrch input,.msrch input[type=search]{border:0!important;background:none!important;box-shadow:none!important;border-radius:0!important;padding:0!important;outline:0!important;height:auto}
+.msrch{border-radius:12px!important}
+.csearch,html.v2 .csearch{border-radius:12px!important}
