@@ -35,10 +35,6 @@ html.v2 .sw{border:1px solid var(--ring)}
 html.v2 .ch3{letter-spacing:.01em}
 html.v2 h1{letter-spacing:-.01em}
 html.v2 .pcard.svc.excs{border-color:#B455FF!important}
-/* появление карточек */
-@keyframes v2in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-html.v2 section:not([hidden])>.pcard,html.v2 section:not([hidden])>.mlot,html.v2 section:not([hidden])>.item{animation:v2in .4s both}
-html.v2 section:not([hidden])>.pcard:nth-child(2){animation-delay:.04s}html.v2 section:not([hidden])>.pcard:nth-child(3){animation-delay:.08s}html.v2 section:not([hidden])>.pcard:nth-child(4){animation-delay:.12s}html.v2 section:not([hidden])>.pcard:nth-child(n+5){animation-delay:.16s}
 @media (prefers-reduced-motion:reduce){html.v2 *{animation-duration:.01ms!important}}
 
 /* усиление: живой фон, неоновая рамка рулетки, объём ячеек */
@@ -71,3 +67,14 @@ html.v2 .pcard.holc{background:linear-gradient(180deg,rgba(255,138,61,.12),rgba(
 html.v2 .ptitle,html.v2 h2.ptitle{letter-spacing:-.01em}
 html.v2 .lbme{border:1px solid var(--blue);box-shadow:0 0 30px -8px var(--blue),0 12px 30px -14px #000}
 html.v2 .podium>*,html.v2 .pod>*{filter:drop-shadow(0 14px 22px rgba(0,0,0,.5))}
+
+/* магазин компактнее */
+.svc{gap:10px;padding:11px 12px}
+.svi{width:42px;height:42px;border-radius:13px;font-size:22px}
+.svc b{font-size:14.5px}.svc small{font-size:12px;margin-top:2px}
+.svc .btn.sm{min-height:36px;padding:0 12px;font-size:14px;border-radius:11px}
+.exct{font-size:9px;padding:1px 6px;margin-bottom:3px}
+.vipc,.luckc,.cnc{padding:14px!important}
+.vterm{padding:9px 6px}.vterm b{font-size:14px}.vterm span{font-size:15px}
+.cnplate{padding:10px}.cnplate b{font-size:22px}
+.stnote{padding:13px}.stnote p{font-size:13px}
