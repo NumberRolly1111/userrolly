@@ -2061,7 +2061,7 @@ renderCases();
 // ---------- Рынок между игроками ----------
 // Лоты хранит сервер (rating-worker). Тип и цену ника покупатель считает сам по названию, а не берёт у продавца.
 const ME={already:'Этот лот уже в топе',poor:'Не хватает монет (по данным сервера)',sync:'Подожди пару секунд: профиль ещё не отправлен на сервер',gone:'Лот уже продан или снят',own:'Это твой лот',changed:'Цена изменилась, обнови список',toomany:'Не больше 10 лотов одновременно',price:'Цена: от 10 до 2 000 000 000 🪙',name:'Этот ник нельзя выставить'};
-const mk={rar:-1,pr:0,hist:null,tab:'buy',q:'',sort:'new',lots:null,my:null,load:false,err:'',sheet:false,sel:'',price:'',busy:false};
+const mk={dd:null,rar:-1,pr:0,hist:null,tab:'buy',q:'',sort:'new',lots:null,my:null,load:false,err:'',sheet:false,sel:'',price:'',busy:false};
 const merr=e=>{const m=String(e&&e.message||e).replace(/^e:/,'');return ME[m]||(m==='http 401'?'Ошибка проверки Telegram':m==='http 500'?'Ошибка сервера':m==='wait'?'Подожди несколько секунд':'Нет связи с сервером')};
 const nickVal=n=>{const s=score(n);return {t:s.t,p:s.p,v:val(s.t,s.p,n)}};
 async function openMarket(){
@@ -2113,12 +2113,18 @@ function mApply(ls){
   return r;
 }
 function mFilters(){
-  const chip=(attr,v,on,l,c)=>`<button class="crch${on?' on':''}" ${attr}="${v}"${c?` style="--tc:${c}"`:''}>${c?'<i></i>':''}${l}</button>`;
   const cnt={};(mk.lots||[]).forEach(l=>{const t=mLotT(l);cnt[t]=(cnt[t]|0)+1});
+  const sl=(MSORT.find(x=>x[0]===mk.sort)||MSORT[0])[1],rl=mk.rar<0?'Редкость':T[mk.rar].n,pl=mk.pr?MPR[mk.pr][2]:'Цена';
+  const dd=(k,l,on)=>`<button class="mdd${on?' on':''}" data-mdd="${k}">${l}<svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
   const dirty=mk.sort!=='new'||mk.rar>=0||mk.pr>0;
-  return `<div class="mfil"><div class="mfr"><span>Сортировка</span><div class="crchips">${MSORT.map(([k,l])=>chip('data-sort',k,mk.sort===k,l)).join('')}</div></div>
-  <div class="mfr"><span>Редкость</span><div class="crchips">${chip('data-mrar',-1,mk.rar<0,'Все')}${T.map((x,t)=>cnt[t]||mk.rar===t?chip('data-mrar',t,mk.rar===t,`${x.n} <b>${cnt[t]|0}</b>`,x.c):'').join('')}</div></div>
-  <div class="mfr"><span>Цена</span><div class="crchips">${MPR.map((x,i)=>chip('data-mpr',i,mk.pr===i,x[2])).join('')}</div></div>${dirty?'<button class="mreset" id="m-reset">Сбросить фильтры</button>':''}</div>`;
+  let sh='';
+  if(mk.dd){
+    const o=(attr,v,on,l,c)=>`<button class="mopt${on?' on':''}" ${attr}="${v}"${c?` style="--tc:${c}"`:''}>${c?'<i></i>':''}<span>${l}</span>${on?'<em>✓</em>':''}</button>`;
+    const ttl={sort:'Сортировка',rar:'Редкость',pr:'Цена'}[mk.dd];
+    const list=mk.dd==='sort'?MSORT.map(([k,l])=>o('data-sort',k,mk.sort===k,l)):mk.dd==='rar'?[o('data-mrar',-1,mk.rar<0,'Все редкости')].concat(T.map((x,t)=>cnt[t]||mk.rar===t?o('data-mrar',t,mk.rar===t,`${x.n} <b>${cnt[t]|0}</b>`,x.c):'')):MPR.map((x,i)=>o('data-mpr',i,mk.pr===i,x[2]));
+    sh=`<div class="usheet" id="mdsheet"><div class="sbg" data-mddx="1"></div><div class="sbox"><div class="shead"><b>${ttl}</b><button class="btn sm" data-mddx="1">✕</button></div><div class="mopts">${list.join('')}</div></div></div>`;
+  }
+  return `<div class="mfrow">${dd('sort',sl,mk.sort!=='new')}${dd('rar',rl,mk.rar>=0)}${dd('pr',pl,mk.pr>0)}${dirty?'<button class="mdd rst" id="m-reset">Сбросить</button>':''}</div>${sh}`;
 }
 function renderMarket(){
   const el=$('#tab-market');if(!el)return;
@@ -2128,7 +2134,7 @@ function renderMarket(){
   else if(mk.load&&!mk.lots)body='<div class="pcard lbmsg"><small>Загружаю…</small></div>';
   else if(mk.err&&!mk.lots)body=`<div class="pcard lbmsg"><b>${escH(mk.err)}</b><button class="btn main" id="m-retry">Повторить</button></div>`;
   else if(mk.tab==='hist')body=!mk.hist?'<div class="pcard lbmsg"><small>Загружаю…</small></div>':(mk.hist.length?mk.hist.map(h=>{const n=nickVal(h.name),sold=h.kind==='sold';return `<div class="mlot hrow2" style="--tc:${T[n.t].c}"><div class="mi"><b>${sold?'💰 Продано':'🛒 Куплено'} · @${escH(h.name)}</b><small>${T[n.t].n} · ${sold?'покупатель':'продавец'}: ${escH(h.who)}</small><small>${fmtDate(h.ts)}</small></div><div class="mpr"><b class="${sold?'hplus':'hminus'}">${sold?'+':'−'}${fmt(sold?h.get:h.price)} 🪙</b>${sold?`<small>цена ${fmt(h.price)}</small>`:''}</div></div>`}).join(''):'<div class="pcard lbmsg"><small>Сделок пока нет.</small></div>')
-  else if(mk.tab==='buy')body=`<input class="csearch" id="m-q" type="search" placeholder="Поиск ника" value="${escH(mk.q)}" autocomplete="off">
+  else if(mk.tab==='buy')body=`<label class="msrch"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="m-q" type="search" placeholder="Поиск ника" value="${escH(mk.q)}" autocomplete="off"></label>
     ${mFilters()}`+
     (()=>{const all=mk.lots||[],ls=mApply(all);return `<div class="mcnt"><b>${ls.length}</b> ${mpl(ls.length)}${ls.length!==all.length?` из ${all.length}`:''}</div>`+(ls.length?ls.map(mLot).join(''):`<div class="pcard lbmsg"><small>${all.length?'По этим фильтрам лотов нет. Сбрось фильтры.':'Лотов нет. Выстави свой ник во вкладке «Мои лоты».'}</small></div>`)})()
   else{
@@ -2156,9 +2162,10 @@ $('#tab-market').onclick=async e=>{
   if(t.closest('#m-back'))return tab('help');
   if(t.closest('#m-retry'))return openMarket();
   const mt=t.closest('[data-mt]');if(mt){mk.tab=mt.dataset.mt;renderMarket();if(mk.tab==='hist'){mk.hist=null;renderMarket();lbReq('/market/history').then(r=>{mk.hist=r.items||[];if(mk.tab==='hist')renderMarket()}).catch(e=>{mk.hist=[];toast(merr(e));if(mk.tab==='hist')renderMarket()})}return}
+  {const d=t.closest('[data-mdd]');if(d){mk.dd=d.dataset.mdd;return renderMarket()}if(t.closest('[data-mddx]')){mk.dd=null;return renderMarket()}}
   if(t.closest('#m-reset')){mk.sort='new';mk.rar=-1;mk.pr=0;try{await mLoad()}catch(x){}return renderMarket()}
-  const so=t.closest('[data-sort]');if(so){const ef=x=>x==='rar'?'new':x,o=mk.sort;mk.sort=so.dataset.sort;if(ef(o)!==ef(mk.sort)){try{await mLoad()}catch(x){}}return renderMarket()}
-  {const ra=t.closest('[data-mrar]');if(ra){mk.rar=+ra.dataset.mrar;return renderMarket()}const pr=t.closest('[data-mpr]');if(pr){mk.pr=+pr.dataset.mpr;return renderMarket()}}
+  const so=t.closest('[data-sort]');if(so){const ef=x=>x==='rar'?'new':x,o=mk.sort;mk.sort=so.dataset.sort;mk.dd=null;if(ef(o)!==ef(mk.sort)){try{await mLoad()}catch(x){}}return renderMarket()}
+  {const ra=t.closest('[data-mrar]');if(ra){mk.rar=+ra.dataset.mrar;mk.dd=null;return renderMarket()}const pr=t.closest('[data-mpr]');if(pr){mk.pr=+pr.dataset.mpr;mk.dd=null;return renderMarket()}}
   if(t.closest('[data-mclose]')){mk.sheet=false;return renderMarket()}
   if(t.closest('#m-topx')){S.toppick=0;save();return renderMarket()}
   {const tp=t.closest('[data-top]');if(tp){

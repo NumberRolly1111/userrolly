@@ -1610,3 +1610,14 @@ body.shk{animation:none!important}
 .excs b{color:#e6ccff}.excs.own{opacity:.8}
 .excs .btn.main{background:#B455FF;color:#fff}
 .exct{display:inline-block;font:800 10px var(--head);letter-spacing:1px;font-style:normal;color:#d9a8ff;background:rgba(180,85,255,.2);border-radius:6px;padding:2px 7px;margin-bottom:4px}
+
+/* рынок: компактные фильтры-выпадашки */
+.msrch{display:flex;align-items:center;gap:10px;padding:0 14px;height:48px;border-radius:14px;border:1px solid var(--line);background:var(--paper);color:var(--mute);margin:2px 0 12px}
+.msrch input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--fg);font:inherit;font-size:16px}
+.mfrow{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 0 4px;padding-bottom:2px}.mfrow::-webkit-scrollbar{display:none}
+.mdd{flex:none;display:flex;align-items:center;gap:7px;height:38px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink);font:700 14px var(--body)}
+.mdd.on{border-color:#8f9cf0;background:rgba(143,156,240,.18)}.mdd.rst{color:#8f9cf0}
+.mopts{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow:auto}
+.mopt{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--ink);font:700 15px var(--body);text-align:left}
+.mopt i{width:10px;height:10px;border-radius:50%;background:var(--tc)}.mopt span{flex:1}.mopt b{color:var(--mute);margin-left:6px}.mopt em{font-style:normal;color:#8f9cf0}
+.mopt.on{border-color:#8f9cf0;background:rgba(143,156,240,.16)}
