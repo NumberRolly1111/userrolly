@@ -3696,3 +3696,19 @@ document.addEventListener('click',e=>{
   const a=e.target.closest&&e.target.closest('[data-vit]');if(a)return vitSheet(+a.dataset.vit);
   const x=e.target.closest&&e.target.closest('[data-vitx]');if(x){const v=vitKeep();v.splice(+x.dataset.vitx,1);S.vit=v;save();sfx('tap');try{renderProf()}catch(er){}try{lbPush(true)}catch(er){}}
 });
+
+// Обязательная подписка на канал @NameRolly (проверка через бота; если проверка недоступна — игру не блокируем)
+(function(){
+  const CH='NameRolly';
+  const show=()=>{if(document.getElementById('subgate'))return;const el=document.createElement('div');el.id='subgate';
+    el.innerHTML=`<div class="sgc"><div class="sgi">📣</div><h2>Подпишись на канал</h2><p>Чтобы играть, подпишись на наш канал <b>@${CH}</b>: там новости, конкурсы и промокоды.</p><button class="sgb" id="sg-go">Подписаться</button><button class="sgb sgb2" id="sg-ok">Я подписался</button></div>`;
+    document.body.appendChild(el);
+    el.onclick=async e=>{const t=e.target;
+      if(t.closest('#sg-go')){try{sfx('tap')}catch(x){}return openTg('https://t.me/'+CH)}
+      if(t.closest('#sg-ok')){const b=t.closest('#sg-ok');b.disabled=true;b.textContent='Проверяю…';const ok=await chk();b.disabled=false;b.textContent='Я подписался';
+        if(ok){S.subAt=Date.now();save();el.remove();try{toast('Спасибо за подписку!')}catch(x){}}else{try{toast('Подписку не вижу. Подпишись и нажми ещё раз')}catch(x){}}}};};
+  const chk=async()=>{try{const r=await lbReq('/sub');return !!(r&&r.ok)}catch(e){return true}};
+  const run=async()=>{if(!API||!tg||!tg.initData)return;if(S.subAt&&Date.now()-S.subAt<6*3600e3)return;
+    if(await chk()){S.subAt=Date.now();save()}else show()};
+  setTimeout(run,300);
+})();

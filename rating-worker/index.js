@@ -826,6 +826,17 @@ async function handle(req, env) {
       if (f && f.flag) return json({ error: 'flag' }, 403);
     }
 
+    if (url.pathname === '/sub' && req.method === 'GET') {   // обязательная подписка на канал: бот должен быть админом канала
+      const ch = env.SUB_CHANNEL || '@NameRolly';
+      if (!env.BOT_TOKEN || isAdmin(uid, env)) return json({ ok: true, skip: 1 });
+      try {
+        const r = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/getChatMember`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: ch, user_id: uid }) });
+        const j = await r.json();
+        if (!j.ok) return json({ ok: true, skip: 1, err: String(j.description || '').slice(0, 120) });   // бот не админ канала — не блокируем игроков
+        const st = j.result && j.result.status;
+        return json({ ok: st === 'creator' || st === 'administrator' || st === 'member' || (st === 'restricted' && !!j.result.is_member) });
+      } catch { return json({ ok: true, skip: 1 }); }
+    }
     if (url.pathname === '/ads' && req.method === 'GET') {   // активная реклама (показывается снизу экрана)
       const rows = (await env.DB.prepare('SELECT id,title,text,url FROM ads WHERE off=0 AND (exp=0 OR exp>?) ORDER BY id DESC LIMIT 10').bind(Date.now()).all()).results;
       return json({ ads: rows });
