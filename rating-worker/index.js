@@ -828,7 +828,7 @@ async function handle(req, env) {
 
     if (url.pathname === '/sub' && req.method === 'GET') {   // обязательная подписка на канал: бот должен быть админом канала
       const ch = env.SUB_CHANNEL || '@NameRolly';
-      if (!env.BOT_TOKEN || isAdmin(uid, env)) return json({ ok: true, skip: 1 });
+      if (!env.BOT_TOKEN) return json({ ok: true, skip: 1 });
       try {
         const r = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/getChatMember`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: ch, user_id: uid }) });
         const j = await r.json();
