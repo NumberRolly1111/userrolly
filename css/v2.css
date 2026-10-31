@@ -86,3 +86,7 @@ input[type=search]::-webkit-search-decoration,input[type=search]::-webkit-search
 .msrch input,.msrch input[type=search]{border:0!important;background:none!important;box-shadow:none!important;border-radius:0!important;padding:0!important;outline:0!important;height:auto}
 .msrch{border-radius:12px!important}
 .csearch,html.v2 .csearch{border-radius:12px!important}
+/* рулетка: без фиолетовой рамки-полоски */
+html.v2 .stage{border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.015)),var(--paper);box-shadow:0 24px 60px -28px rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.08) inset}
+html.v2 .stage.hit{border-color:var(--tc);box-shadow:0 0 0 1px var(--tc),0 0 40px -8px var(--tc),0 24px 60px -28px #000}
+html.v2 .reel .at{text-shadow:none}
