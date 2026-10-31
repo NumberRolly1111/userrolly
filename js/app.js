@@ -3708,7 +3708,10 @@ document.addEventListener('click',e=>{
       if(t.closest('#sg-ok')){const b=t.closest('#sg-ok');b.disabled=true;b.textContent='Проверяю…';const ok=await chk();b.disabled=false;b.textContent='Я подписался';
         if(ok){S.subAt=Date.now();save();el.remove();try{toast('Спасибо за подписку!')}catch(x){}}else{try{toast('Подписку не вижу. Подпишись и нажми ещё раз')}catch(x){}}}};};
   const chk=async()=>{try{const r=await lbReq('/sub');return !!(r&&r.ok)}catch(e){return true}};
-  const run=async()=>{if(!API||!tg||!tg.initData)return;if(S.subAt&&Date.now()-S.subAt<6*3600e3)return;
-    if(await chk()){S.subAt=Date.now();save()}else show()};
+  let busy=0;
+  const run=async()=>{if(!API||!tg||!tg.initData||busy||document.getElementById('subgate'))return;busy=1;
+    try{if(await chk()){S.subAt=Date.now()}else show()}finally{busy=0}};
   setTimeout(run,300);
+  setInterval(()=>{if(!document.hidden)run()},60000);   // раз в минуту, пока игра открыта
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)run()});
 })();
