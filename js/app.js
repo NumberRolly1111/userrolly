@@ -3339,7 +3339,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)ntSync()});
 setTimeout(()=>ntSync(),7000);
 renderUp();
 if(PAGE!=='main')tabIn(PAGE);
-else{const h=location.hash.slice(1);if(['col','up','prof','bon','show','help','guide','season','games','battles','fair','friends','chances'].includes(h))tabIn(h)}
+else{const h=location.hash.slice(1);if(['col','up','prof','bon','show','help','guide','season','games','battles','fair','friends','chances'].includes(h)){if(h==='friends'||h==='chances')setTimeout(()=>tabIn(h),0);else tabIn(h)}}
 try{if(PAGE!=='main'&&tg&&tg.BackButton){tg.BackButton.show();tg.BackButton.onClick(()=>{location.href=PAGE==='clan'?'rating.html':'index.html'})}}catch(e){}
 refInit();
 cloudLoad();
