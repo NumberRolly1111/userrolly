@@ -746,12 +746,17 @@ function playStage(st,reel,r,fresh){
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const mkRow=()=>{const d=document.createElement('div');d.className='stage rrow';d.innerHTML='<div class="reel" aria-live="polite"></div><div class="picks"></div><div class="rmeta"></div>';return d};
 function showIdle(){plHide();const box=$('#reels');box.innerHTML='';const r=mkRow();box.append(r);build('??????',false,r.querySelector('.reel'));$('#idle').hidden=false}
-var LKA=null;
-function luckAcc(){   // шанс принять образец каждой редкости: даёт нужное смещение распределения
-  if(LKA)return LKA;const c=[0,0,0,0,0,0,0],N=6000;for(let i=0;i<N;i++){const r=score(gen());if(r.t<=6)c[r.t]++}
-  const p=c.map(x=>x/N),hi=3*(p[2]+p[3]+p[4])+1.5*(p[5]+p[6]),lo=p[0]+p[1],rl=lo>0?Math.max(.05,Math.min(1,(1-hi)/lo)):1;
-  return LKA=[rl,rl,3,3,3,1.5,1.5].map(x=>x/3)}
-function roll(m){let best=null;const lk=luckOn()?luckAcc():null;for(let i=0;i<3000;i++){const s=gen(),r=score(s);if(r.t>6)continue;if(lk&&Math.random()>lk[r.t])continue;if(!best||r.t>best.t)best={name:s,...r};if(r.t>=m.min)break}return{...best,kept:false,res:''}}
+var LKA={};
+function luckAcc(k){   // шанс принять образец каждой редкости: даёт нужное смещение распределения (k — множитель удачи на редкий–легендарный)
+  k=k||3;const key=k.toFixed(2);if(LKA[key])return LKA[key];const mk=1+(k-1)/4,c=[0,0,0,0,0,0,0],N=6000;for(let i=0;i<N;i++){const r=score(gen());if(r.t<=6)c[r.t]++}
+  const p=c.map(x=>x/N),hi=k*(p[2]+p[3]+p[4])+mk*(p[5]+p[6]),lo=p[0]+p[1],rl=lo>0?Math.max(.05,Math.min(1,(1-hi)/lo)):1;
+  return LKA[key]=[rl,rl,k,k,k,mk,mk].map(x=>x/k)}
+// Фарт дня: у каждого игрока свой множитель на сутки (по Москве): от ×1 до ×2, изредка ×3
+function fartK(){const d=new Date(Date.now()+3*3600e3).toISOString().slice(0,10);let h=2166136261;for(const ch of (S.uid+'|'+d)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}h>>>=0;const u=h/4294967296,u2=(Math.imul(h^(h>>>15),2246822519)>>>0)/4294967296;return u<.05?3:Math.round((1+u2)*10)/10}
+const SER_LEN=10,SER_EVERY=100,serK=()=>vipOn()?5:3;
+function serOn(n){return n>=SER_EVERY&&n%SER_EVERY<SER_LEN}
+function luckK(n){const t=luckOn()?3:1,s=n!=null&&serOn(n)?serK():1;return Math.min(6,Math.max(t,s)*fartK())}
+function roll(m,n){let best=null;const kk=luckK(n),lk=kk>1.001?luckAcc(kk):null;for(let i=0;i<3000;i++){const s=gen(),r=score(s);if(r.t>6)continue;if(lk&&Math.random()>lk[r.t])continue;if(!best||r.t>best.t)best={name:s,...r};if(r.t>=m.min)break}return{...best,kept:false,res:''}}
 function flushPrev(){const left=cur.filter(c=>!c.kept);cur.forEach(c=>c.kept=true);S.pend=null;if(left.length)toast('Прошлые ники: '+stashAll(left))}
 // Итог крутки: в плюсе или в минусе (стоимость выпавших ников минус потраченные монеты)
 var sessPL=0;
@@ -770,7 +775,7 @@ async function spin(){
   else if(S.coins<cost){toast('Не хватает монет. Продай ники в коллекции или загляни в бонусы.');return}
   if(count===5){v5Left();S.v5.n++;S.v5tot=(S.v5tot||0)+1}
   flushPrev();plHide();sfx('whoosh');addXp(10*count);busy=true;if(free){if(S.en>=EN_CAP)S.enT=Date.now();S.en-=cost}else S.coins-=cost;S.spins+=count;if(count>1)S.tri++;addQuest('spins',count);try{spAdd(3*count)}catch(e){}
-  cur=Array.from({length:count},()=>roll(m));const plGot=cur.reduce((a,c)=>a+val(c.t,c.p,c.name),0),plSp=free?0:cost,plEn=free?cost:0;
+  {const n0=S.spins-count;if(serOn(n0+count-1)&&!serOn(n0-1))try{toast('Счастливая серия ×'+serK()+': следующие '+SER_LEN+' круток с удачей')}catch(e){}cur=Array.from({length:count},(_,i)=>roll(m,n0+i))}const plGot=cur.reduce((a,c)=>a+val(c.t,c.p,c.name),0),plSp=free?0:cost,plEn=free?cost:0;
   cur.forEach(c=>{if(c.t>=3&&c.t<=6)feedPush(c.name,c.t);S.cnt[c.t]++;S.best=Math.max(S.best,c.t);noteBest(val(c.t,c.p,c.name),c.name)});
   S.pend=cur.map(({name,t,p})=>({name,t,p}));save();
   // одна общая анимация: крутится лучший ник из выпавших, остальные видны в переключателе после неё
@@ -3510,12 +3515,15 @@ function renderChances(){
   const note={rare:'«Редкий+» повторяет крутку, пока не выпадет редкий или выше. Стоит 10 500 🪙 за ник.',epic:'«Эпик+» повторяет крутку, пока не выпадет эпический или выше. Стоит 40 000 🪙 за ник.',luck:'«Талисман удачи» увеличивает шансы на редкий–легендарный в 3 раза, на мифический в 1,5 раза. Обычные при этом выпадают реже.'}[chx.m];
   const sec=CASES.filter(c=>c.w.some(x=>x[0]===6)).map(c=>`${c.ic} ${c.n} — ${pctw(c.w.find(x=>x[0]===6)[1])}%`).join('<br>');
   el.innerHTML=`<div class="ahead"><button class="btn sm" data-chx="1">‹ Назад</button><h2>Шансы</h2></div><div class="gmpage">
-  <div class="pcard chok"><span class="chsh">🛡️</span><div><b>Одинаковые для всех · открытые</b><p>Шансы не зависят от игрока и покупок. Все шансы и множители в таблицах ниже, без скрытых условий. Меняет их только «Талисман удачи».</p></div></div>
+  <div class="pcard chok"><span class="chsh">🛡️</span><div><b>Одинаковые для всех · открытые</b><p>Шансы не зависят от игрока и покупок. Все шансы и множители в таблицах ниже, без скрытых условий. Меняют их только «Талисман удачи», «Счастливая серия» и «Фарт дня», они описаны ниже. Таблицы показывают обычную крутку без множителей.</p></div></div>
   <h3 class="ch3 chh">Редкость ника</h3>
   <div class="chtabs">${CHM.map(([k,l])=>`<button class="chtb${chx.m===k?' on':''}" data-chm="${k}">${l}</button>`).join('')}</div>
   <div class="pcard chtab"><div class="chr3 chhd"><span>Редкость</span><b>Обычная крутка</b><b class="chb">${ml}</b></div>${rows}</div>
   <div class="pcard chnote"><p>${note}</p></div>
   <small class="sum">Обычный ник — всё остальное, около ${Math.round(CHN[0])}% круток.</small>
+  <h3 class="ch3 chh">Как работает удача</h3>
+  <div class="pcard chtab">${[['🍀','Талисман','×3 к шансу редкого, эпического и легендарного, ×1,5 к мифическому. Работает на всех обычных крутках.'],['✨','Счастливая серия','После каждых '+SER_EVERY+' круток следующие '+SER_LEN+' идут с удачей ×3, с VIP ×5. '+(S.spins>=SER_EVERY&&S.spins%SER_EVERY<SER_LEN?'Серия идёт сейчас: осталось '+(SER_LEN-S.spins%SER_EVERY)+'.':'До серии осталось '+(SER_EVERY-S.spins%SER_EVERY)+' круток.')],['🎲','Фарт дня','У каждого игрока свой множитель на сутки: от ×1 до ×2, изредка ×3. Меняется в полночь по Москве. Твой сегодня: ×'+String(fartK()).replace('.',',')+'.']].map(x=>`<div class="chr" style="display:block"><b>${x[0]} ${x[1]}</b><p style="margin:4px 0 0;font-size:13px;opacity:.75;font-weight:400">${x[2]}</p></div>`).join('')}</div>
+  <small class="sum">Множители складываются не бесконечно: предел ×6. На ставках и в кейсах они не действуют.</small>
   <h3 class="ch3 chh">Секретные ники</h3>
   <div class="pcard chnote"><p>В обычной крутке секретные не выпадают. Их можно получить из кейсов, апгрейдом или купить у игроков.</p><p style="margin-top:8px">${sec}</p></div>
   <h3 class="ch3 chh">Цена ника</h3><div class="pcard chtab">${prices}</div>
