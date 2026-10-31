@@ -2561,7 +2561,7 @@ function wsMake(){
   return {g:g.map(r=>r.join('')),words:placed.map(p=>p.w).sort((a,b)=>a.length-b.length||a.localeCompare(b)),found:[],ph:'play',pot:0,at:Date.now()};
 }
 const wsRw=w=>WS_RW*w.length;
-function wsLeft(){const k=todayK();if(S.wsrs!=='1030'){S.wsrs='1030';S.wsd={d:k,n:0};save()}if(!S.wsd||S.wsd.d!==k)S.wsd={d:k,n:0};return Math.max(0,WS_DAY-S.wsd.n)}
+function wsLeft(){const k=todayK();if(S.wsrs!=='1031'){S.wsrs='1031';S.wsd={d:k,n:0};save()}if(!S.wsd||S.wsd.d!==k)S.wsd={d:k,n:0};return Math.max(0,WS_DAY-S.wsd.n)}
 function wsStart(){
   if(S.ws&&S.ws.ph==='play'||S.ws&&S.ws.ph==='wheel')return;
   if(!wsLeft())return toast('На сегодня игры закончились, приходи завтра');
