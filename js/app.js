@@ -852,6 +852,8 @@ function collapse(els,done){els.forEach(e=>{e.style.maxHeight=e.offsetHeight+'px
 let shownCoins=S.coins,twRaf=0,colSel=null;
 function setCoins(){
   const sb=$('#sbal');if(sb)sb.textContent=fmt(S.sbal||0)+' ⭐';
+  if(sb){let lk=$('#lkp');if(!lk){lk=document.createElement('button');lk.id='lkp';lk.className='pill lkpill';lk.setAttribute('aria-label','Удача на сегодня');sb.after(lk)}
+    try{const f=fartK(),on=serOn(S.spins),k=on?Math.min(6,Math.max(luckOn()?3:1,serK())*f):f;lk.textContent=(on?'✨ ×':'🎲 ×')+String(Math.round(k*10)/10).replace('.',',');lk.dataset.hot=on?1:0}catch(e){}}
   const el=$('#coins'),from=shownCoins,to=S.coins;
   if(from===to){el.textContent=fmtC(to)+' 🪙';return}
   cancelAnimationFrame(twRaf);el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');
@@ -3723,3 +3725,5 @@ document.addEventListener('click',e=>{
   setInterval(()=>{if(!document.hidden)run()},60000);   // раз в минуту, пока игра открыта
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)run()});
 })();
+
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#lkp')){try{tab('chances')}catch(x){location.href='index.html#chances'}}});
