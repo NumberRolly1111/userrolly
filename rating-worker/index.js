@@ -411,7 +411,7 @@ async function salesStats(db) {
   return { paid: { total: all.tg, spentFromBalance: all.bal, count: all.n, buyers: users.n }, refunded: ref, d1: await win(864e5), d7: await win(7 * 864e5), d30: await win(30 * 864e5), items, top: buyers.map((b) => ({ gid: gidOf(b.uid), name: b.name || '', stars: b.s, n: b.n })) };
 }
 
-// ---- Батлы в реальном времени: оба видят одни и те же раунды по серверному времени ----
+// ---- Поединки в реальном времени: оба видят одни и те же раунды по серверному времени ----
 const BT_PRICE = { start: 5200, rare: 25000, all: 52000, star: 185000, abyss: 650000 };
 const BT_ROUND = 6500, BT_LEAD = 3500, BT_TAIL = 2000, BT_MAXN = 20;
 async function battleRoutes(url, req, env, uid, json) {
@@ -610,6 +610,16 @@ async function tgHook(req, env, json) {
       if (pl) await db.prepare('DELETE FROM chat_ban WHERE uid=?').bind(pl.uid).run();
       await say(pl ? `✅ ${pl.name} разбанен` : 'Игрок не найден');
     } else await say('Команды админа:\n/stats: продажи\n/buyer ID: покупки игрока\n/refund НОМЕР: вернуть платёж\n/ban ID часы причина\n/unban ID\n/givenick ID ник: подарить ник');
+    return json({ ok: true });
+  }
+  if (m && typeof m.text === 'string' && m.chat && m.chat.type === 'private' && /^\/(paysupport|terms|privacy)(@\w+)?(\s|$)/.test(m.text)) {
+    const c = m.text.match(/^\/(\w+)/)[1], site = 'https://user.w-smp.in';
+    const txt = c === 'paysupport'
+      ? '💬 Поддержка по платежам\n\nЕсли оплатил ⭐, но товар не пришёл, или платёж прошёл дважды, напиши в поддержку: @ddwwks. Укажи свой ID из профиля игры и время платежа. Мы ответим как можно скорее, а за недоставленный товар вернём ⭐.\n\nЗвёзды тратятся только внутри игры, вывода нет. Это не казино: награды виртуальные и на деньги не обмениваются.'
+      : c === 'terms'
+        ? `📄 Условия использования:\n${site}/terms.html`
+        : `🔒 Политика конфиденциальности:\n${site}/privacy.html`;
+    await tgApi(env, 'sendMessage', { chat_id: m.chat.id, text: txt, disable_web_page_preview: true });
     return json({ ok: true });
   }
   if (m && typeof m.text === 'string' && m.text.startsWith('/start') && m.chat && m.chat.type === 'private') {
