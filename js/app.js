@@ -2675,14 +2675,14 @@ function dcClaim(i){
 var HOL=[['nur','🌿','Наурыз',3,21,3,23,1000000,20],['ny','🎄','Новый год',12,25,1,7,2000000,30],['val','💝','День влюблённых',2,13,2,15,700000,15],['mar','🌷','8 марта',3,7,3,9,700000,15],['apr','🤡','1 апреля',3,31,4,2,500000,10],['vic','🎖️','9 мая',5,8,5,10,500000,10]];
 function holAt(dt){
   const m=dt.getMonth()+1,d=dt.getDate(),v=m*100+d;
-  for(const h of HOL){const a=h[3]*100+h[4],b=h[5]*100+h[6],on=a<=b?(v>=a&&v<=b):(v>=a||v<=b);if(on){const yr=a>b&&m<=h[5]?dt.getFullYear()-1:dt.getFullYear();return {h,key:h[0]+'_'+yr+(h[0]==='hw'?'_'+(m*100+d):''),daily:h[0]==='hw'}}}
+  for(const h of HOL){const a=h[3]*100+h[4],b=h[5]*100+h[6],on=a<=b?(v>=a&&v<=b):(v>=a||v<=b);if(on){const yr=a>b&&m<=h[5]?dt.getFullYear()-1:dt.getFullYear();return {h,key:h[0]+'_'+yr}}}
   return null;
 }
 const holNow=()=>holAt(new Date());
 function holNext(){let best=null;for(let i=1;i<=60;i++){const x=holAt(new Date(Date.now()+i*864e5));if(x){best={h:x.h,days:i};break}}return best}
 function holClaim(){
   const x=holNow();if(!x)return;S.hol=S.hol&&typeof S.hol==='object'?S.hol:{};if(S.hol[x.key])return;
-  const fst=!x.daily||!Object.keys(S.hol).some(k=>k.indexOf(x.key.slice(0,7))===0);S.hol[x.key]=1;if(fst)S.holN=(S.holN|0)+1;S.coins=Math.min(CAP,S.coins+x.h[7]);S.en+=x.h[8];addXp(80);sfx('ach');hap('n','success');save();toast(`${x.h[1]} ${x.h[2]}: +${fmt(x.h[7])} 🪙 и +${x.h[8]} ⚡`);boom('#FFC933',5);render();
+  S.hol[x.key]=1;S.holN=(S.holN|0)+1;S.coins=Math.min(CAP,S.coins+x.h[7]);S.en+=x.h[8];addXp(80);sfx('ach');hap('n','success');save();toast(`${x.h[1]} ${x.h[2]}: +${fmt(x.h[7])} 🪙 и +${x.h[8]} ⚡`);boom('#FFC933',5);render();
 }
 // мини-режим «Крутка-множитель»
 var RKS=[[0,54.7,'💀','Мимо'],[1.5,28,'🪙','×1,5'],[2,13,'💰','×2'],[5,3.8,'💎','×5'],[20,.5,'👑','×20']],RK_ST=[10000,100000,1000000,10000000],RK_DAY=5,rk={st:1,res:''};
@@ -2762,7 +2762,7 @@ function riskHtml(){
 function extraBon(){
   let h='';
   const x=holNow(),nx=holNext();S.hol=S.hol&&typeof S.hol==='object'?S.hol:{};
-  if(x){const got=S.hol[x.key];h+=`<div class="pcard holc"><div class="holh"><span>${x.h[1]}</span><div><b>${x.h[2]}</b><small>${x.daily?'подарок каждый день до 2 ноября':'праздничный подарок'}</small></div></div>${got?'<button class="btn" disabled>Подарок получен ✓</button>':`<button class="btn main" data-b="xhol">Забрать: ${fmt(x.h[7])} 🪙 и ${x.h[8]} ⚡</button>`}</div>`}
+  if(x){const got=S.hol[x.key];h+=`<div class="pcard holc"><div class="holh"><span>${x.h[1]}</span><div><b>${x.h[2]}</b><small>праздничный подарок</small></div></div>${got?'<button class="btn" disabled>Подарок получен ✓</button>':`<button class="btn main" data-b="xhol">Забрать: ${fmt(x.h[7])} 🪙 и ${x.h[8]} ⚡</button>`}</div>`}
   else if(nx)h+=`<div class="pcard holc"><div class="holh"><span>${nx.h[1]}</span><div><b>${nx.h[2]}</b><small>через ${nx.days} ${dw(nx.days)}: подарок ${kfmt(nx.h[7])} 🪙</small></div></div></div>`;
   const d=dcEnsure();
   h+=`<details class="pcard fold" data-fold="dc"${fo('dc',1)}><summary class="bhead"><h3>🎯 Челлендж дня</h3><span class="bsub">${d.got.filter(Boolean).length} из 2${S.dcS?` · серия ${S.dcS} дн.`:''}</span></summary>${hintCard('dc')}`+
