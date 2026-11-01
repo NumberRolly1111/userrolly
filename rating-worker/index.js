@@ -55,6 +55,11 @@ async function migrate(db) {   // добавляем новые столбцы �
   await db.prepare('CREATE TABLE IF NOT EXISTS promos (code TEXT PRIMARY KEY, kind TEXT NOT NULL, val TEXT NOT NULL DEFAULT \'\', n INTEGER NOT NULL DEFAULT 1, max INTEGER NOT NULL DEFAULT 0, exp INTEGER NOT NULL DEFAULT 0, uses INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS promo_use (code TEXT NOT NULL, uid TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (code, uid))').run();
   await db.prepare("INSERT OR IGNORE INTO promos(code,kind,val,n,max,exp,uses,ts) VALUES('NAMEROULETTE','case','star',1,0,0,0,0)").run();
+  // Новый год 2027: ёлка (общий счётчик игрушек), подарки друзьям, промокод
+  await db.prepare('CREATE TABLE IF NOT EXISTS ny_tree (k TEXT PRIMARY KEY, n INTEGER NOT NULL DEFAULT 0)').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS ny_toy (uid TEXT PRIMARY KEY, n INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0)').run();
+  await db.prepare('CREATE TABLE IF NOT EXISTS ny_gift (id INTEGER PRIMARY KEY AUTOINCREMENT, sender TEXT NOT NULL, rcpt TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0)').run();
+  await db.prepare("INSERT OR IGNORE INTO promos(code,kind,val,n,max,exp,uses,ts) VALUES('HELLO2027','coins','50',1000000,0,?,0,0)").bind(NY_END).run();
   await db.prepare('CREATE TABLE IF NOT EXISTS chat (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, name TEXT NOT NULL DEFAULT \'\', text TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0)').run();
   await db.prepare("CREATE TABLE IF NOT EXISTS battles2 (id INTEGER PRIMARY KEY AUTOINCREMENT, cid TEXT NOT NULL, price INTEGER NOT NULL DEFAULT 0, n INTEGER NOT NULL DEFAULT 1, cu TEXT NOT NULL, cn TEXT NOT NULL DEFAULT '', cj TEXT NOT NULL DEFAULT '', ou TEXT NOT NULL DEFAULT '', onm TEXT NOT NULL DEFAULT '', oj TEXT NOT NULL DEFAULT '', st TEXT NOT NULL DEFAULT 'open', win TEXT NOT NULL DEFAULT '', cclaim INTEGER NOT NULL DEFAULT 0, oclaim INTEGER NOT NULL DEFAULT 0, ts INTEGER NOT NULL DEFAULT 0, t0 INTEGER NOT NULL DEFAULT 0)").run();
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_battles2 ON battles2(st, ts)').run();
@@ -261,6 +266,14 @@ let LAST_BONUS = 0;
 const FEED_TXT = { vip: 'купил(а) VIP 👑', ceo: 'купил(а) эксклюзивный ник @ceo 🟣', title_oligarch: 'стал(а) Олигархом 🏆', pack_gold: 'купил(а) Золотой набор 💎', collector: 'стал(а) Коллекционером', museum: 'открыл(а) свой зал в музее' };
 const VIP_FOREVER = 4102444800000, VIP_FEE = 0.02;   // VIP навсегда (до 2100 года)
 const TOPUPS = [1, 50, 100, 250, 500, 1000];
+// ---- Новый год 2027 (по времени Алматы, UTC+5) ----
+const NY_START = Date.UTC(2026, 10, 29, 19, 0);    // 30 ноября 00:00
+const NY_END = Date.UTC(2027, 0, 7, 19, 0);        // конец 7 января
+const NY_SALE_FROM = Date.UTC(2026, 11, 19, 19, 0); // распродажа с 20 декабря
+const NY_SALE = { pack_pro: 79, pack_gold: 199, energy60: 29, vip_m: 179, luck_m: 199 };   // новая цена в ⭐
+const NY_NICKS = ['snow', 'elka', 'ded_moroz', 'moroz', 'sneg', 'santa', 'noel', 'frost', 'yolka', 'snegurka', 'gift', 'ny2027', 'mandarin', 'salut'];
+const NY_COINS = [25000, 100000, 500000];
+const nySaleOn = (now = Date.now()) => now >= NY_SALE_FROM && now < NY_END;
 const STARS_SHOP = {
   starter: { t: 'Стартовый пак', d: '400 000 🪙, 20 ⚡ и ник «Редкий+»', stars: 19, once: 1, allow: 3e6 },
   pack_pro: { t: 'Набор «Профи»', d: '2 500 000 🪙, 60 ⚡ и ник «Эпик+»', stars: 99, allow: 6e6 },
@@ -281,6 +294,10 @@ const STARS_SHOP = {
   pass: { t: 'Платный пропуск', d: 'Платная дорожка наград текущего сезона', stars: 99, season: 1 },
   top: { t: 'Лот в топ', d: 'Твой лот будет первым на рынке 24 часа', stars: 19 },
 };
+for (const [id, to] of Object.entries(NY_SALE)) {   // в распродажу цена в счёте и в витрине берётся одна и та же
+  const it = STARS_SHOP[id]; if (!it) continue; const base = it.stars; it.base = base;
+  Object.defineProperty(it, 'stars', { get() { return nySaleOn() ? to : base; }, enumerable: true });
+}
 for (const n of TOPUPS) STARS_SHOP['bal' + n] = { t: `Баланс +${n} ⭐`, d: 'Пополнение звёздного баланса в игре', stars: n, topup: n };
 const payUrl = (env) => env.GAME_URL || '';
 async function tgApi(env, method, body) {
@@ -492,11 +509,11 @@ async function payRoutes(url, req, env, uid, json) {
   if (p === '/pay/state' && req.method === 'GET') {
     const a = await acctGet(db, uid), have = {};
     for (const id of Object.keys(STARS_SHOP)) if (await owned(db, uid, id)) have[id] = 1;
-    const cat = {}; for (const [id, it] of Object.entries(STARS_SHOP)) cat[id] = it.stars;
+    const cat = {}, sale = {}; for (const [id, it] of Object.entries(STARS_SHOP)) { cat[id] = it.stars; if (it.base && nySaleOn()) sale[id] = { from: it.base, to: it.stars }; }
     const fp = await db.prepare("SELECT COUNT(*) AS n FROM purchases WHERE uid=? AND item LIKE 'bal%'").bind(uid).first();
     const rv = (await db.prepare('SELECT DISTINCT item FROM purchases WHERE uid=? AND ref=1').bind(uid).all()).results, revoked = {};
     for (const r of rv) if (!have[r.item] && !(r.item === 'vip' && a.vip > Date.now())) revoked[r.item] = 1;
-    return json({ first: fp.n ? 0 : 1, revoked, bal: a.bal, vip: a.vip, luck: a.luck, vgift: a.vgift, now: Date.now(), ceoLeft: await ceoLeft(db), owned: have, cat, topups: TOPUPS });
+    return json({ first: fp.n ? 0 : 1, revoked, bal: a.bal, vip: a.vip, luck: a.luck, vgift: a.vgift, now: Date.now(), ceoLeft: await ceoLeft(db), owned: have, cat, sale, topups: TOPUPS });
   }
   if (p === '/pay/history' && req.method === 'GET') {
     const rows = (await db.prepare('SELECT item,stars,via,ts,ref FROM purchases WHERE uid=? ORDER BY id DESC LIMIT 40').bind(uid).all()).results;
@@ -735,7 +752,7 @@ async function handle(req, env) {
         const code = String(b.code || '').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24);
         const kind = b.kind === 'coins' ? 'coins' : 'case';
         const n = kind === 'coins' ? Math.max(1, Math.min(1e9, Math.trunc(Number(b.coins) || 0))) : Math.max(1, Math.min(50, Math.trunc(Number(b.n) || 1)));
-        const val = kind === 'case' ? String(b.val || 'star').slice(0, 16) : '';
+        const val = kind === 'case' ? String(b.val || 'star').slice(0, 16) : String(Math.max(0, Math.min(1000, Math.trunc(Number(b.en) || 0))) || '');
         const max = Math.max(0, Math.min(1e7, Math.trunc(Number(b.max) || 0))), days = Number(b.days) || 0;
         if (!code || (kind === 'coins' && !(n > 0))) return json({ error: 'bad' }, 400);
         const exp = days > 0 ? Date.now() + days * 864e5 : 0;
@@ -857,11 +874,59 @@ async function handle(req, env) {
       await env.DB.prepare(`UPDATE ads SET ${col}=${col}+1 WHERE id=?`).bind(Math.trunc(Number(b.id)) || 0).run();
       return json({ ok: true });
     }
+    // ---- Новый год: общая ёлка ----
+    if (url.pathname === '/ny/tree' && req.method === 'GET') {
+      const r = await env.DB.prepare("SELECT n FROM ny_tree WHERE k='toys'").first();
+      const m = await env.DB.prepare('SELECT n FROM ny_toy WHERE uid=?').bind(uid).first();
+      return json({ n: r ? r.n : 0, mine: m ? m.n : 0 });
+    }
+    if (url.pathname === '/ny/tree/add' && req.method === 'POST') {
+      let b; try { b = await req.json(); } catch { b = {}; }
+      const now = Date.now(), k = Math.max(1, Math.min(10, Math.trunc(Number(b.n) || 0)));
+      if (now < NY_START || now >= NY_END) return json({ ok: false, err: 'off' });
+      const m = await env.DB.prepare('SELECT n,ts FROM ny_toy WHERE uid=?').bind(uid).first();
+      if (m && (now - m.ts < 1500 || m.n >= 3000)) { const r0 = await env.DB.prepare("SELECT n FROM ny_tree WHERE k='toys'").first(); return json({ ok: false, n: r0 ? r0.n : 0 }); }
+      await env.DB.prepare('INSERT INTO ny_toy(uid,n,ts) VALUES(?1,?2,?3) ON CONFLICT(uid) DO UPDATE SET n=n+?2, ts=?3').bind(uid, k, now).run();
+      await env.DB.prepare("INSERT INTO ny_tree(k,n) VALUES('toys',?1) ON CONFLICT(k) DO UPDATE SET n=n+?1").bind(k).run();
+      const r = await env.DB.prepare("SELECT n FROM ny_tree WHERE k='toys'").first();
+      return json({ ok: true, n: r.n });
+    }
+    // ---- Новый год: подарки друзьям (друг = пригласивший или приглашённый) ----
+    const nyFriends = async () => {
+      const a = (await env.DB.prepare('SELECT r.invitee AS u, p.name AS name FROM refs r LEFT JOIN players p ON p.uid=r.invitee WHERE r.inviter=? LIMIT 60').bind(uid).all()).results;
+      const b2 = (await env.DB.prepare('SELECT r.inviter AS u, p.name AS name FROM refs r LEFT JOIN players p ON p.uid=r.inviter WHERE r.invitee=? LIMIT 5').bind(uid).all()).results;
+      return [...a, ...b2].filter((x) => x.u && x.u !== uid).map((x) => ({ u: String(x.u), gid: gidOf(x.u), name: x.name || 'Игрок' }));
+    };
+    if (url.pathname === '/ny/friends' && req.method === 'GET') {
+      const used = await env.DB.prepare('SELECT COUNT(*) AS n FROM ny_gift WHERE sender=? AND ts>?').bind(uid, Date.now() - 864e5).first();
+      return json({ friends: (await nyFriends()).map((x) => ({ gid: x.gid, name: x.name })), left: Math.max(0, 5 - used.n), coins: NY_COINS, nicks: NY_NICKS });
+    }
+    if (url.pathname === '/ny/gift' && req.method === 'POST') {
+      let b; try { b = await req.json(); } catch { b = {}; }
+      const now = Date.now();
+      if (now < NY_START || now >= NY_END) return json({ ok: false, err: 'off' });
+      const to = (await nyFriends()).find((x) => String(x.gid) === String(b.gid));
+      if (!to) return json({ ok: false, err: 'friend' });
+      const used = await env.DB.prepare('SELECT COUNT(*) AS n FROM ny_gift WHERE sender=? AND ts>?').bind(uid, now - 864e5).first();
+      if (used.n >= 5) return json({ ok: false, err: 'limit' });
+      if (b.kind === 'coins') {
+        const v = Math.trunc(Number(b.v));
+        if (!NY_COINS.includes(v)) return json({ ok: false, err: 'bad' });
+        await env.DB.prepare('INSERT INTO grants(uid,amount,claimed,ts) VALUES(?,?,0,?)').bind(to.u, v, now).run();
+      } else if (b.kind === 'nick') {
+        const nm = String(b.v || '');
+        if (!NY_NICKS.includes(nm)) return json({ ok: false, err: 'bad' });
+        await env.DB.prepare('INSERT INTO nickgifts(uid,name,claimed,ts) VALUES(?,?,0,?)').bind(to.u, nm, now).run();
+      } else return json({ ok: false, err: 'bad' });
+      await env.DB.prepare('INSERT INTO ny_gift(sender,rcpt,ts) VALUES(?,?,?)').bind(uid, to.u, now).run();
+      return json({ ok: true, left: 4 - used.n, name: to.name });
+    }
     if (url.pathname === '/promo/redeem' && req.method === 'POST') {
       let b; try { b = await req.json(); } catch { b = {}; }
       const code = String(b.code || '').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24), now = Date.now();
       const p = code && await env.DB.prepare('SELECT * FROM promos WHERE code=?').bind(code).first();
       if (!p) return json({ ok: false, err: 'none' });
+      if (code === 'HELLO2027' && now < NY_START) return json({ ok: false, err: 'early' });
       if (p.exp && now > p.exp) return json({ ok: false, err: 'expired' });
       if (p.max && p.uses >= p.max) return json({ ok: false, err: 'full' });
       const ins = await env.DB.prepare('INSERT OR IGNORE INTO promo_use(code,uid,ts) VALUES(?,?,?)').bind(code, uid, now).run();

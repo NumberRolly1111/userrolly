@@ -20,3 +20,59 @@ html.ny .bt-sub::before{content:'С Новым годом!';font-size:13px}
 #nyfx span{position:absolute;top:-6%;color:#fff;opacity:.8;animation:nyfall linear infinite;will-change:transform;text-shadow:0 0 6px rgba(190,220,255,.8)}
 @keyframes nyfall{to{transform:translate3d(var(--dx,20px),112vh,0) rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){#nyfx{display:none}#nygl i{animation:none}}
+
+/* ===== Новогодние предметы (всегда подключены: купленное не пропадает после праздника) ===== */
+html[data-theme=snowy]{--bg:#071626;--paper:#10263F;--tile:#19395C;--fg:#F2FAFF;--dark:#071626;--mute:#A9CDEB;--line:#6FB6E8;--sh:#0A2038;--blue:#8FD3FF;--dot:#12304F;--glow:#2C6A9C}
+html[data-theme=lights]{--bg:#07140D;--paper:#0F2418;--tile:#173A27;--fg:#F3FFF6;--dark:#07140D;--mute:#A6D8B6;--line:#E5484D;--sh:#0A2014;--blue:#FF4D6D;--dot:#12301F;--glow:#7A2430}
+html[data-theme=lights] body{background:radial-gradient(90% 40% at 20% -5%,rgba(255,77,109,.28),transparent 65%),radial-gradient(90% 40% at 85% -5%,rgba(255,200,87,.2),transparent 65%),var(--bg)}
+.frg.f_nysnow{background:conic-gradient(#BFE6FF,#FFFFFF,#7CC4F5,#E8F7FF,#BFE6FF);filter:drop-shadow(0 0 7px rgba(143,211,255,.8))}
+.frg.f_nylite{background:conic-gradient(#E5484D,#FFC857,#3DDC84,#4DA3FF,#B05BFF,#E5484D);filter:drop-shadow(0 0 7px rgba(255,200,87,.7));animation-duration:3.2s}
+
+/* ===== Карточка на главном экране ===== */
+.nycard{display:flex;align-items:center;gap:12px;width:100%;margin:0 0 12px;padding:12px 14px;border-radius:20px;border:2px solid var(--line);background:linear-gradient(135deg,rgba(229,72,77,.22),rgba(77,163,255,.22)),var(--paper);color:var(--fg);font:inherit;text-align:left;cursor:pointer;box-shadow:0 10px 30px -14px var(--sh)}
+.nycard.night{border-color:#B05BFF;background:linear-gradient(135deg,rgba(176,91,255,.35),rgba(255,200,87,.2)),var(--paper);animation:nynight 2.6s ease-in-out infinite}
+@keyframes nynight{50%{box-shadow:0 0 0 3px rgba(176,91,255,.35),0 10px 30px -10px rgba(176,91,255,.6)}}
+.nyc-i{font-size:30px;line-height:1}
+.nyc-t{flex:1;min-width:0}.nyc-t b{display:block;font:800 15px 'Unbounded',system-ui,sans-serif}.nyc-t small{display:block;color:var(--mute);font-size:12px;margin-top:2px}
+.nyc-cd{font:800 14px 'Unbounded',system-ui,sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap;color:#FFC857}
+
+/* ===== Окно «Новый год» ===== */
+.nybox{max-height:88vh;display:flex;flex-direction:column}
+.nybody{overflow:auto;padding:2px 2px 12px;-webkit-overflow-scrolling:touch}
+.nytabs{margin-top:10px;overflow-x:auto;flex:none;scrollbar-width:none}.nytabs::-webkit-scrollbar{display:none}
+.nytabs button{white-space:nowrap}
+.nyhint{color:var(--mute);font-size:13px;line-height:1.45;margin:10px 0}
+.nynight{margin-top:10px;padding:10px 12px;border-radius:14px;background:linear-gradient(135deg,#6B2FD6,#C2398F);color:#fff;font-size:14px}.nynight small{display:block;opacity:.85;font-size:12px;margin-top:2px}.nynight.soon{background:var(--tile);color:var(--fg);font-size:12.5px}
+.nygrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:10px 0}
+.nyd{aspect-ratio:1;border-radius:12px;border:2px solid var(--line);background:var(--tile);color:var(--fg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font:inherit;padding:0}
+.nyd b{font:800 13px 'Unbounded',system-ui,sans-serif}.nyd span{font-size:14px;line-height:1}
+.nyd.lock{opacity:.45}.nyd.got{background:rgba(61,220,132,.18);border-color:#3DDC84}.nyd.can{border-color:#FFC857;background:linear-gradient(135deg,rgba(255,200,87,.3),rgba(229,72,77,.25));animation:nycan 1.6s ease-in-out infinite;cursor:pointer}
+.nyd.today{outline:2px solid #fff;outline-offset:1px}
+@keyframes nycan{50%{transform:scale(1.07)}}
+.nylast{font-size:13px;color:var(--mute)}
+.nyeve,.nypromo,.nysl,.nytm,.nyq{margin-top:10px;padding:12px;border-radius:16px;background:var(--tile);border:1px solid var(--line)}
+.nyeve{text-align:center;background:linear-gradient(135deg,rgba(255,200,87,.25),rgba(229,72,77,.25))}.nyeve small{display:block;color:var(--mute);margin:4px 0 8px;font-size:12.5px}
+.nypromo,.nysl,.nytm{display:flex;align-items:center;justify-content:space-between;gap:10px}.nypromo small,.nysl small,.nytm small{display:block;color:var(--mute);font-size:12px;margin-top:2px}
+.nysl s{opacity:.7}
+.nytree{display:flex;align-items:center;gap:14px;margin-top:8px}.nytreesvg{width:120px;flex:none;filter:drop-shadow(0 8px 18px rgba(30,143,78,.35))}
+.nyb{animation:nytw 2.2s ease-in-out infinite}
+.nytc b{display:block;font:800 26px 'Unbounded',system-ui,sans-serif;font-variant-numeric:tabular-nums}.nytc small{display:block;color:var(--mute);font-size:12px}.nytc span{display:block;margin-top:6px;color:#FFC857;font-size:13px;font-weight:700}
+.nybar,.nyqb{height:8px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden;margin:8px 0}.nybar i,.nyqb i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#3DDC84,#FFC857)}
+.nytm.ok{border-color:#FFC857}.nytm.cl{opacity:.6}.nytm em,.nyq em{font-style:normal;color:var(--mute);font-size:12px}
+.nyqt{display:flex;justify-content:space-between;gap:8px}.nyqt span{color:#FFC857;font-size:12.5px;white-space:nowrap}.nyq>small{color:var(--mute);font-size:12px}
+.nyqf{display:flex;justify-content:space-between;align-items:center;min-height:30px}.nyq.got{opacity:.6}
+.nyf{margin-top:8px;border-radius:14px;background:var(--tile);border:1px solid var(--line);overflow:hidden}
+.nyfh{width:100%;display:flex;justify-content:space-between;padding:12px;background:none;border:0;color:var(--fg);font:inherit;text-align:left}.nyfh span{color:var(--mute);font-size:13px}
+.nyfg{padding:0 12px 12px}.nyfr{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.nyfr small{color:var(--mute);font-size:12px}
+.stsale{margin:10px 0;padding:10px 12px;border-radius:14px;background:linear-gradient(135deg,rgba(229,72,77,.3),rgba(255,200,87,.2));font-size:14px}.stsale small{display:block;color:var(--mute);font-size:12px}
+.stoff{font-style:normal;margin-left:6px;padding:2px 6px;border-radius:8px;background:#E5484D;color:#fff;font-size:11px;font-weight:800}
+.vterm s,.svc s{opacity:.65;margin-right:2px}
+
+/* ===== Анимация мифика и секретки ===== */
+.nyburst{position:fixed;inset:0;z-index:9000;pointer-events:none;overflow:hidden}
+.nyburst span{position:absolute;top:-8%;animation:nyfall2 2.4s ease-in forwards;text-shadow:0 0 10px rgba(255,255,255,.7)}
+.nyburst b{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%) scale(.6);opacity:0;font:900 clamp(22px,7vw,34px) 'Unbounded',system-ui,sans-serif;color:#fff;text-shadow:0 0 18px #4DA3FF,0 0 34px #E5484D;white-space:nowrap;animation:nypop 2.8s ease-out forwards}
+.nyburst.sec b{text-shadow:0 0 18px #FFC857,0 0 38px #B05BFF}
+@keyframes nyfall2{to{transform:translate3d(0,115vh,0) rotate(540deg);opacity:.2}}
+@keyframes nypop{15%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}30%{transform:translate(-50%,-50%) scale(1)}85%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.nycard.night,.nyd.can{animation:none}}

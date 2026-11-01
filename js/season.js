@@ -3,7 +3,10 @@
 const SZ_LV = 50, SZ_SPL = 300, SZ_PRICE = 500000, SZ_GROW_STEP = 25000, SZ_GROW_CAP = 3000;
 const SZ_NAMES = ['Неоновая осень', 'Ледяной шторм', 'Золотая лихорадка', 'Космический рейс', 'Тёмный лес', 'Огненный вихрь'];
 const szId = () => seasonId(Date.now());
-const szName = (id) => SZ_NAMES[((id % SZ_NAMES.length) + SZ_NAMES.length) % SZ_NAMES.length];
+const szName = (id) => {
+  try { const t = EV_ANCHOR + id * SEASON_MS; if (window.NYG && NYG.on() && t >= Date.UTC(2026, 10, 29) && t < Date.UTC(2027, 0, 8)) return t < Date.UTC(2026, 11, 20) ? 'Новогодний сезон 🎄' : 'Новогодние каникулы ❄'; } catch (e) {}
+  return SZ_NAMES[((id % SZ_NAMES.length) + SZ_NAMES.length) % SZ_NAMES.length];
+};
 const szEnd = (id) => EV_ANCHOR + (id + 1) * SEASON_MS;
 const szCnt = (k) => (S.cnt || []).slice(k).reduce((a, b) => a + b, 0);
 const szLeft = (ms) => { const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4); return d > 0 ? `${d} дн ${h} ч` : h > 0 ? `${h} ч ${m} мин` : `${m} мин`; };

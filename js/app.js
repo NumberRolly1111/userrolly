@@ -234,7 +234,7 @@ const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 fixState();
 // Темы оформления: меняют цвета через переменные CSS (html[data-theme=…])
-const THEMES=[{id:'',n:'Ночь',a:'#5B6BFF',b:'#0D0B1A',price:0},{id:'ocean',n:'Океан',a:'#2E8BFF',b:'#06121F',price:500000},{id:'emerald',n:'Изумруд',a:'#1FBF72',b:'#06130E',price:1000000},{id:'sunset',n:'Закат',a:'#FF6B4A',b:'#17090F',price:2000000},{id:'amoled',n:'Чёрная',a:'#5B6BFF',b:'#000000',price:3000000},{id:'royal',n:'Королевская',a:'#B05BFF',b:'#120A1F',price:5000000},{id:'neon',n:'Неон',a:'#00F0FF',b:'#08051A',price:4000000},{id:'sakura',n:'Сакура',a:'#FF7FB0',b:'#1A0B14',price:3000000},{id:'gold',n:'Золото',a:'#FFC933',b:'#141006',price:8000000}];
+const THEMES=[{id:'',n:'Ночь',a:'#5B6BFF',b:'#0D0B1A',price:0},{id:'ocean',n:'Океан',a:'#2E8BFF',b:'#06121F',price:500000},{id:'emerald',n:'Изумруд',a:'#1FBF72',b:'#06130E',price:1000000},{id:'sunset',n:'Закат',a:'#FF6B4A',b:'#17090F',price:2000000},{id:'amoled',n:'Чёрная',a:'#5B6BFF',b:'#000000',price:3000000},{id:'royal',n:'Королевская',a:'#B05BFF',b:'#120A1F',price:5000000},{id:'neon',n:'Неон',a:'#00F0FF',b:'#08051A',price:4000000},{id:'sakura',n:'Сакура',a:'#FF7FB0',b:'#1A0B14',price:3000000},{id:'gold',n:'Золото',a:'#FFC933',b:'#141006',price:8000000},{id:'snowy',n:'Снежная',a:'#8FD3FF',b:'#071626',price:2500000,ny:1},{id:'lights',n:'Огни ёлки',a:'#FF4D6D',b:'#07140D',price:3500000,ny:1}];
 const themeOwn=t=>!t.id||(S.cown||[]).includes('t_'+t.id);
 function applyTheme(){
   const t=THEMES.find(x=>x.id===S.theme&&themeOwn(x))||THEMES[0];
@@ -1276,6 +1276,9 @@ const TTL=[
   {id:'biz',n:'Бизнесмен',price:150e6,c:'#FF8A3D'},
   {id:'faceless',n:'Человек без лица',price:1e9,c:'#F2EFFF'},
   {id:'oligarch',n:'Олигарх',price:0,star:349,c:'#FFD34E'},   // только за звёзды
+  {id:'nyded',n:'Дед Мороз',price:2e6,c:'#FF5A5F',ny:1},   // новогодние: покупка только на время праздника
+  {id:'nytree',n:'Хозяин ёлки',price:6e6,c:'#3DDC84',ny:1},
+  {id:'ny27',n:'Встретил 2027',price:0,c:'#8FD3FF',ny:2},   // награда за новогодние задания
 ];
 const OLDT={trader:'collector',upgrader:'millionaire',gambler:'hands',magnate:'lucky',billionaire:'biz',legend:'faceless',emperor:'faceless'};   // старые титулы → новые (у кого что было куплено, ничего не пропадает)
 FRM=[
@@ -1283,6 +1286,8 @@ FRM=[
   {id:'f_gold',n:'Золотая рамка',price:5e6},
   {id:'f_emerald',n:'Изумрудная рамка',price:20e6},
   {id:'f_diamond',n:'Бриллиантовая рамка',price:80e6},
+  {id:'f_nysnow',n:'Снежная рамка',price:3e6,ny:1},
+  {id:'f_nylite',n:'Рамка-гирлянда',price:9e6,ny:1},
 ];
 const cosNick=id=>NSTY.find(x=>x.id===id),cosTitle=id=>TTL.find(x=>x.id===id),cosFrame=id=>FRM.find(x=>x.id===id),cosTheme=id=>typeof id==='string'&&id.startsWith('t_')?THEMES.find(x=>x.id&&'t_'+x.id===id):null;
 const cosOwn=id=>S.cown.includes(id);
@@ -1307,14 +1312,16 @@ function cosSheet(){
         if(cosOwn(id)){if(fld==='theme'){S.theme=th.id;applyTheme()}else S[fld]=S[fld]===id?'':id}   // надеть / снять
         else if(it.star){o.remove();return goStar('title_oligarch')}
         else{
+          if(it.ny===2)return toast('Выдаётся за новогодние задания');
+          if(it.ny&&!(window.NYG&&NYG.on()))return toast('Эти предметы продаются только на время Нового года');
           if(S.coins<it.price)return toast('Не хватает монет');
           S.coins-=it.price;S.cown.push(id);if(fld==='theme'){S.theme=th.id;applyTheme()}else S[fld]=id;sfx('ach');hap('n','success');toast('Куплено: '+it.n);
         }
         save();render();lb.sent='';lbPush();cosSheet();if(!$('#tab-prof').hidden)renderProf();try{if(!$('#tab-museum').hidden)renderMuseum()}catch(x){}}
     }}
   const u=tgUser(),nm=u.first_name||'Игрок';
-  const row=(it,kind)=>{const own=kind===4?themeOwn({id:it.id.slice(2)}):cosOwn(it.id),on=kind===1?S.cn===it.id:kind===2?S.ct===it.id:kind===3?S.cf===it.id:S.theme===it.id.slice(2),poor=!own&&!it.star&&S.coins<it.price;
-    return `<div class="crow2${on?' on':''}"><div class="cprev">${kind===1?nickHtml(nm,it.id):kind===2?titleHtml(it.id):kind===3?`<span class="fprev">${frameRing(it.id)}<b>${escH([...nm][0]||'?').toUpperCase()}</b></span>`:`<i class="dthm" style="background:linear-gradient(135deg,${it.b} 52%,${it.a} 52%);border:2px solid ${it.a}"></i>`}</div><div class="cinfo"><b>${it.n}</b><small${own?'':' class="prc"'}>${own?(on?'Надето':'Куплено'):it.star?'⭐ '+it.star+' · только за звёзды':fmtC(it.price)+' 🪙'}</small></div><button class="btn sm${own||!poor?' main':''}" data-cb="${it.id}"${poor?' disabled':''}>${own?(on?(kind===4?'Выбрано':'Снять'):'Надеть'):it.star?'В магазин':poor?'Не хватает':'Купить'}</button></div>`};
+  const row=(it,kind)=>{const own=kind===4?themeOwn({id:it.id.slice(2)}):cosOwn(it.id),on=kind===1?S.cn===it.id:kind===2?S.ct===it.id:kind===3?S.cf===it.id:S.theme===it.id.slice(2),poor=!own&&!it.star&&(S.coins<it.price||it.ny===2||(it.ny&&!(window.NYG&&NYG.on())));
+    return `<div class="crow2${on?' on':''}"><div class="cprev">${kind===1?nickHtml(nm,it.id):kind===2?titleHtml(it.id):kind===3?`<span class="fprev">${frameRing(it.id)}<b>${escH([...nm][0]||'?').toUpperCase()}</b></span>`:`<i class="dthm" style="background:linear-gradient(135deg,${it.b} 52%,${it.a} 52%);border:2px solid ${it.a}"></i>`}</div><div class="cinfo"><b>${it.n}</b><small${own?'':' class="prc"'}>${own?(on?'Надето':'Куплено'):it.star?'⭐ '+it.star+' · только за звёзды':(it.ny===2?'🎄 награда за задания':fmtC(it.price)+' 🪙'+(it.ny?' · 🎄 до 7 января':''))}</small></div><button class="btn sm${own||!poor?' main':''}" data-cb="${it.id}"${poor?' disabled':''}>${own?(on?(kind===4?'Выбрано':'Снять'):'Надеть'):it.star?'В магазин':poor?'Не хватает':'Купить'}</button></div>`};
   const free=()=>{const on=!S.theme;return `<div class="crow2${on?' on':''}"><div class="cprev"><i class="dthm" style="background:linear-gradient(135deg,#0D0B1A 52%,#5B6BFF 52%);border:2px solid #5B6BFF"></i></div><div class="cinfo"><b>Ночь</b><small>${on?'Надето':'Бесплатно'}</small></div><button class="btn sm main" data-cb="t_"${on?' disabled':''}>${on?'Выбрано':'Надеть'}</button></div>`};
   const list=cosTab==='t'?TTL.map(x=>row(x,2)).join(''):cosTab==='f'?FRM.map(x=>row(x,3)).join(''):cosTab==='n'?NSTY.map(x=>row(x,1)).join(''):free()+THEMES.filter(x=>x.id).map(x=>row({...x,id:'t_'+x.id},4)).join('');
   const have=S.cown.length;
@@ -1504,7 +1511,7 @@ function tabIn(n){
 }
 const MI={
 user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',
-friends:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18 14.3c2.2.7 3.5 2.7 3.5 5.2"/>',
+tree:'<path d="M12 3l4.5 6.5h-3L17.5 15h-4v3.5h-3V15h-4l4-5.5h-3z"/><path d="M10.5 21h3"/>',friends:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18 14.3c2.2.7 3.5 2.7 3.5 5.2"/>',
 clan:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
 ach:'<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a2 2 0 0 0 3 4M16 6h3a2 2 0 0 1-3 4M12 13v4M8 20h8M10 17h4"/>',
 gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9M8 8a2.5 2.5 0 1 1 4-2 2.5 2.5 0 1 1 4 2"/>',
@@ -1521,13 +1528,13 @@ spark:'<path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>',
 help:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9.5 12l2 2 3.5-4"/>',
 doc:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
 lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'};
-const MORE=[['prof','Профиль','Уровень, витрина, настройки','user'],['friends','Друзья','Приглашай друзей и получай награды','friends'],['clan','Кланы','Вступи в клан или создай свой','clan'],['ach','Достижения','Награды за прогресс','ach'],['bon','Бонусы и игры','Колесо, мини-игры, кейсы, поединки','gift'],['season','Сезонный пропуск','50 уровней наград','season'],['market','Рынок','Купить и продать ники игрокам','cart'],['auction','Аукцион','Торги за редкие ники','hammer'],['craft','Контракт','Обменять несколько ников на один','flask'],['battles','Поединки','Кейсы против соперника','swords'],['museum','Музей','Ники на витрине славы, доход','bank'],['show','Витрины','Собери набор — получи награду','grid'],['chances','Шансы','Редкости, цены, удача и честная игра','pct'],['idea','Предложить идею / Сообщить о баге','Чего не хватает — ответим в Telegram','send'],['guide','Обучение','Как играть, видео и шаги','spark'],['help','Правила и поддержка','Что можно и как с нами связаться','help'],['terms','Условия использования','Правила игры и покупок ⭐','doc'],['privacy','Политика конфиденциальности','Какие данные мы храним','lock']];
+const MORE=[...(document.documentElement.classList.contains('ny')?[['ny','Новый год','Календарь, ёлка, задания, подарки','tree']]:[]),['prof','Профиль','Уровень, витрина, настройки','user'],['friends','Друзья','Приглашай друзей и получай награды','friends'],['clan','Кланы','Вступи в клан или создай свой','clan'],['ach','Достижения','Награды за прогресс','ach'],['bon','Бонусы и игры','Колесо, мини-игры, кейсы, поединки','gift'],['season','Сезонный пропуск','50 уровней наград','season'],['market','Рынок','Купить и продать ники игрокам','cart'],['auction','Аукцион','Торги за редкие ники','hammer'],['craft','Контракт','Обменять несколько ников на один','flask'],['battles','Поединки','Кейсы против соперника','swords'],['museum','Музей','Ники на витрине славы, доход','bank'],['show','Витрины','Собери набор — получи награду','grid'],['chances','Шансы','Редкости, цены, удача и честная игра','pct'],['idea','Предложить идею / Сообщить о баге','Чего не хватает — ответим в Telegram','send'],['guide','Обучение','Как играть, видео и шаги','spark'],['help','Правила и поддержка','Что можно и как с нами связаться','help'],['terms','Условия использования','Правила игры и покупок ⭐','doc'],['privacy','Политика конфиденциальности','Какие данные мы храним','lock']];
 function moreSheet(){
   let el=document.getElementById('more-sheet');if(el)el.remove();
   el=document.createElement('div');el.className='usheet';el.id='more-sheet';
   el.innerHTML=`<div class="sbg" data-mx="1"></div><div class="sbox moresb"><div class="mgrab"></div><div class="shead"><b>Ещё</b><button class="btn sm" data-mx="1">✕</button></div><p class="msub">Всё остальное в игре — в одно нажатие</p><div class="mlist">${MORE.map(([k,t,d,i])=>`<button class="mrow"${k==='craft'?' data-craft="1"':''} data-mgo="${k}"><span class="mic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MI[i]}</svg></span><span class="mtx"><b>${t}</b><small>${d}</small></span><svg class="mch" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>`).join('')}</div></div>`;
   document.body.append(el);
-  el.onclick=e=>{if(e.target.closest('[data-mx]'))return el.remove();const g=e.target.closest('[data-mgo]');if(!g)return;const k=g.dataset.mgo;el.remove();if(k==='craft')return;sfx('tap');if(k==='idea')return openTg('https://t.me/ddwwks');if(k==='terms'||k==='privacy'){try{sessionStorage.setItem('nr_nav','1')}catch(x){}return location.href=k+'.html'}tab(k)};
+  el.onclick=e=>{if(e.target.closest('[data-mx]'))return el.remove();const g=e.target.closest('[data-mgo]');if(!g)return;const k=g.dataset.mgo;el.remove();if(k==='craft')return;sfx('tap');if(k==='idea')return openTg('https://t.me/ddwwks');if(k==='ny')return window.NYG&&NYG.open();if(k==='terms'||k==='privacy'){try{sessionStorage.setItem('nr_nav','1')}catch(x){}return location.href=k+'.html'}tab(k)};
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='more'){sfx('tap');return moreSheet()}tab(b.dataset.tab)});
 // ---------- Рейтинг игроков ----------
@@ -1720,6 +1727,8 @@ const CASES=[
   {id:'rare',n:'Сундук странника',ic:'💠',c:'#9B7BFF',price:25000,d:'Редкие и эпические, иногда мифический',w:[[2,40],[3,45],[4,14],[5,1]]},
   {id:'all',n:'Всё или ничего',ic:'🎲',c:'#FF5FA2',price:52000,d:'98% редкий ник, 2% — секретный',w:[[2,98],[6,2]]},
   {id:'star',n:'Комета',ic:'☄️',c:'#FFB62E',price:185000,d:'Много мифических и шанс на секретный',w:[[3,50],[4,30],[5,17],[6,3]]},
+  {id:'nybox',n:'Подарочная коробка',ic:'🎄',c:'#E5484D',price:48000,ny:1,d:'Новогодняя картонная коробка: редкие и эпические, иногда мифический',w:[[2,45],[3,42],[4,12],[5,1]]},
+  {id:'nygold',n:'Золотая коробка',ic:'🎆',c:'#FFC857',price:240000,ny:1,d:'Новогодняя золотая коробка: легендарные и мифические, шанс на секретный',w:[[3,45],[4,38],[5,14],[6,3]]},
   {id:'abyss',n:'Чёрная дыра',ic:'🌌',c:'#FF4B3E',price:650000,d:'Только легендарные, мифические и секретные',w:[[4,30],[5,55],[6,15]]},
 ];
 let cs={id:'',busy:false,res:null,tiles:[]},tierPool=null;
@@ -1739,7 +1748,7 @@ function luckWeights(w){
 function rollTier(c){const ws=luckOn()?luckWeights(c.w):c.w;let r=Math.random()*ws.reduce((s,x)=>s+x[1],0);for(const [t,w] of ws){r-=w;if(r<0)return t}return ws[ws.length-1][0]}
 const cdLeft=c=>c&&c.cd?Math.max(0,(+(S.cdt&&S.cdt[c.id])||0)+c.cd-Date.now()):0;
 const dClaimed=()=>cdLeft(CASES[0])>0;
-function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.map(c=>`<button class="cscard${(c.id==='week'||S.coins<c.price)&&!(S.cfree&&S.cfree[c.id]>0)?' poor':''}${cdLeft(c)?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.cd?(cdLeft(c)?'Через '+leftT(cdLeft(c)):'Бесплатно · раз в '+(c.daily?'сутки':'неделю')):(S.cfree&&S.cfree[c.id]>0?'Бесплатно · '+(S.cfree[c.id]|0)+' шт.':fmt(c.price)+' 🪙')}</span></button>`).join('')+'</div>'}
+function casesHtml(){return `<div class="cshd"><b>Кейсы</b><small>Открыто: ${fmt(S.casen)}</small></div><div class="csgrid">`+CASES.filter(c=>!c.ny||(window.NYG&&NYG.on())||((S.cfree&&S.cfree[c.id])|0)>0).map(c=>`<button class="cscard${(c.id==='week'||S.coins<c.price)&&!(S.cfree&&S.cfree[c.id]>0)?' poor':''}${cdLeft(c)?' done':''}" data-case="${c.id}" style="--cc:${c.c}"><span class="csi">${c.ic}</span><b>${c.n}</b><small>${c.d}</small><span class="csp">${c.cd?(cdLeft(c)?'Через '+leftT(cdLeft(c)):'Бесплатно · раз в '+(c.daily?'сутки':'неделю')):(S.cfree&&S.cfree[c.id]>0?'Бесплатно · '+(S.cfree[c.id]|0)+' шт.':fmt(c.price)+' 🪙')}</span></button>`).join('')+'</div>'}
 function renderCases(){
   let el=$('#cases');if(!el){const st=document.querySelector('#tab-game .stats');if(!st)return;el=document.createElement('div');el.id='cases';st.after(el)}
   setHtml(el,'');
@@ -1763,7 +1772,7 @@ async function openCase(){
   const c=CASES.find(x=>x.id===cs.id);if(!c||cs.busy||cdLeft(c))return;const fr=!c.cd&&S.cfree&&S.cfree[c.id]>0;if(!c.cd&&!fr&&S.coins<c.price)return;
   cs.busy=true;xbusy=1;cs.res=null;
   const tier=rollTier(c),pr=P(poolOf(tier));
-  if(c.cd){S.cdt[c.id]=Date.now();if(c.daily)S.dcase=todayK()}else if(fr)S.cfree[c.id]--;else S.coins-=c.price;S.casen++;try{spAdd(12)}catch(e){}if(pr.t>=3&&pr.t<=6)feedPush(pr.name,pr.t);S.cnt[pr.t]++;S.best=Math.max(S.best,pr.t);noteBest(pr.price,pr.name);addXp(8+pr.t*6);
+  if(c.cd){S.cdt[c.id]=Date.now();if(c.daily)S.dcase=todayK()}else if(fr)S.cfree[c.id]--;else S.coins-=c.price;S.casen++;if(c.ny)try{NYG.box(c)}catch(e){}try{spAdd(12)}catch(e){}if(pr.t>=3&&pr.t<=6)feedPush(pr.name,pr.t);S.cnt[pr.t]++;S.best=Math.max(S.best,pr.t);noteBest(pr.price,pr.name);addXp(8+pr.t*6);
   const msg=stashAll([{name:pr.name,t:pr.t,p:pr.p}]);save();render();   // приз выдан сразу: закрытие приложения его не отменит
   caseSheet();
   const trk=$('#crt'),rl=$('#crl'),N=46,WIN=36,tw=96,gap=8,pitch=tw+gap;
@@ -1843,10 +1852,10 @@ async function promoUse(raw){
   promoBusy=true;let r;
   try{r=await lbReq('/promo/redeem',{code})}catch(e){promoBusy=false;return toast(String(e.message)==='wait'?'Подожди несколько секунд':'Нет связи с сервером, попробуй позже')}
   promoBusy=false;
-  if(!r||!r.ok){const m={none:'Такого промокода нет',expired:'Срок действия промокода истёк',full:'Промокод закончился: все активации уже разобраны',used:'Ты уже использовал этот промокод'}[r&&r.err];
+  if(!r||!r.ok){const m={none:'Такого промокода нет',expired:'Срок действия промокода истёк',full:'Промокод закончился: все активации уже разобраны',early:'Этот промокод ещё не начал действовать',used:'Ты уже использовал этот промокод'}[r&&r.err];
     if(r&&r.err==='used'&&!S.promo.includes(code)){S.promo.push(code);save()}return toast(m||'Не удалось применить промокод')}
   S.promo.push(code);
-  if(r.kind==='coins'){S.coins=Math.min(CAP,S.coins+(+r.n||0));save();sfx('coins');hap('n','success');toast(`🎟️ Промокод принят: +${fmt(+r.n||0)} 🪙`);render();return}
+  if(r.kind==='coins'){const en=Math.max(0,Math.min(1000,+r.val||0));S.coins=Math.min(CAP,S.coins+(+r.n||0));if(en)S.en=(+S.en||0)+en;save();sfx('coins');hap('n','success');toast(`🎟️ Промокод принят: +${fmt(+r.n||0)} 🪙`+(en?` и +${en} ⚡`:''));render();try{updEn()}catch(e){}return}
   const c=CASES.find(x=>x.id===r.val);
   if(!c){save();return toast('🎟️ Промокод принят, но такого кейса в игре нет')}
   if(!S.cfree||typeof S.cfree!=='object')S.cfree={};S.cfree[c.id]=(S.cfree[c.id]|0)+(+r.n||1);
@@ -3051,6 +3060,8 @@ var STG=[['Наборы',['starter','pack_pro','pack_gold','energy60']],['Ста
 var STUP=[1,50,100,250,500,1000],VIP_FOREVER=4102444800000;
 var VIPPERK=[['Крутка ×5','Пять ников одной кнопкой, бесплатно и с выбором редкости. Без ограничений по числу раз. Обычным игрокам ×5 недоступна.'],['Энергия быстрее','Новая энергия за 8 минут вместо 15.'],['+10 мест в коллекции','Сверх обычных 30 мест, пока действует VIP.'],['Комиссия 2% вместо 5%','На продажах на рынке и в аукционе.'],['Доход музея +30%','Ко всем экспонатам в твоём зале.'],['Подарок каждый день','100 000 🪙 и 5 ⚡ просто за заход.'],['Корона 👑 в профиле','Значок VIP рядом с именем и в чате.']];
 var stPr=id=>(st.cat&&st.cat[id])||STC[id][3];
+var stBase=id=>st.sale&&st.sale[id]?st.sale[id].from:stPr(id);
+var stP=id=>{const x=st.sale&&st.sale[id];return x?`<s>${fmt(x.from)}</s> ⭐ ${fmt(x.to)}`:'⭐ '+fmt(stPr(id))},stOff=id=>{const x=st.sale&&st.sale[id];return x?`<em class="stoff">−${Math.round((1-x.to/x.from)*100)}%</em>`:''};
 var stHave=id=>{const c=STC[id];if(!c)return false;if(id==='vip')return vipPerm();if(id==='luck')return (+S.luck||0)>=4e12||!!(S.sx.luck||st.owned.luck);if(id==='ceo')return !!(S.exc.ceo||st.owned.ceo||(sh.ex&&sh.ex.ceo&&sh.ex.ceo.mine));if(id==='pass'){try{return !!(st.owned.pass||szState().paid)}catch(e){return !!st.owned.pass}}return !!(c[4]&&(S.sx[id]||st.owned[id]))};
 function goStar(id){try{sessionStorage.setItem('nr_st',id)}catch(e){}if(PAGE==='shop'){sh.tab='stars';st.sel=id;renderShop()}else tab('shop')}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-stgo]');if(b)goStar(b.dataset.stgo)});
@@ -3064,18 +3075,19 @@ function stHtml(){
   if(S.sx.custom>0)h+=`<div class="pcard lbmsg"><b>✏️ Именной юзернейм оплачен</b><small>Напиши в поддержку @ddwwks и назови желаемый юзернейм. Это можно сделать сейчас.</small><button class="btn main" id="st-sup">Написать в поддержку</button><button class="btn" id="st-done">Ник выдали, скрыть</button></div>`;
   {const un=(+S.vip||0)>Date.now()?+S.vip:0,fv=un>=4e12,du=d=>new Date(d).toLocaleDateString('ru-RU',{day:'numeric',month:'long'}),VT=[['vip_w','7 дней','Неделя'],['vip_m','30 дней','Месяц'],['vip_3m','90 дней','3 месяца']];
   h+=`<div class="pcard vipc"><div class="vch"><span class="vci">👑</span><div><b>VIP</b><small>${fv?'Активен навсегда':un?'Активен до '+du(un):'Выбери срок, подписка не нужна'}</small></div>${un?'<span class="vok">✓</span>':''}</div>
-  <div class="vterms">${VT.map(([id,d,l])=>`<button class="vterm${id==='vip_m'?' hot':''}" data-st="${id}"><b>${l}</b><small>${d}</small><span>⭐ ${fmt(stPr(id))}</span>${id==='vip_3m'?`<em>−${Math.round((1-stPr('vip_3m')/(stPr('vip_m')*3))*100)}%</em>`:''}</button>`).join('')}</div>
+  <div class="vterms">${VT.map(([id,d,l])=>`<button class="vterm${id==='vip_m'?' hot':''}" data-st="${id}"><b>${l}</b><small>${d}</small><span>${stP(id)}</span>${id==='vip_3m'?`<em>−${Math.round((1-stPr('vip_3m')/(stBase('vip_m')*3))*100)}%</em>`:stOff(id)}</button>`).join('')}</div>
   <ul class="vipl">${VIPPERK.map(x=>`<li><b>${x[0]}</b><small>${x[1]}</small></li>`).join('')}</ul></div>`;}
   {const lu=(+S.luck||0)>Date.now()?+S.luck:0,lf=lu>=4e12,du=d=>new Date(d).toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
   h+=`<div class="pcard luckc"><div class="vch"><span class="vci">🍀</span><div><b>Талисман удачи</b><small>${lf?'Активен навсегда':lu?'Активен до '+du(lu):'Удача на всех крутках'}</small></div>${lu?'<span class="vok">✓</span>':''}</div>
   <div class="lkpf"><span><b>×3</b> шанс на редкий — легендарный</span><span><b>×1,5</b> шанс на мифический и секретный</span></div>
-  <div class="vterms two"><button class="vterm hot" data-st="luck_m"><b>30 дней</b><small>можно продлить</small><span>⭐ ${fmt(stPr('luck_m'))}</span></button><button class="vterm" data-st="luck"${lf?' disabled':''}><b>Навсегда</b><small>один раз</small><span>⭐ ${fmt(stPr('luck'))}</span></button></div></div>`;}
+  <div class="vterms two"><button class="vterm hot" data-st="luck_m"><b>30 дней</b><small>можно продлить</small><span>${stP('luck_m')}</span>${stOff('luck_m')}</button><button class="vterm" data-st="luck"${lf?' disabled':''}><b>Навсегда</b><small>один раз</small><span>⭐ ${fmt(stPr('luck'))}</span></button></div></div>`;}
   {const tu=(()=>{try{return tgUser()}catch(e){return {}}})(),nm=String(S.nick||tu.username||tu.first_name||'username').toUpperCase().slice(0,14);
   h+=`<div class="stsec"><h3 class="ch3">Именной юзернейм</h3><span>навсегда</span></div><div class="pcard cnc"><div class="cnplate"><i>★</i><b>Твой username</b><i>★</i></div><b class="cnt">Именной юзернейм</b><p class="cnd">Ник с твоим текстом, навсегда</p><small class="cns">Свой текст · один на всю игру · не сгорает · добавим в твою коллекцию</small><button class="cnb" data-st="custom_nick">⭐ ${fmt(stPr('custom_nick'))}</button></div>`+'</div>'.slice(0,0);}
+  if(st.sale&&Object.keys(st.sale).length)h+=`<div class="stsale">🎄 <b>Новогодняя распродажа</b><small>до 7 января · цены на отмеченные товары ниже обычных, старая цена зачёркнута</small></div>`;
   for(const [g,ids] of STG){
     h+=`<h3 class="ch3">${g}</h3>`+ids.map(id=>{const c=STC[id],own=stHave(id);
       const out=id==='ceo'&&!own&&sh.ex&&sh.ex.ceo&&sh.ex.ceo.left<1,ds=id==='ceo'&&sh.ex&&sh.ex.ceo?c[2]+` · осталось ${sh.ex.ceo.left} из ${sh.ex.ceo.total}`:c[2],dis=own||out;
-      return `<div class="pcard svc stit${dis?' own':''}${id==='ceo'?' excs':''}"${dis?'':` data-st="${id}"`}><span class="svi">${c[0]}</span><div>${id==='ceo'?'<em class="exct">ЭКСКЛЮЗИВ</em>':''}<b>${c[1]}</b><small>${ds}</small></div><button class="btn ${dis?'':'main '}sm"${dis?' disabled':` data-st="${id}"`}>${own?'Куплено ✓':out?'Раскуплен':'⭐ '+fmt(stPr(id))}</button></div>`}).join('');
+      return `<div class="pcard svc stit${dis?' own':''}${id==='ceo'?' excs':''}"${dis?'':` data-st="${id}"`}><span class="svi">${c[0]}</span><div>${id==='ceo'?'<em class="exct">ЭКСКЛЮЗИВ</em>':''}<b>${c[1]}</b><small>${ds}</small></div><button class="btn ${dis?'':'main '}sm"${dis?' disabled':` data-st="${id}"`}>${own?'Куплено ✓':out?'Раскуплен':stP(id)+stOff(id)}</button></div>`}).join('');
   }
   h+=`<div class="stbh"><b><i></i>Звёздный баланс</b><span>на балансе ⭐ ${fmt(bal)}</span></div>${st.first?'<div class="stfirst">🎁 Первое пополнение: +10% звёзд в подарок</div>':''}<div class="stgrid">${STUP.map(n=>`<button class="stp${n===100?' hot':''}" data-stup="${n}">${n===100?'<em>выбор игроков</em>':''}<b>+${fmt(n)} ⭐</b><small>${fmt(n)} ${n===1?'звезда':'звёзд'} Telegram${st.first&&n>=10?` · +${Math.floor(n/10)} ⭐ бонус`:''}</small></button>`).join('')}</div>`;
   return h+`<div class="stnote"><b>Про звёзды</b><p>Звёзды тратятся только внутри игры, вывода нет.</p><p>Бесплатно их не раздают: они приходят только с оплаты звёздами Telegram, с продаж на рынке и как 5% с платежей приглашённых друзей.</p><p>Если покупку вернули, всё, что за неё выдано, списывается обратно.</p><p><b>Это не казино.</b> За ⭐ ты покупаешь внутриигровые товары и возможности, а не шанс выиграть деньги. Выигрыш в деньги и вывод невозможны. Не трать больше, чем готов потратить на развлечение.</p></div>`;
@@ -3092,7 +3104,7 @@ function stSheet(){
 async function stLoad(){
   if(!API||!tg||!tg.initData)return;
   const [r,f]=await Promise.all([lbReq('/pay/state'),lbReq('/pay/feed').catch(()=>({items:[]}))]);
-  st.bal=r.bal;S.sbal=r.bal;st.owned=r.owned||{};st.cat=r.cat||null;st.first=!!r.first;st.feed=f.items||[];
+  st.bal=r.bal;S.sbal=r.bal;st.owned=r.owned||{};st.cat=r.cat||null;st.sale=r.sale||{};st.first=!!r.first;st.feed=f.items||[];
   if(r.vip&&r.vip>S.vip)S.vip=r.vip;else if(!r.vip)S.vip=0;
   S.luck=r.luck&&r.luck>Date.now()?r.luck:0;
   stOwned();if(r.revoked)stRevoke(r.revoked);save();setMax();
