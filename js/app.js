@@ -37,7 +37,7 @@ const V5_DAY=15;   // VIP: сколько бесплатных кручений 
 var vipPerm=()=>(+S.vip||0)>=4e12,vipOn=()=>(+S.vip||0)>Date.now()||(+S.vipT||0)>Date.now(),vipX=()=>vipOn()?10:0,enInt=()=>vipOn()?8*60*1000:EN_INT,setMax=()=>{MAX=(S.slots||MAX0)+vipX()};
 var v5Left=()=>{const d=todayK();if(!S.v5||S.v5.d!==d)S.v5={d,n:0};return Math.max(0,V5_DAY-S.v5.n)};   // запас энергии и время накопления одной единицы (15 минут)
 const AUTO=['выключена','ниже необычного','ниже редкого','ниже эпического','ниже легендарного','ниже мифического'];
-const APP_LINK='https://t.me/NumberRollyBot';            // ссылка на Mini App для кнопки «Позвать друзей»: https://t.me/ИМЯ_БОТА/КОРОТКОЕ_ИМЯ_ПРИЛОЖЕНИЯ (из @BotFather → /newapp). С ней работают награды за друзей
+const APP_LINK='https://t.me/NameRolly_Bot';            // ссылка на Mini App для кнопки «Позвать друзей»: https://t.me/ИМЯ_БОТА/КОРОТКОЕ_ИМЯ_ПРИЛОЖЕНИЯ (из @BotFather → /newapp). С ней работают награды за друзей
 const fmt=n=>Math.round(n).toLocaleString('ru-RU');
 const CAP=1e12;                    // максимальный баланс: 1 трлн монет
 const tz=x=>String(x).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'').replace('.',',');
@@ -3716,9 +3716,9 @@ document.addEventListener('click',e=>{
   setTimeout(show,700);
 })();
 
-// Обязательная подписка на канал @NameRolly (проверка через бота; если проверка недоступна — игру не блокируем)
+// Обязательная подписка на канал @NameRollyNews (проверка через бота; если проверка недоступна — игру не блокируем)
 (function(){
-  const CH='NameRolly';
+  const CH='NameRollyNews';
   const show=()=>{if(document.getElementById('subgate'))return;const el=document.createElement('div');el.id='subgate';
     el.innerHTML=`<div class="sgc"><div class="sgi">📣</div><h2>Подпишись на канал</h2><p>Чтобы играть, подпишись на наш канал <b>@${CH}</b>: там новости, конкурсы и промокоды.</p><button class="sgb" id="sg-go">Подписаться</button><button class="sgb sgb2" id="sg-ok">Я подписался</button></div>`;
     document.body.appendChild(el);
