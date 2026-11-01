@@ -234,12 +234,12 @@ const def={coins:START,spins:0,best:0,day:'',items:[],uid:0,ups:0,upw:0,cnt:[0,0
 let S;try{S={...def,...JSON.parse(localStorage.getItem('nameroulette')||'{}')}}catch(e){S={...def}}
 fixState();
 // Темы оформления: меняют цвета через переменные CSS (html[data-theme=…])
-const THEMES=[{id:'',n:'Ночь',a:'#5B6BFF',b:'#0D0B1A',price:0},{id:'ocean',n:'Океан',a:'#2E8BFF',b:'#06121F',price:500000},{id:'emerald',n:'Изумруд',a:'#1FBF72',b:'#06130E',price:1000000},{id:'sunset',n:'Закат',a:'#FF6B4A',b:'#17090F',price:2000000},{id:'amoled',n:'Чёрная',a:'#5B6BFF',b:'#000000',price:3000000},{id:'royal',n:'Королевская',a:'#B05BFF',b:'#120A1F',price:5000000},{id:'hallow',n:'Хэллоуин',a:'#FF7A1A',b:'#120806',price:2500000},{id:'neon',n:'Неон',a:'#00F0FF',b:'#08051A',price:4000000},{id:'sakura',n:'Сакура',a:'#FF7FB0',b:'#1A0B14',price:3000000},{id:'gold',n:'Золото',a:'#FFC933',b:'#141006',price:8000000}];
+const THEMES=[{id:'',n:'Ночь',a:'#5B6BFF',b:'#0D0B1A',price:0},{id:'ocean',n:'Океан',a:'#2E8BFF',b:'#06121F',price:500000},{id:'emerald',n:'Изумруд',a:'#1FBF72',b:'#06130E',price:1000000},{id:'sunset',n:'Закат',a:'#FF6B4A',b:'#17090F',price:2000000},{id:'amoled',n:'Чёрная',a:'#5B6BFF',b:'#000000',price:3000000},{id:'royal',n:'Королевская',a:'#B05BFF',b:'#120A1F',price:5000000},{id:'neon',n:'Неон',a:'#00F0FF',b:'#08051A',price:4000000},{id:'sakura',n:'Сакура',a:'#FF7FB0',b:'#1A0B14',price:3000000},{id:'gold',n:'Золото',a:'#FFC933',b:'#141006',price:8000000}];
 const themeOwn=t=>!t.id||(S.cown||[]).includes('t_'+t.id);
 function applyTheme(){
   const t=THEMES.find(x=>x.id===S.theme&&themeOwn(x))||THEMES[0];
   try{if(t.id)document.documentElement.dataset.theme=t.id;else delete document.documentElement.dataset.theme;
-    const m=document.querySelector('meta[name=theme-color]');if(m)m.content=t.b;try{hwFx()}catch(x){}
+    const m=document.querySelector('meta[name=theme-color]');if(m)m.content=t.b;
     if(tg){tg.setHeaderColor&&tg.setHeaderColor(t.b);tg.setBackgroundColor&&tg.setBackgroundColor(t.b)}}catch(e){}
 }
 applyTheme();
@@ -503,7 +503,7 @@ const ACH=[
   A('🎲','Любитель множителей','Сыграй в крутку-множитель 50 раз',()=>S.rkN|0,50,1500000),
   A('💎','Иксы пошли','Выиграй множитель ×5 или больше в крутке-множителе',()=>S.rk5|0,1,1000000),
   A('👑','Множитель ×20','Выиграй множитель ×20 в крутке-множителе',()=>S.rkW|0,20,5000000),
-  A('🎃','Праздничный подарок','Забери подарок к празднику',()=>S.holN|0,1,500000),
+  A('🎁','Праздничный подарок','Забери подарок к празднику',()=>S.holN|0,1,500000),
   A('🎉','Любитель праздников','Забери 3 праздничных подарка',()=>S.holN|0,3,3000000),
   A('🎯','Серия побед','Выиграй 5 раз подряд в крутке-множителе',()=>S.rkStrB|0,5,1500000),
   A('🔤','Словоед','Пройди мини игру «Поиск слов»',()=>S.wsN|0,1,300000),
@@ -970,7 +970,6 @@ function updAva(){
 }
 function render(){
   try{updAva()}catch(e){}
-  try{hwFx()}catch(e){}
   try{renderNotes()}catch(e){}
   setCoins();
   ensureQuests();updBonDot();checkAch();try{renderCases()}catch(e){}   // кейсы объявлены ниже: на первом проходе их ещё нет
@@ -1290,7 +1289,7 @@ const cosOwn=id=>S.cown.includes(id);
 const nickHtml=(name,id)=>`<span class="nk${cosNick(id)?' nk-'+id:''}">${escH(name)}</span>`;
 const titleHtml=id=>{const t=cosTitle(id);return t?`<span class="ttl" style="--tc:${t.c}">${t.n}</span>`:''};
 const cosKey=()=>(cosOwn(S.cn)&&cosNick(S.cn)?S.cn:'')+'|'+(cosOwn(S.ct)&&cosTitle(S.ct)?S.ct:'')+'|'+(cosOwn(S.cf)&&cosFrame(S.cf)?S.cf:'');
-function cosFix(){const ol=S.sx&&S.sx.title_oligarch;S.cown=[...new Set(S.cown.map(x=>x==='oligarch'&&!ol?'biz':OLDT[x]||x))].filter(x=>cosNick(x)||cosTitle(x)||cosFrame(x)||cosTheme(x)||/^a_(ghost|pop|rain)$/.test(x));if(OLDT[S.ct])S.ct=OLDT[S.ct];if(S.ct==='oligarch'&&!ol)S.ct='biz';if(S.cn&&!cosOwn(S.cn))S.cn='';if(S.ct&&!cosOwn(S.ct))S.ct='';if(S.cf&&!cosOwn(S.cf))S.cf='';if(S.theme&&!S.cown.includes('t_'+S.theme))S.theme=''}
+function cosFix(){try{if(Array.isArray(S.cown)&&S.cown.includes('t_hallow')){S.cown=S.cown.filter(x=>x!=='t_hallow');S.coins=Math.min(CAP,(S.coins|0)+2500000);if(S.theme==='hallow')S.theme=''}}catch(e){}const ol=S.sx&&S.sx.title_oligarch;S.cown=[...new Set(S.cown.map(x=>x==='oligarch'&&!ol?'biz':OLDT[x]||x))].filter(x=>cosNick(x)||cosTitle(x)||cosFrame(x)||cosTheme(x)||/^a_(ghost|pop|rain)$/.test(x));if(OLDT[S.ct])S.ct=OLDT[S.ct];if(S.ct==='oligarch'&&!ol)S.ct='biz';if(S.cn&&!cosOwn(S.cn))S.cn='';if(S.ct&&!cosOwn(S.ct))S.ct='';if(S.cf&&!cosOwn(S.cf))S.cf='';if(S.theme&&!S.cown.includes('t_'+S.theme))S.theme=''}
 cosFix();
 try{avaKey='';updAva()}catch(e){}
 var cosTab='t';
@@ -2673,7 +2672,7 @@ function dcClaim(i){
   S.coins=Math.min(CAP,S.coins+r);sfx('coins');hap('n','success');save();toast(`Челлендж выполнен: +${fmt(q.c)} 🪙 и +${q.e} ⚡${m}`);if(d.got[0]&&d.got[1])boom('#FFC933',4);render();
 }
 // праздники по датам: [id, значок, название, месяц начала, день начала, месяц конца, день конца, монеты, энергия]
-var HOL=[['nur','🌿','Наурыз',3,21,3,23,1000000,20],['hw','🎃','Хэллоуин',10,25,11,2,250000,10],['ny','🎄','Новый год',12,25,1,7,2000000,30],['ind','🇰🇿','День Независимости',12,16,12,17,1000000,20],['val','💝','День влюблённых',2,13,2,15,700000,15],['mar','🌷','8 марта',3,7,3,9,700000,15],['apr','🤡','1 апреля',3,31,4,2,500000,10],['vic','🎖️','9 мая',5,8,5,10,500000,10]];
+var HOL=[['nur','🌿','Наурыз',3,21,3,23,1000000,20],['ny','🎄','Новый год',12,25,1,7,2000000,30],['ind','🇰🇿','День Независимости',12,16,12,17,1000000,20],['val','💝','День влюблённых',2,13,2,15,700000,15],['mar','🌷','8 марта',3,7,3,9,700000,15],['apr','🤡','1 апреля',3,31,4,2,500000,10],['vic','🎖️','9 мая',5,8,5,10,500000,10]];
 function holAt(dt){
   const m=dt.getMonth()+1,d=dt.getDate(),v=m*100+d;
   for(const h of HOL){const a=h[3]*100+h[4],b=h[5]*100+h[6],on=a<=b?(v>=a&&v<=b):(v>=a||v<=b);if(on){const yr=a>b&&m<=h[5]?dt.getFullYear()-1:dt.getFullYear();return {h,key:h[0]+'_'+yr+(h[0]==='hw'?'_'+(m*100+d):''),daily:h[0]==='hw'}}}
@@ -2681,19 +2680,9 @@ function holAt(dt){
 }
 const holNow=()=>holAt(new Date());
 function holNext(){let best=null;for(let i=1;i<=60;i++){const x=holAt(new Date(Date.now()+i*864e5));if(x){best={h:x.h,days:i};break}}return best}
-const hwOn=()=>{try{const x=holNow();return S.theme==='hallow'||!!(x&&x.h[0]==='hw')}catch(e){return false}};
 function holClaim(){
   const x=holNow();if(!x)return;S.hol=S.hol&&typeof S.hol==='object'?S.hol:{};if(S.hol[x.key])return;
   const fst=!x.daily||!Object.keys(S.hol).some(k=>k.indexOf(x.key.slice(0,7))===0);S.hol[x.key]=1;if(fst)S.holN=(S.holN|0)+1;S.coins=Math.min(CAP,S.coins+x.h[7]);S.en+=x.h[8];addXp(80);sfx('ach');hap('n','success');save();toast(`${x.h[1]} ${x.h[2]}: +${fmt(x.h[7])} 🪙 и +${x.h[8]} ⚡`);boom('#FFC933',5);render();
-}
-// декор Хэллоуина: плавающие тыквы и призраки на фоне
-function hwFx(){
-  try{let el=document.getElementById('hwfx');
-    if(el)el.remove();return;   // летающий декор отключён
-    if(!hwOn()||reduce){if(el)el.remove();return}
-    if(el)return;el=document.createElement('div');el.id='hwfx';el.setAttribute('aria-hidden','true');
-    const E=['🎃','👻','🦇','🕸️','🎃','👻'];el.innerHTML=Array.from({length:9},(_,i)=>`<span style="left:${8+i*10.5}%;animation-duration:${14+(i*5)%9}s;animation-delay:-${(i*3)%13}s;font-size:${18+(i*7)%16}px">${E[i%E.length]}</span>`).join('');
-    document.body.append(el);}catch(e){}
 }
 // мини-режим «Крутка-множитель»
 var RKS=[[0,54.7,'💀','Мимо'],[1.5,28,'🪙','×1,5'],[2,13,'💰','×2'],[5,3.8,'💎','×5'],[20,.5,'👑','×20']],RK_ST=[10000,100000,1000000,10000000],RK_DAY=5,rk={st:1,res:''};
