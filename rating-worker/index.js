@@ -613,11 +613,11 @@ async function tgHook(req, env, json) {
     return json({ ok: true });
   }
   if (m && typeof m.text === 'string' && m.text.startsWith('/start') && m.chat && m.chat.type === 'private') {
-    await tgApi(env, 'sendMessage', { chat_id: m.chat.id, text: '👋 Добро пожаловать в Нейм-рулетку!\n\nКрути рулетку, выбивай редкие юзернеймы, собирай коллекцию, торгуй с игроками и поднимайся в рейтинге.\n\nЖми «Играть».', reply_markup: { inline_keyboard: [[gameBtn(env)]] } });
+    await tgApi(env, 'sendMessage', { chat_id: m.chat.id, text: '👋 Добро пожаловать в Нейм-рулетку!\n\nКрути рулетку, выбивай редкие юзернеймы, собирай коллекцию, торгуй с игроками и поднимайся в рейтинге.\n\n⚠️ Это не казино. Игра развлекательная: монеты, ники и награды виртуальные, выиграть или вывести деньги нельзя. За ⭐ продаются только внутриигровые возможности, а не шанс на выигрыш. Доступность юзернейма игра не проверяет. Только 18+, играй в меру.\n\nЖми «Играть», и ты подтверждаешь, что тебе есть 18 лет.', reply_markup: { inline_keyboard: [[gameBtn(env)]] } });
   }
   return json({ ok: true });
 }
-const gameBtn = (env) => (payUrl(env) ? { text: '🎰 Играть', web_app: { url: payUrl(env) } } : { text: '🎰 Играть', url: env.APP_LINK || 'https://t.me/NumberRollyBot' });
+const gameBtn = (env) => (payUrl(env) ? { text: '▶️ Играть', web_app: { url: payUrl(env) } } : { text: '▶️ Играть', url: env.APP_LINK || 'https://t.me/NumberRollyBot' });
 
 // Запрещённые слова чата. Проверка идёт по корням, буквы-двойники (латиница вместо кириллицы) и разделители убираются.
 // Свои слова можно добавить секретом CHAT_BAD (через запятую), без правки кода.
