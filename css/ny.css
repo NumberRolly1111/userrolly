@@ -71,8 +71,5 @@ html[data-theme=lights] body{background:radial-gradient(90% 40% at 20% -5%,rgba(
 /* ===== Анимация мифика и секретки ===== */
 .nyburst{position:fixed;inset:0;z-index:9000;pointer-events:none;overflow:hidden}
 .nyburst span{position:absolute;top:-8%;animation:nyfall2 2.4s ease-in forwards;text-shadow:0 0 10px rgba(255,255,255,.7)}
-.nyburst b{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%) scale(.6);opacity:0;font:900 clamp(22px,7vw,34px) 'Unbounded',system-ui,sans-serif;color:#fff;text-shadow:0 0 18px #4DA3FF,0 0 34px #E5484D;white-space:nowrap;animation:nypop 2.8s ease-out forwards}
-.nyburst.sec b{text-shadow:0 0 18px #FFC857,0 0 38px #B05BFF}
 @keyframes nyfall2{to{transform:translate3d(0,115vh,0) rotate(540deg);opacity:.2}}
-@keyframes nypop{15%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}30%{transform:translate(-50%,-50%) scale(1)}85%{opacity:1}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){.nycard.night,.nyd.can{animation:none}}

@@ -298,10 +298,10 @@
   function burst(sec) {
     if (window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches) return;
     var o = document.createElement('div'); o.className = 'nyburst' + (sec ? ' sec' : ''); o.setAttribute('aria-hidden', 'true');
-    var F = sec ? ['❄', '✦', '🎆', '🎇', '⭐', '🎄'] : ['❄', '✦', '❅', '🎁', '⭐'], s = '';
-    for (var i = 0; i < (sec ? 36 : 24); i++) s += '<span style="left:' + (Math.random() * 100).toFixed(1) + '%;animation-delay:' + (Math.random() * 0.9).toFixed(2) + 's;font-size:' + (14 + Math.floor(Math.random() * 20)) + 'px">' + F[i % F.length] + '</span>';
-    o.innerHTML = s + '<b>' + (sec ? 'С НОВЫМ ГОДОМ!' : 'Новогодний мифик!') + '</b>';
-    document.body.appendChild(o); setTimeout(function () { o.remove(); }, 3200);
+    var F = sec ? ['🎁', '❄', '🎁', '❅', '⭐', '🎁', '❆', '✦'] : ['🎁', '❄', '❅', '🎁', '❆', '⭐'], s = '', N = sec ? 90 : 70;
+    for (var i = 0; i < N; i++) s += '<span style="left:' + (Math.random() * 100).toFixed(1) + '%;animation-delay:' + (Math.random() * 1.6).toFixed(2) + 's;animation-duration:' + (1.8 + Math.random() * 1.6).toFixed(2) + 's;font-size:' + (14 + Math.floor(Math.random() * 24)) + 'px">' + F[i % F.length] + '</span>';
+    o.innerHTML = s;
+    document.body.appendChild(o); setTimeout(function () { o.remove(); }, 4500);
   }
   NYG.burst = burst;
 
