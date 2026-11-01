@@ -3090,7 +3090,7 @@ function stHtml(){
       return `<div class="pcard svc stit${dis?' own':''}${id==='ceo'?' excs':''}"${dis?'':` data-st="${id}"`}><span class="svi">${c[0]}</span><div>${id==='ceo'?'<em class="exct">ЭКСКЛЮЗИВ</em>':''}<b>${c[1]}</b><small>${ds}</small></div><button class="btn ${dis?'':'main '}sm"${dis?' disabled':` data-st="${id}"`}>${own?'Куплено ✓':out?'Раскуплен':'⭐ '+fmt(stPr(id))}</button></div>`}).join('');
   }
   h+=`<div class="stbh"><b><i></i>Звёздный баланс</b><span>на балансе ⭐ ${fmt(bal)}</span></div>${st.first?'<div class="stfirst">🎁 Первое пополнение: +10% звёзд в подарок</div>':''}<div class="stgrid">${STUP.map(n=>`<button class="stp${n===100?' hot':''}" data-stup="${n}">${n===100?'<em>выбор игроков</em>':''}<b>+${fmt(n)} ⭐</b><small>${fmt(n)} ${n===1?'звезда':'звёзд'} Telegram${st.first&&n>=10?` · +${Math.floor(n/10)} ⭐ бонус`:''}</small></button>`).join('')}</div>`;
-  return h+`<div class="stnote"><b>Про звёзды</b><p>Звёзды тратятся только внутри игры, вывода нет.</p><p>Бесплатно их не раздают: они приходят только с оплаты звёздами Telegram, с продаж на рынке и как 5% с платежей приглашённых друзей.</p><p>Если покупку вернули, всё, что за неё выдано, списывается обратно.</p></div>`;
+  return h+`<div class="stnote"><b>Про звёзды</b><p>Звёзды тратятся только внутри игры, вывода нет.</p><p>Бесплатно их не раздают: они приходят только с оплаты звёздами Telegram, с продаж на рынке и как 5% с платежей приглашённых друзей.</p><p>Если покупку вернули, всё, что за неё выдано, списывается обратно.</p><p><b>Это не казино.</b> За ⭐ ты покупаешь внутриигровые товары и возможности, а не шанс выиграть деньги. Выигрыш в деньги и вывод невозможны. Не трать больше, чем готов потратить на развлечение.</p></div>`;
 }
 function stSheet(){
   const id=st.sel,c=STC[id];if(!c)return '';
@@ -3447,7 +3447,7 @@ function gmHtml(){
     card('','🎲','Крутка с риском','Выиграй множитель и рискни им',S.rkp>0?'<i class="gmdot"></i>ждёт выигрыш':`${RK_DAY-rkEnsure().n} из ${RK_DAY} сегодня`,'#FFB62E','data-gm="risk"')+
     card('','⚔️','Батлы','Открывай кейсы против игроков — забирай всё',S.btn?`<i class="gmdot"></i>результатов: ${S.btn}`:'создай свой','#FF5F7A','data-gm="bt"')+
     `</div><button class="gmfair" data-gm="fair">🛡 Честная игра <span>как всё работает и какие шансы</span></button>
-    <p class="gmage"><b>18+</b> Игры на удачу идут на виртуальные монеты и вещи внутри игры. Они не приносят реальных денег и не обменяются на них. Играй в меру.</p>`;
+    <p class="gmage"><b>18+</b> Это не казино и не азартная игра на деньги. Игры на удачу идут на виртуальные монеты и вещи внутри игры. Они не приносят реальных денег и не обменяются на них. Играй в меру.</p>`;
   return `<div class="ahead"><button class="btn sm" data-gm="${gmv==='cases'||gmv==='risk'?'main':'back'}">‹ ${gmv==='cases'||gmv==='risk'?'Игры':'Бонусы'}</button><h2>${gmv==='cases'?'Кейсы':gmv==='risk'?'Крутка с риском':'Игры'}</h2></div><div class="gmpage">${body}</div>`;
 }
 function renderGames(){
@@ -3547,7 +3547,7 @@ function renderFair(){
   <div class="fgc"><b>Как определяется результат</b><p>Кейсы, лотерея, колесо и «Найди слова» выбирают результат случайно прямо в твоей игре по тем шансам, что указаны. Подкруток и скрытых условий нет.</p>
   <p>В батле двое открывают один и тот же кейс. Побеждает ник с большей ценой и забирает оба. При равной цене каждый оставляет свой. Сервер только сводит двух игроков и сравнивает цены.</p></div>
   <div class="fgc"><b>Монеты виртуальные</b><p>Игровые монеты, ники и награды нельзя вывести или обменять на деньги. За ⭐ продаются только дополнительные возможности, а не шанс выиграть.</p></div>
-  <p class="gmage"><b>18+</b> Игры на удачу не для несовершеннолетних. Если игра перестала быть в радость, сделай перерыв.</p>
+  <p class="gmage"><b>18+</b> Это не казино: денег выиграть нельзя. Игры на удачу не для несовершеннолетних. Если игра перестала быть в радость, сделай перерыв.</p>
   <button class="btn cwide" data-fgx="1">Назад</button></div>`;
 }
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#tab-fair [data-fgx]'))tab(fgFrom==='battles'?'battles':'games')});
@@ -3706,6 +3706,15 @@ document.addEventListener('click',e=>{
   const a=e.target.closest&&e.target.closest('[data-vit]');if(a)return vitSheet(+a.dataset.vit);
   const x=e.target.closest&&e.target.closest('[data-vitx]');if(x){const v=vitKeep();v.splice(+x.dataset.vitx,1);S.vit=v;save();sfx('tap');try{renderProf()}catch(er){}try{lbPush(true)}catch(er){}}
 });
+
+// Предупреждение «это не казино»: показывается один раз при первом запуске
+(function(){
+  const show=()=>{if(S.disc||document.getElementById('discgate'))return;const el=document.createElement('div');el.id='discgate';
+    el.innerHTML=`<div class="dgc"><div class="dgi">⚠️</div><h2>Это не казино</h2><ul><li>Игра развлекательная. Здесь нет ставок на деньги и нельзя выиграть деньги.</li><li>Монеты, ники и награды виртуальные: их нельзя вывести или обменять на деньги.</li><li>⭐ покупают только внутриигровые возможности, а не шанс на выигрыш.</li><li>Юзернеймы из рулетки не гарантированы: доступность ника игра не проверяет.</li><li>Игра для взрослых, 18+. Играй в меру.</li></ul><button class="dgb" id="dg-ok">Понятно, мне 18+</button></div>`;
+    document.body.appendChild(el);
+    el.onclick=e=>{if(e.target.closest('#dg-ok')){try{sfx('tap')}catch(x){}S.disc=Date.now();save();el.remove()}};};
+  setTimeout(show,700);
+})();
 
 // Обязательная подписка на канал @NameRolly (проверка через бота; если проверка недоступна — игру не блокируем)
 (function(){
