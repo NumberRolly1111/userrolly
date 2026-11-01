@@ -128,7 +128,7 @@ async function tgSend(env, uid, text) {
   try {
     const r = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: uid, text, reply_markup: { inline_keyboard: [[{ text: '🎮 Открыть игру', url: env.APP_LINK || 'https://t.me/NameRolly_Bot' }]] } }),
+      body: JSON.stringify({ chat_id: uid, text, reply_markup: { inline_keyboard: [[{ text: '🎮 Открыть игру', url: env.APP_LINK || 'https://t.me/NumberRollyBot' }]] } }),
     });
     if (r.status === 403 || r.status === 400) {   // бот заблокирован или чат не начат: больше не пишем, пока игрок сам не включит заново
       await env.DB.prepare('UPDATE ntf SET mask=0, bad=? WHERE uid=?').bind(Date.now(), uid).run();
@@ -627,7 +627,7 @@ async function tgHook(req, env, json) {
   }
   return json({ ok: true });
 }
-const gameBtn = (env) => (payUrl(env) ? { text: '▶️ Играть', web_app: { url: payUrl(env) } } : { text: '▶️ Играть', url: env.APP_LINK || 'https://t.me/NameRolly_Bot' });
+const gameBtn = (env) => (payUrl(env) ? { text: '▶️ Играть', web_app: { url: payUrl(env) } } : { text: '▶️ Играть', url: env.APP_LINK || 'https://t.me/NumberRollyBot' });
 
 // Запрещённые слова чата. Проверка идёт по корням, буквы-двойники (латиница вместо кириллицы) и разделители убираются.
 // Свои слова можно добавить секретом CHAT_BAD (через запятую), без правки кода.
@@ -837,7 +837,7 @@ async function handle(req, env) {
     }
 
     if (url.pathname === '/sub' && req.method === 'GET') {   // обязательная подписка на канал: бот должен быть админом канала
-      const ch = env.SUB_CHANNEL || '@NameRollyNews';
+      const ch = env.SUB_CHANNEL || '@NameRolly';
       if (!env.BOT_TOKEN) return json({ ok: true, skip: 1 });
       try {
         const r = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/getChatMember`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: ch, user_id: uid }) });
