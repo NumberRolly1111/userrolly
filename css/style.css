@@ -1,4 +1,4 @@
-:root{--bg:#0D0B1A;--paper:#171430;--tile:#241F4A;--fg:#F2EFFF;--dark:#0D0B1A;--mute:#A29CD6;--line:#4B4399;--sh:#2A2468;--blue:#5B6BFF;--tc:#9AA5DB;--head:'Unbounded',system-ui,sans-serif;--body:'Onest',system-ui,sans-serif;--bw:2.5px}
+:root{--bg:#0D0B1A;--paper:#171430;--tile:#241F4A;--fg:#F2EFFF;--dark:#0D0B1A;--mute:#A29CD6;--line:#4B4399;--sh:#2A2468;--blue:#5B6BFF;--tc:#9AA5DB;--head:'Inter',system-ui,sans-serif;--body:'Inter',system-ui,sans-serif;--bw:2.5px}
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
 body{min-height:100dvh;background:radial-gradient(var(--dot,#201C42) 1.3px,transparent 1.4px) 0 0/22px 22px,radial-gradient(90% 38% at 50% 0,var(--glow,#2a2273) 0,transparent 70%),var(--bg);color:var(--fg);font:16px/1.4 var(--body);padding:var(--top,env(safe-area-inset-top)) 0 calc(68px + env(safe-area-inset-bottom))}
 .app{max-width:480px;margin:0 auto;padding:16px}
@@ -1137,7 +1137,7 @@ details.taxl>small{display:block;color:var(--mute);font-size:12px;line-height:1.
 
 /* ---- Магазин за звёзды ---- */
 .stbal{display:flex;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(135deg,#2b2370,#4b2f8f);border-color:#7c6bff}
-.stbal b{display:block;font:800 26px 'Unbounded',system-ui,sans-serif;color:#ffe08a}
+.stbal b{display:block;font:800 26px var(--head);color:#ffe08a}
 .stbal small{color:#c9c2f5;max-width:150px;text-align:right}
 .stup{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px}
 .stup .btn{flex:1 1 56px;min-width:56px}
@@ -1146,7 +1146,7 @@ details.taxl>small{display:block;color:var(--mute);font-size:12px;line-height:1.
 .stvip{border-color:#ffc933;background:linear-gradient(135deg,#3a2f12,#2a2150)}
 .stvip b{color:#ffd34e}
 .stperk{margin:8px 0;padding-left:18px;color:#d8d3ff;font-size:13px;line-height:1.55}
-.stprice{font:800 24px 'Unbounded',system-ui,sans-serif;color:#ffe08a;text-align:center;margin:10px 0}
+.stprice{font:800 24px var(--head);color:#ffe08a;text-align:center;margin:10px 0}
 .vipb{display:inline-block;padding:2px 8px;border-radius:99px;background:linear-gradient(135deg,#ffd34e,#ff9f2e);color:#2a1a00;font:800 11px system-ui,sans-serif;margin-right:4px}
 
 /* налог: плашка всегда раскрыта */
@@ -1169,7 +1169,7 @@ details.taxl>small{display:block;color:var(--mute);font-size:12px;line-height:1.
 .vipbig{border-color:#ffc933;background:linear-gradient(145deg,#3a2f12,#2a2150 70%);padding:18px}
 .vipbig .vbh{display:flex;align-items:center;gap:14px}
 .vipbig .vbi{font-size:44px;line-height:1}
-.vipbig .vbh b{display:block;font:800 20px 'Unbounded',system-ui,sans-serif;color:#ffd34e}
+.vipbig .vbh b{display:block;font:800 20px var(--head);color:#ffd34e}
 .vipbig .vbh small{color:#d8d3ff;font-size:13px}
 .vipbig .stperk{font-size:14px;line-height:1.6;margin:14px 0 16px}
 .vipbig .btn{font-size:16px;padding:14px}
@@ -1180,7 +1180,7 @@ section .usheet .sbox{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 .vipc{padding:14px 14px 16px;border-color:#6b5420;background:linear-gradient(180deg,#1d1a2c,#14121f)}
 .vipc .vch{display:flex;align-items:center;gap:12px;margin-bottom:12px}
 .vipc .vci{flex:none;width:44px;height:44px;border-radius:12px;background:#3a2f12;display:grid;place-items:center;font-size:24px}
-.vipc .vch b{display:block;font:800 17px 'Unbounded',system-ui,sans-serif;color:#fff}
+.vipc .vch b{display:block;font:800 17px var(--head);color:#fff}
 .vipc .vch small{color:var(--mute);font-size:12px;line-height:1.3}
 .vipl{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .vipl li{position:relative;padding-left:22px}
@@ -1196,9 +1196,9 @@ section .usheet .sbox{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 .stup .btn:nth-child(4){grid-column:2 / span 2}
 .stup .btn:nth-child(5){grid-column:4 / span 2}
 /* VIP: кнопка поменьше */
-.vbuy{display:flex;align-items:center;justify-content:center;gap:10px;margin:14px auto 0;padding:9px 22px;border-radius:99px;border:0;background:linear-gradient(180deg,#ffd34e,#ff9f2e);color:#2a1a00;cursor:pointer;font:800 15px 'Unbounded',system-ui,sans-serif}
+.vbuy{display:flex;align-items:center;justify-content:center;gap:10px;margin:14px auto 0;padding:9px 22px;border-radius:99px;border:0;background:linear-gradient(180deg,#ffd34e,#ff9f2e);color:#2a1a00;cursor:pointer;font:800 15px var(--head)}
 .vbuy small{font:600 12px system-ui,sans-serif;color:#5a3a00}
-.vbuy b{font:800 15px 'Unbounded',system-ui,sans-serif}
+.vbuy b{font:800 15px var(--head)}
 
 .vipc .vch{align-items:center}
 .vipc .vch>div{flex:1;min-width:0}
@@ -1206,12 +1206,12 @@ section .usheet .sbox{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 .vipc .vok{flex:none;color:#7CF29B;font:800 20px system-ui}
 /* пополнение баланса */
 .stbh{display:flex;align-items:center;justify-content:space-between;margin:22px 0 10px}
-.stbh b{display:flex;align-items:center;gap:8px;font:800 16px 'Unbounded',system-ui,sans-serif}
+.stbh b{display:flex;align-items:center;gap:8px;font:800 16px var(--head)}
 .stbh b i{width:14px;height:4px;border-radius:2px;background:#ff8a3d;box-shadow:0 0 0 0 #ff8a3d}
 .stbh span{color:var(--mute);font-size:12px}
 .stgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .stp{position:relative;display:grid;gap:6px;justify-items:center;padding:22px 8px 18px;border-radius:18px;border:1px solid var(--line);background:var(--paper);color:var(--fg);cursor:pointer}
-.stp b{font:800 20px 'Unbounded',system-ui,sans-serif}
+.stp b{font:800 20px var(--head)}
 .stp small{color:var(--mute);font-size:12px}
 .stp.wide{grid-column:1 / -1}
 .stp.hot{border-color:#ffb62e;background:linear-gradient(180deg,#2a2112,var(--paper))}
@@ -1304,7 +1304,7 @@ header{flex-wrap:nowrap;gap:8px}
 /* VIP: красивые карточки преимуществ */
 .vipcrown{display:grid;justify-items:center;gap:2px;text-align:center;padding:16px 12px;margin:4px 0 12px;border-radius:18px;border:1px solid #ffc933;background:radial-gradient(120% 140% at 50% 0,#4a3a10,#2a2150 75%);box-shadow:0 0 28px rgba(255,201,51,.18)}
 .vipcrown span{font-size:44px;line-height:1;filter:drop-shadow(0 4px 10px rgba(255,201,51,.5))}
-.vipcrown b{font:800 16px 'Unbounded',system-ui,sans-serif;color:#ffd34e;margin-top:4px}
+.vipcrown b{font:800 16px var(--head);color:#ffd34e;margin-top:4px}
 .vipcrown small{color:#d8d3ff;font-size:12px}
 .vperks{display:grid;gap:8px;margin-bottom:12px}
 .vpk{display:flex;gap:12px;align-items:center;padding:11px 12px;border-radius:14px;border:1px solid var(--line);background:linear-gradient(135deg,var(--paper),#1c1a33)}

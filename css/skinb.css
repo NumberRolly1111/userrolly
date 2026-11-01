@@ -1,0 +1,23 @@
+/* Стиль «Синий постер»: яркий ультрамарин, белый жирный шрифт, тёмно-синие карточки. Действует на теме по умолчанию (без data-theme). */
+:root{--head:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;--body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif}
+html:not([data-theme]){--bg:#2438FF;--paper:#0A0F3D;--tile:#17216E;--fg:#FFFFFF;--dark:#0A0F3D;--mute:#C9D0FF;--line:#5C6CFF;--sh:#0A0F3D;--blue:#7C8BFF;--dot:#2C41FF;--glow:#4A5DFF}
+html:not([data-theme]) body{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 600'%3E%3Ctext x='300' y='520' font-family='Arial Black,Arial,Helvetica,sans-serif' font-weight='900' font-size='640' text-anchor='middle' fill='%23ffffff' fill-opacity='.07'%3E@%3C/text%3E%3C/svg%3E") no-repeat right -190px top -90px/620px 620px fixed,linear-gradient(180deg,#2A3FFF 0,#2236F0 60%,#1C2DD0 100%) fixed;background-color:#2438FF}
+html:not([data-theme]) h1,html:not([data-theme]) h2,html:not([data-theme]) h3,html:not([data-theme]) .ptitle,html:not([data-theme]) .ch3{letter-spacing:-.02em;font-weight:900}
+html.v2:not([data-theme]) .pcard,html.v2:not([data-theme]) .stage,html.v2:not([data-theme]) .item,html.v2:not([data-theme]) .seg,html.v2:not([data-theme]) .sbox,html.v2:not([data-theme]) .mlot,html.v2:not([data-theme]) .pill{background:var(--paper);border:0;box-shadow:0 14px 30px -16px rgba(5,8,50,.85)}
+html.v2:not([data-theme]) .pcard{border-radius:22px}
+html.v2:not([data-theme]) .stage{border-radius:30px}
+html.v2:not([data-theme]) .sbox{border-radius:28px 28px 0 0}
+html.v2:not([data-theme]) .seg [aria-pressed=true]{background:#fff;color:#2438FF;box-shadow:none}
+html.v2:not([data-theme]) .btn{background:var(--tile);border:0;box-shadow:none;border-radius:99px}
+html.v2:not([data-theme]) nav{background:rgba(10,15,61,.92);border-top:0}
+html.v2:not([data-theme]) nav [aria-selected=true]{background:#fff;color:#2438FF}
+html.v2:not([data-theme]) nav [aria-selected=true] svg{stroke:#2438FF}
+html.v2:not([data-theme]) .cell{background:#17216E;border:0;box-shadow:none}
+html.v2:not([data-theme]) .tag{background:rgba(255,255,255,.1)}
+html.v2:not([data-theme]) .sbg{background:rgba(5,8,50,.7)}
+html[data-theme=night]{--bg:#0D0B1A;--paper:#171430;--tile:#241F4A;--fg:#F2EFFF;--dark:#0D0B1A;--mute:#A29CD6;--line:#4B4399;--sh:#2A2468;--blue:#5B6BFF;--dot:#201C42;--glow:#2A2468}
+html.v2:not([data-theme]) .btn.main{background:linear-gradient(180deg,color-mix(in srgb,var(--tc) 100%,#fff 22%),var(--tc));color:var(--dark);box-shadow:0 8px 22px -10px rgba(5,8,50,.8)}
+html.v2:not([data-theme]) .btn:disabled{opacity:.55}
+html:not([data-theme]) #discgate{background:rgba(20,30,200,.92)}
+html:not([data-theme]) #discgate .dgc{background:#0A0F3D;border:0}
+html:not([data-theme]) #discgate ul{color:#C9D0FF}
