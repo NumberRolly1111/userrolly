@@ -54,7 +54,7 @@ Telegram Mini App: рулетка юзернеймов с редкостями, 
 1. `cd rating-worker && npx wrangler d1 create nr-rating` — скопируй `database_id` в `wrangler.toml`.
 2. `npx wrangler d1 execute nr-rating --remote --file=schema.sql`
 3. `npx wrangler secret put BOT_TOKEN` — токен твоего бота (из @BotFather). Нужен, чтобы проверять подпись Telegram.
-   Для страницы `/admin` (выдача монет по ID): `npx wrangler secret put ADMIN_KEY` — придумай пароль. Страница: https://site.wsmp.workers.dev/admin. Владелец игры в Telegram заходит без пароля.
+   Для страницы `/admin` (выдача монет по ID): `npx wrangler secret put ADMIN_KEY` — придумай пароль. Страница: https://user.w-smp.in/admin. Владелец игры в Telegram заходит без пароля.
 4. `npx wrangler deploy` — получишь адрес вида `https://nr-rating.….workers.dev`.
 5. Впиши этот адрес в `js/app.js` в константу `API` и подними `?v=` в `index.html`.
 

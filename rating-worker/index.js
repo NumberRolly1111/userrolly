@@ -613,7 +613,7 @@ async function tgHook(req, env, json) {
     return json({ ok: true });
   }
   if (m && typeof m.text === 'string' && m.chat && m.chat.type === 'private' && /^\/(paysupport|terms|privacy)(@\w+)?(\s|$)/.test(m.text)) {
-    const c = m.text.match(/^\/(\w+)/)[1], site = String(env.SITE_URL || 'https://site.wsmp.workers.dev').replace(/\/+$/, '');
+    const c = m.text.match(/^\/(\w+)/)[1], site = String(env.SITE_URL || 'https://user.w-smp.in').replace(/\/+$/, '');
     const txt = c === 'paysupport'
       ? '💬 Поддержка по платежам\n\nЕсли оплатил ⭐, но товар не пришёл, или платёж прошёл дважды, напиши в поддержку: @ddwwks. Укажи свой ID из профиля игры и время платежа. Мы ответим как можно скорее, а за недоставленный товар вернём ⭐.\n\nЗвёзды тратятся только внутри игры, вывода нет. Это не казино: награды виртуальные и на деньги не обмениваются.'
       : c === 'terms'
