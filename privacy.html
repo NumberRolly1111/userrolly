@@ -9,30 +9,51 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Onest:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261102zzzn"><link rel="stylesheet" href="css/v2.css?v=20261102zzzn">
+<link rel="stylesheet" href="css/style.css?v=20261102zzzo"><link rel="stylesheet" href="css/v2.css?v=20261102zzzo">
 <style>
-.lgp{padding-bottom:40px}
-.lgp header{justify-content:flex-start;gap:12px;flex-wrap:nowrap}
-.lgp h1{font-size:15px;line-height:1.25}
-.lgp .btn.sm{flex:none;padding:8px 12px;text-decoration:none;color:var(--fg);display:inline-block}
+.lgp{padding-bottom:44px}
+.lgp .top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.lgp .back{flex:none;display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:14px;color:var(--fg);text-decoration:none;font-weight:700;font-size:14px;background:var(--glass),var(--tile);border:1px solid var(--ring);box-shadow:0 6px 16px -8px rgba(0,0,0,.6)}
+.lgp .back:active{transform:scale(.97)}
+.lgp .brandm{font:800 13px var(--head);letter-spacing:-.02em;color:var(--mute)}
+.hero{position:relative;overflow:hidden;text-align:center;padding:26px 18px 20px;margin-bottom:14px;border-radius:26px;border:1px solid var(--ring);background:radial-gradient(120% 90% at 50% -10%,color-mix(in srgb,var(--blue) 42%,transparent),transparent 70%),var(--glass),var(--paper);box-shadow:0 24px 60px -26px color-mix(in srgb,var(--blue) 55%,#000),0 1px 0 rgba(255,255,255,.08) inset;animation:lgup .5s both}
+.hero .badge{width:72px;height:72px;margin:0 auto 12px;border-radius:22px;display:grid;place-items:center;font-size:34px;background:linear-gradient(145deg,#5B6BFF,#9B5BFF);box-shadow:0 0 0 3px #4B4399,0 14px 34px rgba(91,107,255,.45)}
+.hero h1{font:800 20px/1.2 var(--head);letter-spacing:-.02em;margin-bottom:8px}
+.hero p{color:var(--mute);font-size:14px;line-height:1.5;max-width:330px;margin:0 auto 12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.chip{padding:5px 11px;border-radius:999px;font-size:12px;font-weight:700;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);border:1px solid color-mix(in srgb,var(--c) 40%,transparent)}
+.lg{animation:lgup .5s var(--d,0ms) both}
+.lgh{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.lgh h3{margin:0;font:800 14px/1.3 var(--head)}
+.lgi{flex:none;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;font-size:18px;background:rgba(255,255,255,.07);border:1px solid var(--ring)}
 .lg p,.lg li{color:var(--mute);font-size:14px;line-height:1.55}
 .lg p+p{margin-top:8px}
 .lg ul{margin:0;padding-left:18px}
-.lg li{margin-bottom:6px}
+.lg li{margin-bottom:6px}.lg li:last-child{margin-bottom:0}
 .lg b{color:var(--fg)}
 .lg a,.lgp .foot a{color:#8C9BFF}
-.lg.warn{border-color:var(--blue)}
-.lgp .foot{margin:6px 4px 0;font-size:12px;color:var(--mute);text-align:center;line-height:1.6}
+.lg.warn{border-color:color-mix(in srgb,#FFB62E 55%,transparent);background:linear-gradient(180deg,rgba(255,182,46,.10),rgba(255,182,46,.02)),var(--paper)}
+.lgp .foot{margin:8px 4px 0;font-size:12px;color:var(--mute);text-align:center;line-height:1.7}
+.lgp .alt{display:block;margin:14px 0 0;padding:13px;text-align:center;border-radius:16px;text-decoration:none;font-weight:700;color:var(--fg);background:var(--glass),var(--tile);border:1px solid var(--ring)}
+@keyframes lgup{from{opacity:0;transform:translateY(10px)}}
+@media (prefers-reduced-motion:reduce){.hero,.lg{animation:none}}
 </style>
 </head>
 <body>
 <div class="app lgp">
-  <header>
-    <a class="btn sm" href="index.html">‹ В игру</a>
-    <h1>Политика конфиденциальности</h1>
-  </header>
-<div class="pcard lg"><h3>Кто мы</h3><p>Нейм-рулетка — Telegram Mini App и бот @NumberRollyBot. Связь по любым вопросам, в том числе по персональным данным: <a href="https://t.me/ddwwks">@ddwwks</a>.</p></div><div class="pcard lg"><h3>Какие данные мы получаем</h3><ul><li>Данные профиля Telegram, которые передаёт сам Telegram при открытии приложения: ID, имя и @username. Они нужны для входа, рейтинга, рынка, кланов и реферальной системы.</li><li>Игровой прогресс: монеты, коллекция ников, достижения, настройки, баланс ⭐, история покупок.</li><li>Сообщения, которые ты сам отправляешь в игровые чаты и поддержку.</li><li>Технические данные запросов (время, тип запроса) для защиты от злоупотреблений.</li></ul></div><div class="pcard lg"><h3>Что мы не собираем</h3><p>Номер телефона, адрес, данные банковских карт и документы мы не запрашиваем и не храним. Оплата проходит внутри Telegram звёздами ⭐, платёжные данные обрабатывает Telegram.</p></div><div class="pcard lg"><h3>Где хранятся данные</h3><p>Прогресс хранится на твоём устройстве (localStorage), в облаке Telegram (CloudStorage) и на нашем сервере (Cloudflare Workers и база D1) для рейтинга, рынка и платежей.</p></div><div class="pcard lg"><h3>Как мы используем данные</h3><p>Только чтобы игра работала: вход, сохранение прогресса, рейтинг, рынок и аукционы, начисление покупок и возвратов, защита от обмана и спама, уведомления бота о событиях игры. Мы не продаём данные и не передаём их рекламодателям. Рекламные плашки в игре не получают твои данные.</p></div><div class="pcard lg"><h3>Хранение и удаление</h3><p>Данные хранятся, пока ты играешь. Чтобы удалить аккаунт и связанные данные, напиши @ddwwks со своего Telegram-аккаунта: мы удалим их, кроме записей о платежах, которые нужно сохранить для разрешения споров.</p></div><div class="pcard lg"><h3>Дети</h3><p>Игра предназначена для лиц 18 лет и старше.</p></div><div class="pcard lg"><h3>Изменения</h3><p>При существенных изменениях мы обновим дату редакции на этой странице.</p></div>
-  <p class="foot">Редакция от 1 ноября 2026 · <a href="terms.html">Условия использования</a> · Поддержка: <a href="https://t.me/ddwwks">@ddwwks</a></p>
+  <div class="top"><a class="back" href="index.html" id="bk">‹ В игру</a><span class="brandm">Нейм-рулетка</span></div>
+  <div class="hero"><div class="badge">🔒</div><h1>Политика конфиденциальности</h1><p>Какие данные нужны игре, зачем и как их удалить.</p><div class="chips"><span class="chip" style="--c:#36E07C">Без телефона и карт</span><span class="chip" style="--c:#6E7BFF">Данные не продаём</span><span class="chip" style="--c:#FFB62E">Удаление по запросу</span></div></div>
+<section class="pcard lg" style="--d:0ms"><div class="lgh"><span class="lgi">👤</span><h3>Кто мы</h3></div><p>Нейм-рулетка — Telegram Mini App и бот @NumberRollyBot. Связь по любым вопросам, в том числе по персональным данным: <a href="https://t.me/ddwwks">@ddwwks</a>.</p></section>
+<section class="pcard lg" style="--d:45ms"><div class="lgh"><span class="lgi">📥</span><h3>Какие данные мы получаем</h3></div><ul><li>Данные профиля Telegram, которые передаёт сам Telegram при открытии приложения: ID, имя и @username. Они нужны для входа, рейтинга, рынка, кланов и реферальной системы.</li><li>Игровой прогресс: монеты, коллекция ников, достижения, настройки, баланс ⭐, история покупок.</li><li>Сообщения, которые ты сам отправляешь в игровые чаты и поддержку.</li><li>Технические данные запросов (время, тип запроса) для защиты от злоупотреблений.</li></ul></section>
+<section class="pcard lg" style="--d:90ms"><div class="lgh"><span class="lgi">🚫</span><h3>Что мы не собираем</h3></div><p>Номер телефона, адрес, данные банковских карт и документы мы не запрашиваем и не храним. Оплата проходит внутри Telegram звёздами ⭐, платёжные данные обрабатывает Telegram.</p></section>
+<section class="pcard lg" style="--d:135ms"><div class="lgh"><span class="lgi">🗄️</span><h3>Где хранятся данные</h3></div><p>Прогресс хранится на твоём устройстве (localStorage), в облаке Telegram (CloudStorage) и на нашем сервере (Cloudflare Workers и база D1) для рейтинга, рынка и платежей.</p></section>
+<section class="pcard lg" style="--d:180ms"><div class="lgh"><span class="lgi">⚙️</span><h3>Как мы используем данные</h3></div><p>Только чтобы игра работала: вход, сохранение прогресса, рейтинг, рынок и аукционы, начисление покупок и возвратов, защита от обмана и спама, уведомления бота о событиях игры. Мы не продаём данные и не передаём их рекламодателям. Рекламные плашки в игре не получают твои данные.</p></section>
+<section class="pcard lg" style="--d:225ms"><div class="lgh"><span class="lgi">🗑️</span><h3>Хранение и удаление</h3></div><p>Данные хранятся, пока ты играешь. Чтобы удалить аккаунт и связанные данные, напиши @ddwwks со своего Telegram-аккаунта: мы удалим их, кроме записей о платежах, которые нужно сохранить для разрешения споров.</p></section>
+<section class="pcard lg" style="--d:270ms"><div class="lgh"><span class="lgi">🔞</span><h3>Дети</h3></div><p>Игра предназначена для лиц 18 лет и старше.</p></section>
+<section class="pcard lg" style="--d:315ms"><div class="lgh"><span class="lgi">📝</span><h3>Изменения</h3></div><p>При существенных изменениях мы обновим дату редакции на этой странице.</p></section>
+  <a class="alt" href="terms.html">Условия использования ›</a>
+  <p class="foot">Редакция от 1 ноября 2026 · Поддержка и платежи: <a href="https://t.me/ddwwks">@ddwwks</a></p>
 </div>
+<script>document.getElementById('bk').onclick=function(){try{sessionStorage.setItem('nr_nav','1')}catch(e){}};</script>
 </body>
 </html>

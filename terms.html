@@ -9,30 +9,51 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Onest:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261102zzzn"><link rel="stylesheet" href="css/v2.css?v=20261102zzzn">
+<link rel="stylesheet" href="css/style.css?v=20261102zzzo"><link rel="stylesheet" href="css/v2.css?v=20261102zzzo">
 <style>
-.lgp{padding-bottom:40px}
-.lgp header{justify-content:flex-start;gap:12px;flex-wrap:nowrap}
-.lgp h1{font-size:15px;line-height:1.25}
-.lgp .btn.sm{flex:none;padding:8px 12px;text-decoration:none;color:var(--fg);display:inline-block}
+.lgp{padding-bottom:44px}
+.lgp .top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.lgp .back{flex:none;display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:14px;color:var(--fg);text-decoration:none;font-weight:700;font-size:14px;background:var(--glass),var(--tile);border:1px solid var(--ring);box-shadow:0 6px 16px -8px rgba(0,0,0,.6)}
+.lgp .back:active{transform:scale(.97)}
+.lgp .brandm{font:800 13px var(--head);letter-spacing:-.02em;color:var(--mute)}
+.hero{position:relative;overflow:hidden;text-align:center;padding:26px 18px 20px;margin-bottom:14px;border-radius:26px;border:1px solid var(--ring);background:radial-gradient(120% 90% at 50% -10%,color-mix(in srgb,var(--blue) 42%,transparent),transparent 70%),var(--glass),var(--paper);box-shadow:0 24px 60px -26px color-mix(in srgb,var(--blue) 55%,#000),0 1px 0 rgba(255,255,255,.08) inset;animation:lgup .5s both}
+.hero .badge{width:72px;height:72px;margin:0 auto 12px;border-radius:22px;display:grid;place-items:center;font-size:34px;background:linear-gradient(145deg,#5B6BFF,#9B5BFF);box-shadow:0 0 0 3px #4B4399,0 14px 34px rgba(91,107,255,.45)}
+.hero h1{font:800 20px/1.2 var(--head);letter-spacing:-.02em;margin-bottom:8px}
+.hero p{color:var(--mute);font-size:14px;line-height:1.5;max-width:330px;margin:0 auto 12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.chip{padding:5px 11px;border-radius:999px;font-size:12px;font-weight:700;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);border:1px solid color-mix(in srgb,var(--c) 40%,transparent)}
+.lg{animation:lgup .5s var(--d,0ms) both}
+.lgh{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.lgh h3{margin:0;font:800 14px/1.3 var(--head)}
+.lgi{flex:none;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;font-size:18px;background:rgba(255,255,255,.07);border:1px solid var(--ring)}
 .lg p,.lg li{color:var(--mute);font-size:14px;line-height:1.55}
 .lg p+p{margin-top:8px}
 .lg ul{margin:0;padding-left:18px}
-.lg li{margin-bottom:6px}
+.lg li{margin-bottom:6px}.lg li:last-child{margin-bottom:0}
 .lg b{color:var(--fg)}
 .lg a,.lgp .foot a{color:#8C9BFF}
-.lg.warn{border-color:var(--blue)}
-.lgp .foot{margin:6px 4px 0;font-size:12px;color:var(--mute);text-align:center;line-height:1.6}
+.lg.warn{border-color:color-mix(in srgb,#FFB62E 55%,transparent);background:linear-gradient(180deg,rgba(255,182,46,.10),rgba(255,182,46,.02)),var(--paper)}
+.lgp .foot{margin:8px 4px 0;font-size:12px;color:var(--mute);text-align:center;line-height:1.7}
+.lgp .alt{display:block;margin:14px 0 0;padding:13px;text-align:center;border-radius:16px;text-decoration:none;font-weight:700;color:var(--fg);background:var(--glass),var(--tile);border:1px solid var(--ring)}
+@keyframes lgup{from{opacity:0;transform:translateY(10px)}}
+@media (prefers-reduced-motion:reduce){.hero,.lg{animation:none}}
 </style>
 </head>
 <body>
 <div class="app lgp">
-  <header>
-    <a class="btn sm" href="index.html">‹ В игру</a>
-    <h1>Условия использования</h1>
-  </header>
-<div class="pcard lg warn"><h3>⚠️ Это не казино</h3><p>Нейм-рулетка — развлекательная игра. В ней нет ставок на деньги, <b>нельзя выиграть деньги</b>, а монеты, ники и награды виртуальные и не обмениваются на деньги.</p></div><div class="pcard lg"><h3>1. Кто может играть</h3><p>Игра только для лиц <b>18 лет и старше</b>. Начиная играть, ты подтверждаешь, что тебе есть 18 лет и что игры на удачу с виртуальными предметами разрешены в твоей стране.</p></div><div class="pcard lg"><h3>2. Виртуальные предметы</h3><p>Монеты, энергия, ники в коллекции, титулы и другие предметы существуют только внутри игры. Они не являются деньгами или имуществом, не дают права требовать выплат и не могут быть выведены или обменены на деньги. Мы можем менять баланс и экономику игры.</p></div><div class="pcard lg"><h3>3. Звёзды ⭐ и покупки</h3><ul><li>За ⭐ покупаются внутриигровые товары и возможности, а не шанс выиграть деньги.</li><li>⭐ тратятся только внутри игры, вывода нет.</li><li>Платежи проходят через Telegram Stars. Если товар не пришёл или платёж прошёл дважды, напиши боту <b>/paysupport</b> или в поддержку @ddwwks: мы разберёмся и при необходимости вернём ⭐.</li><li>Если платёж вернули, выданные за него товары списываются обратно.</li></ul></div><div class="pcard lg"><h3>4. Шансы</h3><p>Результат кейсов, рулетки и других игр на удачу определяется случайно. Шансы показаны в игре в разделе «Честная игра». Выпавший ник не гарантирует, что такой юзернейм свободен в Telegram: доступность игра не проверяет.</p></div><div class="pcard lg"><h3>5. Правила поведения</h3><p>Нельзя использовать ошибки игры, автоматизацию, несколько аккаунтов для обхода правил, оскорблять других игроков и спамить. За нарушения мы можем ограничить доступ и обнулить полученное нечестным путём.</p></div><div class="pcard lg"><h3>6. Ответственность</h3><p>Игра предоставляется «как есть». Мы стараемся, чтобы она работала без сбоев, но не гарантируем это. Если игра перестала быть в радость, сделай перерыв.</p></div><div class="pcard lg"><h3>7. Реклама и канал</h3><p>Реклама и вопросы: <a href="https://t.me/ddwwks">@ddwwks</a>. Канал с новостями: <a href="https://t.me/NameRolly">@NameRolly</a>.</p></div>
-  <p class="foot">Редакция от 1 ноября 2026 · <a href="privacy.html">Политика конфиденциальности</a> · Поддержка: <a href="https://t.me/ddwwks">@ddwwks</a></p>
+  <div class="top"><a class="back" href="index.html" id="bk">‹ В игру</a><span class="brandm">Нейм-рулетка</span></div>
+  <div class="hero"><div class="badge">📄</div><h1>Условия использования</h1><p>Короткие правила игры и покупок. Читай спокойно, здесь всё по делу.</p><div class="chips"><span class="chip" style="--c:#FFB62E">18+</span><span class="chip" style="--c:#FF6B7A">Не казино</span><span class="chip" style="--c:#36E07C">Деньги не выводятся</span></div></div>
+<section class="pcard lg warn" style="--d:0ms"><div class="lgh"><span class="lgi">⚠️</span><h3>Это не казино</h3></div><p>Нейм-рулетка — развлекательная игра. В ней нет ставок на деньги, <b>нельзя выиграть деньги</b>, а монеты, ники и награды виртуальные и не обмениваются на деньги.</p></section>
+<section class="pcard lg" style="--d:45ms"><div class="lgh"><span class="lgi">🔞</span><h3>1. Кто может играть</h3></div><p>Игра только для лиц <b>18 лет и старше</b>. Начиная играть, ты подтверждаешь, что тебе есть 18 лет и что игры на удачу с виртуальными предметами разрешены в твоей стране.</p></section>
+<section class="pcard lg" style="--d:90ms"><div class="lgh"><span class="lgi">🪙</span><h3>2. Виртуальные предметы</h3></div><p>Монеты, энергия, ники в коллекции, титулы и другие предметы существуют только внутри игры. Они не являются деньгами или имуществом, не дают права требовать выплат и не могут быть выведены или обменены на деньги. Мы можем менять баланс и экономику игры.</p></section>
+<section class="pcard lg" style="--d:135ms"><div class="lgh"><span class="lgi">⭐</span><h3>3. Звёзды и покупки</h3></div><ul><li>За ⭐ покупаются внутриигровые товары и возможности, а не шанс выиграть деньги.</li><li>⭐ тратятся только внутри игры, вывода нет.</li><li>Платежи проходят через Telegram Stars. Если товар не пришёл или платёж прошёл дважды, напиши боту <b>/paysupport</b> или в поддержку @ddwwks: мы разберёмся и при необходимости вернём ⭐.</li><li>Если платёж вернули, выданные за него товары списываются обратно.</li></ul></section>
+<section class="pcard lg" style="--d:180ms"><div class="lgh"><span class="lgi">🎲</span><h3>4. Шансы</h3></div><p>Результат кейсов, рулетки и других игр на удачу определяется случайно. Шансы показаны в игре в разделе «Честная игра». Выпавший ник не гарантирует, что такой юзернейм свободен в Telegram: доступность игра не проверяет.</p></section>
+<section class="pcard lg" style="--d:225ms"><div class="lgh"><span class="lgi">🤝</span><h3>5. Правила поведения</h3></div><p>Нельзя использовать ошибки игры, автоматизацию, несколько аккаунтов для обхода правил, оскорблять других игроков и спамить. За нарушения мы можем ограничить доступ и обнулить полученное нечестным путём.</p></section>
+<section class="pcard lg" style="--d:270ms"><div class="lgh"><span class="lgi">🛡️</span><h3>6. Ответственность</h3></div><p>Игра предоставляется «как есть». Мы стараемся, чтобы она работала без сбоев, но не гарантируем это. Если игра перестала быть в радость, сделай перерыв.</p></section>
+<section class="pcard lg" style="--d:315ms"><div class="lgh"><span class="lgi">📣</span><h3>7. Реклама и канал</h3></div><p>Реклама и вопросы: <a href="https://t.me/ddwwks">@ddwwks</a>. Канал с новостями: <a href="https://t.me/NameRolly">@NameRolly</a>.</p></section>
+  <a class="alt" href="privacy.html">Политика конфиденциальности ›</a>
+  <p class="foot">Редакция от 1 ноября 2026 · Поддержка и платежи: <a href="https://t.me/ddwwks">@ddwwks</a></p>
 </div>
+<script>document.getElementById('bk').onclick=function(){try{sessionStorage.setItem('nr_nav','1')}catch(e){}};</script>
 </body>
 </html>
