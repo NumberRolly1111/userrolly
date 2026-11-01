@@ -978,7 +978,7 @@ function render(){
   if(!sr.firstChild)sr.innerHTML='<button aria-pressed="false" data-s="free">⚡ Бесплатно</button><button aria-pressed="false" data-s="coin">🪙 За монеты</button>';
   [...sr.children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===S.src));seg.hidden=free;$('#en').hidden=!free;updEn();
   if(!seg.firstChild)seg.innerHTML=MODES.map((x,i)=>`<button aria-pressed="false" data-m="${i}">${x.l}<small>${fmt(x.cost)} 🪙</small></button>`).join('');
-  {const cl=vipOn()?[1,3,5]:[1,3],ck=cl.join();if(cn.dataset.k!==ck){cn.dataset.k=ck;cn.innerHTML=cl.map(n=>`<button aria-pressed="false" data-n="${n}">×${n}<small>${n===1?'один ник':n===3?'три ника':'👑 VIP бесплатно'}</small></button>`).join('')}}
+  {const cl=vipOn()?[1,3,5]:[1,3],ck=cl.join();if(cn.dataset.k!==ck){cn.dataset.k=ck;cn.innerHTML=cl.map(n=>`<button aria-pressed="false" data-n="${n}">×${n}<small>${n===1?'один ник':n===3?'три ника':'👑 VIP'}</small></button>`).join('')}}
   [...seg.children].forEach((b,i)=>b.setAttribute('aria-pressed',i===mode));
   [...cn.children].forEach(b=>b.setAttribute('aria-pressed',+b.dataset.n===count));
   const sp=$('#spin');sp.textContent=`Крутить${count>1?' ×'+count:''} · ${free?count+' ⚡':count===5?'VIP · без лимита':fmt(m.cost*count)+' 🪙'}`;sp.disabled=busy;
