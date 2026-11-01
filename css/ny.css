@@ -1,0 +1,22 @@
+/* Новогодняя тема. Включается классом html.ny (см. js/ny.js и скрипт в <head>) */
+html.ny{--bg:#07111F;--paper:#0F1D36;--tile:#17294C;--fg:#F4F8FF;--dark:#07111F;--mute:#9FB8DC;--line:#2F5DA3;--sh:#0A1A33;--blue:#4DA3FF;--dot:#12233F;--glow:#1E4A86;--tc:#8CC4FF}
+html.ny body{background:radial-gradient(120% 50% at 50% -8%,rgba(77,163,255,.30) 0,transparent 62%),radial-gradient(70% 40% at 100% 100%,rgba(229,72,77,.16) 0,transparent 70%),radial-gradient(60% 30% at 0 100%,rgba(255,200,87,.10) 0,transparent 70%),var(--bg)}
+html.ny h1::before{content:'🎄 '}
+html.ny .pcard,html.ny .stage,html.ny .item,html.ny .sbox,html.ny .mlot{box-shadow:0 10px 30px -12px var(--sh),0 1px 0 rgba(255,255,255,.07) inset,0 3px 0 -1px rgba(255,255,255,.16) inset}
+/* заставка */
+html.ny .bt-logo{background:linear-gradient(145deg,#E5484D,#FFB347);box-shadow:0 0 0 3px #7A2430,0 14px 40px rgba(229,72,77,.5)}
+html.ny .bt-logo span{font-size:0}
+html.ny .bt-logo span::before{content:'🎄';font-size:46px;line-height:1}
+html.ny .bt-sub{font-size:0}
+html.ny .bt-sub::before{content:'С Новым годом!';font-size:13px}
+/* гирлянда */
+#nygl{position:fixed;left:0;right:0;top:0;height:22px;z-index:60;pointer-events:none;display:flex;justify-content:space-around;align-items:flex-start;padding:0 2px;overflow:hidden}
+#nygl::before{content:"";position:absolute;left:-2%;right:-2%;top:-9px;height:20px;border-bottom:2px solid rgba(255,255,255,.22);border-radius:0 0 50% 50%/0 0 100% 100%}
+#nygl i{position:relative;top:6px;width:9px;height:13px;border-radius:50% 50% 55% 55%;background:var(--c);box-shadow:0 0 10px 2px var(--c);animation:nytw 2.4s ease-in-out infinite;animation-delay:var(--d)}
+#nygl i::before{content:"";position:absolute;left:3px;top:-5px;width:3px;height:6px;background:#5b6b86;border-radius:1px}
+@keyframes nytw{0%,100%{opacity:1}50%{opacity:.35}}
+/* снег */
+#nyfx{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+#nyfx span{position:absolute;top:-6%;color:#fff;opacity:.8;animation:nyfall linear infinite;will-change:transform;text-shadow:0 0 6px rgba(190,220,255,.8)}
+@keyframes nyfall{to{transform:translate3d(var(--dx,20px),112vh,0) rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#nyfx{display:none}#nygl i{animation:none}}
