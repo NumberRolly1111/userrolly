@@ -3411,12 +3411,75 @@ async function notesLoad(){
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='mus-v'){S.musv=+e.target.value;musApply()}});
 document.addEventListener('change',e=>{if(e.target&&e.target.id==='mus-v')save()});
 
+// ---------- Минное поле: 6×6, 6 мин, 18 призов, 12 пустых; 8 открытий; вход платный, призы фиксированы ----------
+var MNP=50000,MN_M=6,MN_TRY=8;
+var MNPZ=[].concat(Array(11).fill({k:'c',v:5000}),Array(3).fill({k:'c',v:12000}),[{k:'c',v:30000},{k:'c',v:120000},{k:'e',v:3},{k:'n'}]);
+var mn={run:false,placed:false,cells:[],tries:0,found:[],over:false,res:''};
+const mnNb=i=>{const r=Math.floor(i/6),c=i%6,o=[];for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){if(!a&&!b)continue;const y=r+a,x=c+b;if(y>=0&&y<6&&x>=0&&x<6)o.push(y*6+x)}return o};
+const mnShuf=a=>{for(let i=a.length-1;i>0;i--){const j=R(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
+function mnReset(){mn={run:false,placed:false,cells:Array.from({length:36},()=>({t:'e',open:false,n:0})),tries:MN_TRY,found:[],over:false,res:''}}
+function mnPlace(first){   // поле раскладывается после первого нажатия: первая клетка никогда не мина
+  const ids=mnShuf([...Array(36).keys()].filter(i=>i!==first)),pz=mnShuf(MNPZ.slice());
+  ids.slice(0,MN_M).forEach(i=>mn.cells[i].t='m');
+  ids.slice(MN_M,MN_M+pz.length).forEach((i,k)=>{mn.cells[i].t='p';mn.cells[i].p=pz[k]});
+  mn.cells.forEach((c,i)=>{c.n=mnNb(i).filter(j=>mn.cells[j].t==='m').length});mn.placed=true;
+}
+function mnGive(p){
+  if(p.k==='c'){S.coins=Math.min(CAP,S.coins+p.v);return {txt:'+'+fmt(p.v)+' 🪙',ic:'🪙',lb:short(p.v)}}
+  if(p.k==='e'){S.en=(+S.en||0)+p.v;try{updEn()}catch(e){}return {txt:'+'+p.v+' ⚡',ic:'⚡',lb:'+'+p.v}}
+  const r=roll({min:2},0);stashAll([{name:r.name,t:r.t,p:r.p}]);return {txt:'ник @'+r.name,ic:'🏷️',lb:'ник'};
+}
+function mnEnd(res){mn.over=true;mn.res=res;mn.cells.forEach(c=>{if(c.t==='m')c.open=true});save();render()}
+function mnOpen(i){
+  if(!mn.run||mn.over||mn.cells[i].open)return;if(!mn.placed)mnPlace(i);
+  const c=mn.cells[i];c.open=true;mn.tries--;
+  if(c.t==='m'){sfx('lose');hap('n','warning');return mnEnd('mine')}
+  if(c.t==='p'){const g=mnGive(c.p);c.g=g;mn.found.push(g.txt);sfx(c.p.k==='n'||c.p.v>=120000?'ach':'coins');hap('n','success');if(c.p.v>=120000||c.p.k==='n'){try{boom('#FFC933',4)}catch(e){}}}
+  else sfx('tap');
+  save();render();
+  if(mn.tries<=0||mn.cells.filter(x=>!x.open&&x.t!=='m').length===0)mnEnd('done');
+}
+function mnStart(){
+  if(S.coins<MNP)return toast('Не хватает монет');
+  if(!limLeft('mn'))return toast('Лимит на сегодня: '+LIM.mn+' из '+LIM.mn+' раундов');
+  limUse('mn');S.coins-=MNP;save();render();mnReset();mn.run=true;sfx('tap');
+}
+function mnSheet(close){
+  let o=document.getElementById('mnsh');
+  if(close){if(o)o.remove();if(mn.run&&!mn.over)mnEnd('left');mn.run=false;return}
+  if(!o){o=document.createElement('div');o.id='mnsh';o.className='usheet';document.body.append(o);
+    o.onclick=e=>{
+      if(e.target.closest('[data-mx]'))return mnSheet(true);
+      if(e.target.closest('#mn-buy')){mnStart();return mnSheet()}
+      if(e.target.closest('#mn-take')){if(mn.run&&!mn.over)mnEnd('take');return mnSheet()}
+      const b=e.target.closest('[data-mi]');if(b){mnOpen(+b.dataset.mi);mnSheet()}
+    }}
+  if(!mn.cells.length)mnReset();
+  const run=mn.run&&!mn.over,poor=S.coins<MNP,left=limLeft('mn');
+  const cell=(c,i)=>{
+    if(!c.open)return `<button class="mnc" data-mi="${i}"${run?'':' disabled'} aria-label="Закрытая клетка"></button>`;
+    if(c.t==='m')return `<span class="mnc op mine">💣</span>`;
+    if(c.t==='p')return `<span class="mnc op pz"><i>${c.g?c.g.ic:'🎁'}</i><small>${c.g?c.g.lb:''}</small>${c.n?`<em>${c.n}</em>`:''}</span>`;
+    return `<span class="mnc op em">${c.n||''}</span>`;
+  };
+  const total=MNPZ.length,cnt={};MNPZ.forEach(p=>{const k=p.k==='c'?fmt(p.v)+' 🪙':p.k==='e'?'+'+p.v+' ⚡':'ник «Редкий+»';cnt[k]=(cnt[k]|0)+1});
+  const msg=mn.over?(mn.res==='mine'?'<div class="mnres lose"><b>Мина!</b><span>Раунд окончен, найденное осталось у тебя</span></div>':`<div class="mnres win"><b>${mn.res==='done'?'Поле пройдено':'Раунд завершён'}</b><span>${mn.found.length?'Найдено: '+mn.found.join(', '):'Призов не найдено'}</span></div>`):'';
+  o.innerHTML=`<div class="sbg" data-mx="1"></div><div class="sbox casebox mnbox"><div class="shead"><b>💣 Минное поле</b><button class="btn sm" data-mx="1">✕</button></div>
+    <p class="cdesc3">Открывай клетки: под ними призы, пустота или мины. Число на пустой клетке показывает, сколько мин рядом. Первая клетка всегда безопасна.</p>
+    <div class="mnbar"><span>Осталось открытий: <b>${run?mn.tries:mn.over?0:MN_TRY}</b></span><span>Найдено: <b>${mn.found.length}</b></span></div>
+    <div class="mngrid${run?'':' idle'}">${mn.cells.map(cell).join('')}</div>${msg}
+    ${run?`<button class="btn cwide" id="mn-take">Забрать найденное и выйти</button>`:`<button class="btn main cwide" id="mn-buy"${poor||!left?' disabled':''}>${!left?'Лимит на сегодня исчерпан':poor?'Не хватает монет':(mn.over?'Играть ещё · ':'Войти · ')+fmt(MNP)+' 🪙'}</button>`}
+    <p class="mnlim">Раундов сегодня: ${left} из ${LIM.mn}</p>
+    <details class="lodds"><summary>Призы и правила</summary><div class="lrw"><span>Клеток</span><b>36</b><small>6 мин · ${total} призов · ${36-6-total} пустых</small></div>${Object.keys(cnt).map(k=>`<div class="lrw"><span>${k}</span><b>${cnt[k]} шт.</b><small></small></div>`).join('')}<small class="sum">Вход ${fmt(MNP)} 🪙 списывается один раз и не зависит от призов. Призы одинаковы для всех и не растут от суммы входа. У тебя ${MN_TRY} открытий. Найденный приз остаётся у тебя, даже если дальше попадётся мина. Призы виртуальные, на деньги не обмениваются. Это не казино.</small></details></div>`;
+}
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#mn-open')){mnReset();mnSheet()}});
+
 // ---------- Раздел «Игры» в бонусах: мини-игры, кейсы, поединки, «Честная игра» ----------
-var LIM={lot:3,gs:8};
-function limGet(){const k=todayK();if(!S.lim||typeof S.lim!=='object'||S.lim.d!==k)S.lim={d:k,lot:0,gs:0};return S.lim}
+var LIM={lot:3,gs:8,mn:5};
+function limGet(){const k=todayK();if(!S.lim||typeof S.lim!=='object'||S.lim.d!==k)S.lim={d:k,lot:0,gs:0,mn:0};return S.lim}
 function limLeft(k){return Math.max(0,LIM[k]-(limGet()[k]|0))}
 function limUse(k){limGet()[k]=(limGet()[k]|0)+1;save()}
-function gmReady(){return (limLeft('lot')>0&&S.coins>=LOTP?1:0)+(limLeft('gs')>0&&S.coins>=GSC?1:0)+(wsLeft()>0?1:0)+(S.btn|0)+(S.rkp>0?1:0)}
+function gmReady(){return (limLeft('mn')>0&&S.coins>=MNP?1:0)+(limLeft('lot')>0&&S.coins>=LOTP?1:0)+(limLeft('gs')>0&&S.coins>=GSC?1:0)+(wsLeft()>0?1:0)+(S.btn|0)+(S.rkp>0?1:0)}
 function gmPlaque(){const n=gmReady();
   return `<button class="gmplq" id="gm-open"><span class="gmi">🎮</span><div><b>Игры: <em>${n?'ждут '+n:'пока нет новых'}</em></b><small>Розыгрыш, дороже или дешевле, найди слова, кейсы, поединки</small></div><span class="gma">›</span></button>`}
 var gmv='main';
@@ -3429,6 +3492,7 @@ function gmHtml(){
   else body=`<h4 class="gmh">Мини-игры</h4><div class="gmg">`+
     card('lot-open','🎟️','Розыгрыш','Найди три одинаковых из девяти',`${limLeft('lot')} из ${LIM.lot} сегодня · ${fmt(LOTP)} 🪙`,'#FFC933')+
     card('gs-open','🔎','Дороже или дешевле','Угадай ник: серия верных — награда',`${limLeft('gs')} из ${LIM.gs} забегов · ${fmt(GSC)} 🪙`,'#27D9BD')+
+    card('mn-open','💣','Минное поле','Открывай клетки: призы и мины',`${limLeft('mn')} из ${LIM.mn} сегодня · ${fmt(MNP)} 🪙`,'#FF5F7A')+
     card('ws-open','🔤','Найди слова','Сетка 10×10, в конце колесо ×1,2–10',`${wsLeft()} из ${WS_DAY} забегов · бесплатно`,'#FF8A3D')+
     `</div><h4 class="gmh">Игры на удачу</h4><div class="gmg">`+
     card('','🧳','Кейсы','Тематические кейсы, шансы открыты',`Открыто: ${fmt(S.casen)}`,'#8B7CFF','data-gm="cases"')+
