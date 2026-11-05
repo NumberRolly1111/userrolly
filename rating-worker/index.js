@@ -1047,8 +1047,17 @@ async function handle(req, env) {
       return json({ ok: true, hidden: n >= 3 ? 1 : 0 });
     }
     if (url.pathname === '/feed' && req.method === 'GET') {
-      const rows = (await env.DB.prepare('SELECT f.name,f.tier,f.ts,p.name AS who,p.hide FROM feed f LEFT JOIN players p ON p.uid=f.uid WHERE f.ts>? ORDER BY f.id DESC LIMIT 14').bind(Date.now() - 86400000).all()).results;
-      return json({ items: rows.map((r) => ({ name: r.name, tier: r.tier, ts: r.ts, who: r.hide ? 'Игрок' : (r.who || 'Игрок') })) });
+      // лента общая для всех: 2 секунды держим готовый ответ в кэше Cloudflare, чтобы частый опрос не нагружал D1
+      const after = Math.max(0, Math.floor(Number(url.searchParams.get('after')) || 0));
+      const ck = new Request('https://feed.cache/v1'), cache = caches.default;
+      let items = null;
+      try { const hit = await cache.match(ck); if (hit) items = await hit.json(); } catch (e) {}
+      if (!items) {
+        const rows = (await env.DB.prepare('SELECT f.id,f.name,f.tier,f.ts,p.name AS who,p.hide FROM feed f LEFT JOIN players p ON p.uid=f.uid WHERE f.ts>? ORDER BY f.id DESC LIMIT 14').bind(Date.now() - 86400000).all()).results;
+        items = rows.map((r) => ({ id: r.id, name: r.name, tier: r.tier, ts: r.ts, who: r.hide ? 'Игрок' : (r.who || 'Игрок') }));
+        try { bg(cache.put(ck, new Response(JSON.stringify(items), { headers: { 'Cache-Control': 'public, max-age=2' } }))); } catch (e) {}
+      }
+      return json({ items: after ? items.filter((x) => x.id > after) : items, last: items.length ? items[0].id : 0 });
     }
     if (url.pathname === '/feed' && req.method === 'POST') {
       let b; try { b = await req.json(); } catch { return json({ error: 'json' }, 400); }
@@ -1057,8 +1066,9 @@ async function handle(req, env) {
       const me = await env.DB.prepare('SELECT 1 AS x FROM players WHERE uid=?').bind(uid).first();
       if (!me) return json({ ok: false });
       const last = await env.DB.prepare('SELECT ts FROM feed WHERE uid=? ORDER BY id DESC LIMIT 1').bind(uid).first();
-      if (last && Date.now() - last.ts < 15000) return json({ ok: false });
+      if (last && Date.now() - last.ts < 4000) return json({ ok: false });
       await env.DB.prepare('INSERT INTO feed(uid,name,tier,ts) VALUES(?,?,?,?)').bind(uid, name, tier, Date.now()).run();
+      try { bg(caches.default.delete(new Request('https://feed.cache/v1'))); } catch (e) {}
       if (Math.random() < 0.05) await env.DB.prepare('DELETE FROM feed WHERE ts<?').bind(Date.now() - 2 * 86400000).run();
       return json({ ok: true });
     }

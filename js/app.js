@@ -3355,11 +3355,21 @@ setTimeout(()=>{gAuto();auClaim()},6000);document.addEventListener('visibilitych
 
 // ---------- LIVE: лента крупных выпадений ----------
 var liveD=[];
-function feedPush(name,t){try{if(API&&tg&&tg.initData)lbReq('/feed',{name,tier:t}).then(()=>setTimeout(feedLoad,1200)).catch(()=>{})}catch(e){}}
+var liveLast=0,liveBusy=false,liveSig='';
+function feedPush(name,t){try{if(API&&tg&&tg.initData)lbReq('/feed',{name,tier:t}).then(()=>setTimeout(feedLoad,300)).catch(()=>{})}catch(e){}}
 async function feedLoad(){
-  if(!API||!tg||!tg.initData||document.hidden)return;
-  try{const r=await lbReq('/feed');liveD=(r.items||[]).filter(x=>x&&x.name)}catch(e){}
-  renderLive();
+  if(!API||!tg||!tg.initData||document.hidden||liveBusy)return;
+  liveBusy=true;
+  try{
+    const r=await lbReq('/feed'+(liveLast?'?after='+liveLast:''));
+    const fresh=(r.items||[]).filter(x=>x&&x.name&&x.id);
+    if(!liveLast)liveD=fresh;
+    else if(fresh.length)liveD=fresh.concat(liveD.filter(o=>!fresh.some(f=>f.id===o.id))).slice(0,14);
+    if(r.last)liveLast=Math.max(liveLast,r.last);
+  }catch(e){}
+  liveBusy=false;
+  const sig=liveD.map(x=>x.id).join(',');   // ленту перерисовываем только когда появились новые записи, чтобы бегущая строка не дёргалась
+  if(sig!==liveSig){liveSig=sig;renderLive()}
 }
 function renderLive(){
   const el=document.getElementById('live');if(!el)return;
@@ -3368,7 +3378,8 @@ function renderLive(){
   if(!it){el.innerHTML='<span class="livepill"><i></i>LIVE</span><span class="liveempty">Пока тихо. Выбей Эпический ник или выше, и о тебе узнают все</span>';return}
   el.innerHTML=`<span class="livepill"><i></i>LIVE</span><div class="livewin"><div class="livetrk" style="animation-duration:${Math.max(18,liveD.length*7)}s">${it}${it}</div></div>`;
 }
-try{renderLive()}catch(e){}setTimeout(feedLoad,2500);setInterval(()=>{try{if(PAGE==='main'&&!document.getElementById('tab-game').hidden)feedLoad()}catch(e){}},40000);
+try{renderLive()}catch(e){}setTimeout(feedLoad,2500);setInterval(()=>{try{if(PAGE==='main'&&!document.getElementById('tab-game').hidden)feedLoad()}catch(e){}},4000);
+document.addEventListener('visibilitychange',()=>{try{if(!document.hidden&&PAGE==='main')feedLoad()}catch(e){}});
 
 // ---------- Карточки-уведомления над рулеткой (листаются) ----------
 var nt={au:null,top:null,sig:''};
