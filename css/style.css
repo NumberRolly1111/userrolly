@@ -1736,3 +1736,14 @@ html body nav [aria-selected=true]::before{content:none}
 html body nav [aria-selected=true] svg{filter:drop-shadow(0 0 6px rgba(160,180,255,.7))}
 .toast{bottom:calc(90px + env(safe-area-inset-bottom))}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){html body nav[role=tablist]{background:rgba(30,26,60,.92)}}
+
+/* кнопки над плавающей панелью: поднять, чтобы не перекрывались */
+#spin{border-radius:22px;bottom:calc(90px + env(safe-area-inset-bottom))}
+#cnt{bottom:calc(154px + env(safe-area-inset-bottom));background:linear-gradient(145deg,rgba(255,255,255,.14),rgba(255,255,255,.05)),rgba(18,16,42,.4);-webkit-backdrop-filter:blur(18px) saturate(180%);backdrop-filter:blur(18px) saturate(180%);border:1px solid rgba(255,255,255,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 8px 22px rgba(0,0,0,.4)}
+#tab-game{padding-bottom:176px}
+.selbar{bottom:calc(86px + env(safe-area-inset-bottom))}
+.mebar{bottom:94px}
+#adb{bottom:calc(92px + env(safe-area-inset-bottom))}
+.toast{bottom:calc(210px + env(safe-area-inset-bottom))}
+#upres{scroll-margin-bottom:116px}
+section .usheet .sbox{padding-bottom:calc(100px + env(safe-area-inset-bottom))}
